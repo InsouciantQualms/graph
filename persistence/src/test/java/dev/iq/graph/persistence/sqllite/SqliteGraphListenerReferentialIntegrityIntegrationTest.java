@@ -1,0 +1,51 @@
+package dev.iq.graph.persistence.sqllite;
+
+import dev.iq.common.persist.Session;
+import dev.iq.graph.persistence.AbstractGraphListenerReferentialIntegrityIntegrationTest;
+import dev.iq.graph.persistence.GraphRepository;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+
+import javax.sql.DataSource;
+
+/**
+ * Integration tests for SqliteGraphRepository to validate
+ * referential integrity when using graph listeners.
+ */
+@DisplayName("SQLite Graph Listener Referential Integrity Integration Tests")
+final class SqliteGraphListenerReferentialIntegrityIntegrationTest extends AbstractGraphListenerReferentialIntegrityIntegrationTest {
+
+    private static DataSource dataSource;
+    private static SqliteSessionFactory sessionFactory;
+    private Session currentSession;
+
+    @BeforeAll
+    static void setUpClass() {
+        dataSource = SqlliteTestConnectionHelper.getSharedDataSource();
+        sessionFactory = new SqliteSessionFactory(dataSource);
+    }
+
+    @AfterAll
+    static void tearDownClass() {
+        SqlliteTestConnectionHelper.closeSharedDataSource();
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (currentSession != null) {
+            currentSession.rollback();
+            currentSession.close();
+            currentSession = null;
+        }
+    }
+
+    @Override
+    protected GraphRepository createGraphRepository() {
+        
+        // Create a new session for this test
+        currentSession = sessionFactory.create();
+        return SqliteGraphRepository.create((SqliteSession) currentSession);
+    }
+}

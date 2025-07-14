@@ -1,0 +1,127 @@
+package dev.iq.graph.api.impl;
+
+import dev.iq.common.persist.Session;
+import dev.iq.graph.api.NodeService;
+import dev.iq.graph.model.simple.SimpleData;
+import dev.iq.graph.persistence.GraphRepository;
+import dev.iq.graph.persistence.sqllite.SqliteGraphRepository;
+import dev.iq.graph.persistence.sqllite.SqliteSession;
+import dev.iq.graph.persistence.sqllite.SqliteSessionFactory;
+import dev.iq.graph.persistence.sqllite.SqlliteTestConnectionHelper;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import javax.sql.DataSource;
+import java.util.function.Function;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Integration tests for DefaultNodeService functionality.
+ */
+final class DefaultNodeServiceIntegrationTest {
+
+    private static DataSource dataSource;
+    private static SqliteSessionFactory sessionFactory;
+    private NodeService nodeService;
+
+    @BeforeAll
+    static void setUpClass() {
+        dataSource = SqlliteTestConnectionHelper.getSharedDataSource();
+        sessionFactory = new SqliteSessionFactory(dataSource);
+    }
+
+    @AfterAll
+    static void tearDownClass() {
+        SqlliteTestConnectionHelper.closeSharedDataSource();
+    }
+
+    @BeforeEach
+    void setUp() {
+        // Create a function that creates a GraphRepository from a Session
+        Function<Session, GraphRepository> repositoryFactory = session -> 
+            SqliteGraphRepository.create((SqliteSession) session);
+            
+        // Create a modified DefaultNodeService that creates repository per operation
+        nodeService = new TestDefaultNodeService(sessionFactory, repositoryFactory);
+    }
+
+    @Test
+    void testAddNode() {
+        final var data = new SimpleData(String.class, "test-node");
+        final var node = nodeService.add(data);
+
+        assertNotNull(node);
+        assertEquals(1, node.locator().version());
+        assertEquals(data.value(), node.data().value());
+        assertNotNull(node.created());
+        assertFalse(node.expired().isPresent());
+    }
+
+    @Test
+    void testFindNode() {
+        // Add a node
+        final var data = new SimpleData(String.class, "find-test");
+        final var addedNode = nodeService.add(data);
+
+        // Find the node
+        final var foundNode = nodeService.find(addedNode.locator());
+
+        assertNotNull(foundNode);
+        assertEquals(addedNode.locator(), foundNode.locator());
+        assertEquals(data.value(), foundNode.data().value());
+    }
+
+    @Test
+    void testFindActiveNode() {
+        // Add a node
+        final var data = new SimpleData(String.class, "active-test");
+        final var addedNode = nodeService.add(data);
+
+        // Find active version
+        final var activeNode = nodeService.findActive(addedNode.locator().id());
+
+        assertTrue(activeNode.isPresent());
+        assertEquals(addedNode.locator(), activeNode.get().locator());
+        assertEquals(data.value(), activeNode.get().data().value());
+    }
+
+    @Test
+    void testFindAllVersions() {
+        // Add a node
+        final var data = new SimpleData(String.class, "version-test");
+        final var node = nodeService.add(data);
+
+        // Find all versions
+        final var versions = nodeService.findAllVersions(node.locator().id());
+
+        assertFalse(versions.isEmpty());
+        assertEquals(1, versions.size());
+        assertEquals(node.locator(), versions.get(0).locator());
+    }
+
+    @Test
+    void testFindNonExistentNode() {
+        // find(Locator) should throw an exception for non-existent items
+        assertThrows(Exception.class, () -> {
+            nodeService.find(dev.iq.common.version.Locator.generate());
+        });
+    }
+
+    @Test
+    void testNodeVersioningStub() {
+        // This test demonstrates that versioning is stubbed out in the current implementation
+        final var data1 = new SimpleData(String.class, "version-1");
+        final var node1 = nodeService.add(data1);
+
+        // In a full implementation, this would create version 2
+        final var data2 = new SimpleData(String.class, "version-2");
+        // Currently, the service doesn't support creating new versions of existing nodes
+
+        // Verify only one version exists
+        final var versions = nodeService.findAllVersions(node1.locator().id());
+        assertEquals(1, versions.size());
+    }
+}
