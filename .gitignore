@@ -4,10 +4,6 @@
 # To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
 #
 
-# Ignore local Claude settings
-**/.claude/
-CLAUDE.MD
-
 # Ignore build Gradle cache
 **/.gradle/
 
@@ -116,3 +112,9 @@ http-client.private.env.json
 # Apifox Helper cache
 .idea/.cache/.Apifox_Helper
 .idea/ApifoxUploaderProjectSetting.xml
+
+# End excludes from IntelliJ
+
+# Ignore local AI files
+**/.claude/
+CLAUDE.MD
