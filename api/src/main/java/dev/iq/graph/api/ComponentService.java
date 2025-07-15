@@ -1,3 +1,9 @@
+/*
+ * Insouciant Qualms © 2025 by Sascha Goldsmith is licensed under CC BY 4.0.
+ * To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0.
+ * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
+ */
+
 package dev.iq.graph.api;
 
 import dev.iq.common.version.NanoId;
@@ -13,6 +19,7 @@ import java.util.List;
  * maximal sub-graphs containing nodes and elements.  Each component is identified by
  * a Nano ID and are versioned like other graph elements.  Components can overlap
  * other components.
+ * Implementations must be thread-safe.
  */
 public interface ComponentService extends IdentifiableBase<Component> {
 
