@@ -17,9 +17,9 @@ import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.statement.StatementContext;
 import java.time.Instant;
 import java.util.*;
 
@@ -38,9 +38,9 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
         // Schema initialization is handled by SqliteConnectionProvider
     }
 
-    private Connection getConnection() {
-        // Use the connection from the associated session
-        return session.connection();
+    private Handle getHandle() {
+
+        return session.handle();
     }
 
 
@@ -48,21 +48,20 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
     public Edge save(final Edge edge) {
         final var sql = """
             INSERT INTO edge (id, version_id, source_id, source_version_id, target_id, target_version_id, created, expired)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (:id, :version_id, :source_id, :source_version_id, :target_id, :target_version_id, :created, :expired)
             """;
 
         Io.withVoid(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, edge.locator().id().id());
-                stmt.setInt(2, edge.locator().version());
-                stmt.setString(3, edge.source().locator().id().id());
-                stmt.setInt(4, edge.source().locator().version());
-                stmt.setString(5, edge.target().locator().id().id());
-                stmt.setInt(6, edge.target().locator().version());
-                stmt.setString(7, edge.created().toString());
-                stmt.setString(8, edge.expired().map(Object::toString).orElse(null));
-                stmt.executeUpdate();
-            }
+            getHandle().createUpdate(sql)
+                .bind("id", edge.locator().id().id())
+                .bind("version_id", edge.locator().version())
+                .bind("source_id", edge.source().locator().id().id())
+                .bind("source_version_id", edge.source().locator().version())
+                .bind("target_id", edge.target().locator().id().id())
+                .bind("target_version_id", edge.target().locator().version())
+                .bind("created", edge.created().toString())
+                .bind("expired", edge.expired().map(Object::toString).orElse(null))
+                .execute();
 
             // Save properties in separate table
             saveProperties(edge.locator().id(), edge.locator().version(), edge.data());
@@ -76,20 +75,15 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
         final var sql = """
             SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id, e.target_id, e.target_version_id, e.created, e.expired
             FROM edge e
-            WHERE e.id = ? AND e.expired IS NULL
+            WHERE e.id = :id AND e.expired IS NULL
             ORDER BY e.version_id DESC LIMIT 1
             """;
 
         return Io.withReturn(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, edgeId.id());
-                try (final var rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return Optional.ofNullable(createEdgeFromResultSet(rs));
-                    }
-                    return Optional.empty();
-                }
-            }
+            return getHandle().createQuery(sql)
+                .bind("id", edgeId.id())
+                .map(new EdgeMapper())
+                .findOne();
         });
     }
 
@@ -98,24 +92,15 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
         final var sql = """
             SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id, e.target_id, e.target_version_id, e.created, e.expired
             FROM edge e
-            WHERE e.id = ?
+            WHERE e.id = :id
             ORDER BY e.version_id
             """;
 
         return Io.withReturn(() -> {
-            final var edges = new ArrayList<Edge>();
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, edgeId.id());
-                try (final var rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        final var edge = createEdgeFromResultSet(rs);
-                        if (edge != null) {
-                            edges.add(edge);
-                        }
-                    }
-                    return edges;
-                }
-            }
+            return getHandle().createQuery(sql)
+                .bind("id", edgeId.id())
+                .map(new EdgeMapper())
+                .list();
         });
     }
 
@@ -124,20 +109,15 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
         final var sql = """
             SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id, e.target_id, e.target_version_id, e.created, e.expired
             FROM edge e
-            WHERE e.id = ? AND e.version_id = ?
+            WHERE e.id = :id AND e.version_id = :version_id
             """;
 
         return Io.withReturn(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, locator.id().id());
-                stmt.setInt(2, locator.version());
-                try (final var rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return Optional.of(createEdgeFromResultSet(rs));
-                    }
-                    return Optional.empty();
-                }
-            }
+            return getHandle().createQuery(sql)
+                .bind("id", locator.id().id())
+                .bind("version_id", locator.version())
+                .map(new EdgeMapper())
+                .findOne();
         });
     }
 
@@ -146,100 +126,97 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
         final var sql = """
             SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id, e.target_id, e.target_version_id, e.created, e.expired
             FROM edge e
-            WHERE e.id = ? AND e.created <= ? AND (e.expired IS NULL OR e.expired > ?)
+            WHERE e.id = :id AND e.created <= :timestamp AND (e.expired IS NULL OR e.expired > :timestamp)
             ORDER BY e.version_id DESC
             LIMIT 1
             """;
 
         return Io.withReturn(() -> {
             final var timestampStr = timestamp.toString();
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, edgeId.id());
-                stmt.setString(2, timestampStr);
-                stmt.setString(3, timestampStr);
-                try (final var rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return Optional.ofNullable(createEdgeFromResultSet(rs));
-                    }
-                    return Optional.empty();
-                }
-            }
+            return getHandle().createQuery(sql)
+                .bind("id", edgeId.id())
+                .bind("timestamp", timestampStr)
+                .map(new EdgeMapper())
+                .findOne();
         });
     }
 
     @Override
     public boolean delete(final NanoId edgeId) {
-        final var sql = "DELETE FROM edge WHERE id = ?";
+        final var sql = "DELETE FROM edge WHERE id = :id";
 
         return Io.withReturn(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, edgeId.id());
-                return stmt.executeUpdate() > 0;
-            }
+            return getHandle().createUpdate(sql)
+                .bind("id", edgeId.id())
+                .execute() > 0;
         });
     }
 
     @Override
     public boolean expire(final NanoId elementId, final Instant expiredAt) {
-        final var sql = "UPDATE edge SET expired = ? WHERE id = ? AND expired IS NULL";
+        final var sql = "UPDATE edge SET expired = :expired WHERE id = :id AND expired IS NULL";
 
         return Io.withReturn(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, expiredAt.toString());
-                stmt.setString(2, elementId.id());
-                return stmt.executeUpdate() > 0;
-            }
+            return getHandle().createUpdate(sql)
+                .bind("expired", expiredAt.toString())
+                .bind("id", elementId.id())
+                .execute() > 0;
         });
     }
 
 
-    private Edge createEdgeFromResultSet(final ResultSet rs) throws SQLException {
-        final var id = new NanoId(rs.getString("id"));
-        final var versionId = rs.getInt("version_id");
-        final var created = Instant.parse(rs.getString("created"));
+    private class EdgeMapper implements RowMapper<Edge> {
 
-        Optional<Instant> expired = Optional.empty();
-        final var expiredStr = rs.getString("expired");
-        if (expiredStr != null) {
-            expired = Optional.of(Instant.parse(expiredStr));
+        @Override
+        public Edge map(final java.sql.ResultSet rs, final StatementContext ctx) throws java.sql.SQLException {
+
+            final var id = new NanoId(rs.getString("id"));
+            final var versionId = rs.getInt("version_id");
+            final var created = Instant.parse(rs.getString("created"));
+
+            Optional<Instant> expired = Optional.empty();
+            final var expiredStr = rs.getString("expired");
+            if (expiredStr != null) {
+                expired = Optional.of(Instant.parse(expiredStr));
+            }
+
+            final var data = loadProperties(id, versionId);
+
+            // Get source and target nodes with specific versions
+            final var sourceId = new NanoId(rs.getString("source_id"));
+            final var sourceVersionId = rs.getInt("source_version_id");
+            final var targetId = new NanoId(rs.getString("target_id"));
+            final var targetVersionId = rs.getInt("target_version_id");
+
+            final var sourceNode = nodeRepository
+                .find(new Locator(sourceId, sourceVersionId))
+                .orElseThrow(() -> new RuntimeException("missing source " + sourceId));
+            final var targetNode = nodeRepository
+                .find(new Locator(targetId, targetVersionId))
+                .orElseThrow(() -> new RuntimeException("missing target " + targetId));
+
+            final var locator = new Locator(id, versionId);
+            return new SimpleEdge(locator, sourceNode, targetNode, data, created, expired);
         }
-
-        final var data = loadProperties(id, versionId);
-
-        // Get source and target nodes with specific versions
-        final var sourceId = new NanoId(rs.getString("source_id"));
-        final var sourceVersionId = rs.getInt("source_version_id");
-        final var targetId = new NanoId(rs.getString("target_id"));
-        final var targetVersionId = rs.getInt("target_version_id");
-
-        final var sourceNode = nodeRepository
-            .find(new Locator(sourceId, sourceVersionId))
-            .orElseThrow(() -> new RuntimeException("missing source $sourceId"));
-        final var targetNode = nodeRepository
-            .find(new Locator(targetId, targetVersionId))
-            .orElseThrow(() -> new RuntimeException("missing target $targetId"));
-
-        final var locator = new Locator(id, versionId);
-        return new SimpleEdge(locator, sourceNode, targetNode, data, created, expired);
     }
 
     private void saveProperties(final NanoId edgeId, final int version, final Data data) {
         final var sql = """
             INSERT INTO edge_properties (id, version_id, property_key, property_value)
-            VALUES (?, ?, ?, ?)
+            VALUES (:id, :version_id, :property_key, :property_value)
             """;
 
         final var properties = serde.serialize(data);
         Io.withVoid(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                for (final var entry : properties.entrySet()) {
-                    stmt.setString(1, edgeId.id());
-                    stmt.setInt(2, version);
-                    stmt.setString(3, entry.getKey());
-                    stmt.setString(4, String.valueOf(entry.getValue()));
-                    stmt.executeUpdate();
-                }
+            final var batch = getHandle().prepareBatch(sql);
+            for (final var entry : properties.entrySet()) {
+                batch.bind("id", edgeId.id())
+                    .bind("version_id", version)
+                    .bind("property_key", entry.getKey())
+                    .bind("property_value", String.valueOf(entry.getValue()))
+                    .add();
             }
+            batch.execute();
         });
     }
 
@@ -247,20 +224,19 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
         final var sql = """
             SELECT property_key, property_value
             FROM edge_properties
-            WHERE id = ? AND version_id = ?
+            WHERE id = :id AND version_id = :version_id
             """;
 
         return Io.withReturn(() -> {
             final var properties = new HashMap<String, Object>();
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, edgeId.id());
-                stmt.setInt(2, version);
-                try (final var rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        properties.put(rs.getString("property_key"), rs.getString("property_value"));
-                    }
-                }
-            }
+            getHandle().createQuery(sql)
+                .bind("id", edgeId.id())
+                .bind("version_id", version)
+                .map((rs, ctx) -> {
+                    properties.put(rs.getString("property_key"), rs.getString("property_value"));
+                    return null;
+                })
+                .list();
             return serde.deserialize(properties);
         });
     }

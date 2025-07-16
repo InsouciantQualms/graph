@@ -87,7 +87,7 @@ public final class EdgeOperations implements Operations<Edge> {
     @Override
     public Edge expire(final NanoId id, final Instant timestamp) {
 
-        final var edge = Versions.validateForExpiry(findActive(id), id, "Edge");
+        final var edge = OperationsHelper.validateForExpiry(findActive(id), id, "Edge");
         final var expiredEdge = new SimpleEdge(
             edge.locator(), edge.source(), edge.target(), edge.data(), edge.created(), Optional.of(timestamp)
         );

@@ -17,9 +17,9 @@ import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.statement.StatementContext;
 import java.time.Instant;
 import java.util.*;
 
@@ -35,26 +35,25 @@ public final class SqliteNodeRepository implements VersionedRepository<Node> {
         this.session = session;
     }
 
-    private Connection getConnection() {
-        // Use the connection from the associated session
-        return session.connection();
+    private Handle getHandle() {
+
+        return session.handle();
     }
 
     @Override
     public Node save(final Node node) {
         final var sql = """
             INSERT INTO node (id, version_id, created, expired)
-            VALUES (?, ?, ?, ?)
+            VALUES (:id, :version_id, :created, :expired)
             """;
 
         Io.withVoid(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, node.locator().id().id());
-                stmt.setInt(2, node.locator().version());
-                stmt.setString(3, node.created().toString());
-                stmt.setString(4, node.expired().map(Object::toString).orElse(null));
-                stmt.executeUpdate();
-            }
+            getHandle().createUpdate(sql)
+                .bind("id", node.locator().id().id())
+                .bind("version_id", node.locator().version())
+                .bind("created", node.created().toString())
+                .bind("expired", node.expired().map(Object::toString).orElse(null))
+                .execute();
 
             // Save properties in separate table
             saveProperties(node.locator().id(), node.locator().version(), node.data());
@@ -65,54 +64,38 @@ public final class SqliteNodeRepository implements VersionedRepository<Node> {
 
     @Override
     public Optional<Node> findActive(final NanoId nodeId) {
-        final var sql = "SELECT * FROM node WHERE id = ? AND expired IS NULL ORDER BY version_id DESC LIMIT 1";
+        final var sql = "SELECT * FROM node WHERE id = :id AND expired IS NULL ORDER BY version_id DESC LIMIT 1";
 
         return Io.withReturn(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, nodeId.id());
-                try (final var rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return Optional.of(resultSetToNode(rs));
-                    }
-                    return Optional.empty();
-                }
-            }
+            return getHandle().createQuery(sql)
+                .bind("id", nodeId.id())
+                .map(new NodeMapper())
+                .findOne();
         });
     }
 
     @Override
     public List<Node> findAll(final NanoId nodeId) {
-        final var sql = "SELECT * FROM node WHERE id = ? ORDER BY version_id";
+        final var sql = "SELECT * FROM node WHERE id = :id ORDER BY version_id";
 
         return Io.withReturn(() -> {
-            final var nodes = new ArrayList<Node>();
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, nodeId.id());
-                try (final var rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        nodes.add(resultSetToNode(rs));
-                    }
-                    return nodes;
-                }
-            }
+            return getHandle().createQuery(sql)
+                .bind("id", nodeId.id())
+                .map(new NodeMapper())
+                .list();
         });
     }
 
     @Override
     public Optional<Node> find(final Locator locator) {
-        final var sql = "SELECT * FROM node WHERE id = ? AND version_id = ?";
+        final var sql = "SELECT * FROM node WHERE id = :id AND version_id = :version_id";
 
         return Io.withReturn(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, locator.id().id());
-                stmt.setInt(2, locator.version());
-                try (final var rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return Optional.of(resultSetToNode(rs));
-                    }
-                    return Optional.empty();
-                }
-            }
+            return getHandle().createQuery(sql)
+                .bind("id", locator.id().id())
+                .bind("version_id", locator.version())
+                .map(new NodeMapper())
+                .findOne();
         });
     }
 
@@ -120,87 +103,84 @@ public final class SqliteNodeRepository implements VersionedRepository<Node> {
     public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
         final var sql = """
             SELECT * FROM node
-            WHERE id = ? AND created <= ? AND (expired IS NULL OR expired > ?)
+            WHERE id = :id AND created <= :timestamp AND (expired IS NULL OR expired > :timestamp)
             ORDER BY version_id DESC
             LIMIT 1
             """;
 
         return Io.withReturn(() -> {
             final var timestampStr = timestamp.toString();
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, nodeId.id());
-                stmt.setString(2, timestampStr);
-                stmt.setString(3, timestampStr);
-                try (final var rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return Optional.of(resultSetToNode(rs));
-                    }
-                    return Optional.empty();
-                }
-            }
+            return getHandle().createQuery(sql)
+                .bind("id", nodeId.id())
+                .bind("timestamp", timestampStr)
+                .map(new NodeMapper())
+                .findOne();
         });
     }
 
     @Override
     public boolean delete(final NanoId nodeId) {
-        final var sql = "DELETE FROM node WHERE id = ?";
+        final var sql = "DELETE FROM node WHERE id = :id";
 
         return Io.withReturn(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, nodeId.id());
-                return stmt.executeUpdate() > 0;
-            }
+            return getHandle().createUpdate(sql)
+                .bind("id", nodeId.id())
+                .execute() > 0;
         });
     }
 
     @Override
     public boolean expire(final NanoId elementId, final Instant expiredAt) {
-        final var sql = "UPDATE node SET expired = ? WHERE id = ? AND expired IS NULL";
+        final var sql = "UPDATE node SET expired = :expired WHERE id = :id AND expired IS NULL";
 
         return Io.withReturn(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, expiredAt.toString());
-                stmt.setString(2, elementId.id());
-                return stmt.executeUpdate() > 0;
-            }
+            return getHandle().createUpdate(sql)
+                .bind("expired", expiredAt.toString())
+                .bind("id", elementId.id())
+                .execute() > 0;
         });
     }
 
 
-    private Node resultSetToNode(final ResultSet rs) throws SQLException {
-        final var id = new NanoId(rs.getString("id"));
-        final var versionId = rs.getInt("version_id");
-        final var created = Instant.parse(rs.getString("created"));
+    private class NodeMapper implements RowMapper<Node> {
 
-        Optional<Instant> expired = Optional.empty();
-        final var expiredStr = rs.getString("expired");
-        if (expiredStr != null) {
-            expired = Optional.of(Instant.parse(expiredStr));
+        @Override
+        public Node map(final java.sql.ResultSet rs, final StatementContext ctx) throws java.sql.SQLException {
+
+            final var id = new NanoId(rs.getString("id"));
+            final var versionId = rs.getInt("version_id");
+            final var created = Instant.parse(rs.getString("created"));
+
+            Optional<Instant> expired = Optional.empty();
+            final var expiredStr = rs.getString("expired");
+            if (expiredStr != null) {
+                expired = Optional.of(Instant.parse(expiredStr));
+            }
+
+            final var data = loadProperties(id, versionId);
+            final var locator = new Locator(id, versionId);
+
+            return new SimpleNode(locator, List.of(), data, created, expired);
         }
-
-        final var data = loadProperties(id, versionId);
-        final var locator = new Locator(id, versionId);
-
-        return new SimpleNode(locator, List.of(), data, created, expired);
     }
 
     private void saveProperties(final NanoId nodeId, final int version, final Data data) {
         final var sql = """
             INSERT INTO node_properties (id, version_id, property_key, property_value)
-            VALUES (?, ?, ?, ?)
+            VALUES (:id, :version_id, :property_key, :property_value)
             """;
 
         final var properties = serde.serialize(data);
         Io.withVoid(() -> {
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                for (final var entry : properties.entrySet()) {
-                    stmt.setString(1, nodeId.id());
-                    stmt.setInt(2, version);
-                    stmt.setString(3, entry.getKey());
-                    stmt.setString(4, String.valueOf(entry.getValue()));
-                    stmt.executeUpdate();
-                }
+            final var batch = getHandle().prepareBatch(sql);
+            for (final var entry : properties.entrySet()) {
+                batch.bind("id", nodeId.id())
+                    .bind("version_id", version)
+                    .bind("property_key", entry.getKey())
+                    .bind("property_value", String.valueOf(entry.getValue()))
+                    .add();
             }
+            batch.execute();
         });
     }
 
@@ -208,20 +188,19 @@ public final class SqliteNodeRepository implements VersionedRepository<Node> {
         final var sql = """
             SELECT property_key, property_value
             FROM node_properties
-            WHERE id = ? AND version_id = ?
+            WHERE id = :id AND version_id = :version_id
             """;
 
         return Io.withReturn(() -> {
             final var properties = new HashMap<String, Object>();
-            try (final var stmt = getConnection().prepareStatement(sql)) {
-                stmt.setString(1, nodeId.id());
-                stmt.setInt(2, version);
-                try (final var rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        properties.put(rs.getString("property_key"), rs.getString("property_value"));
-                    }
-                }
-            }
+            getHandle().createQuery(sql)
+                .bind("id", nodeId.id())
+                .bind("version_id", version)
+                .map((rs, ctx) -> {
+                    properties.put(rs.getString("property_key"), rs.getString("property_value"));
+                    return null;
+                })
+                .list();
             return serde.deserialize(properties);
         });
     }

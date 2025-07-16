@@ -13,10 +13,6 @@ import dev.iq.graph.model.*;
 import dev.iq.graph.model.simple.SimpleComponent;
 import dev.iq.graph.model.simple.SimpleData;
 import org.jgrapht.Graph;
-import org.jgrapht.alg.connectivity.ConnectivityInspector;
-import org.jgrapht.alg.cycle.CycleDetector;
-import org.jgrapht.graph.AsSubgraph;
-import org.jgrapht.graph.DirectedMultigraph;
 
 import java.time.Instant;
 import java.util.*;
@@ -52,7 +48,7 @@ public final class ComponentOperations implements Operations<Component> {
      */
     public Component add(final List<Element> elements, final Data data, final Instant timestamp) {
 
-        validateComponentElements(elements);
+        OperationsHelper.validateComponentElements(elements, graph);
         final var locator = Locator.generate();
 
         // Track component membership externally
@@ -74,8 +70,8 @@ public final class ComponentOperations implements Operations<Component> {
      */
     public Component update(final NanoId id, final List<Element> elements, final Data data, final Instant timestamp) {
 
-        validateComponentElements(elements);
-        final var existingComponent = Versions.validateForExpiry(findActive(id), id, "Component");
+        OperationsHelper.validateComponentElements(elements, graph);
+        final var existingComponent = OperationsHelper.validateForExpiry(findActive(id), id, "Component");
 
         // Remove component reference from old elements
         for (final var element : existingComponent.elements()) {
@@ -152,7 +148,7 @@ public final class ComponentOperations implements Operations<Component> {
     @Override
     public Component expire(final NanoId id, final Instant timestamp) {
 
-        final var component = Versions.validateForExpiry(findActive(id), id, "Component");
+        final var component = OperationsHelper.validateForExpiry(findActive(id), id, "Component");
 
         // Create expired version
         final var expiredComponent = new SimpleComponent(
@@ -247,91 +243,4 @@ public final class ComponentOperations implements Operations<Component> {
     /**
      * Validates that the elements form a valid component according to the rules.
      */
-    private void validateComponentElements(final Collection<Element> elements) {
-        if (elements.isEmpty()) {
-            throw new IllegalArgumentException("Component must contain at least one element");
-        }
-
-        final var nodes = new HashSet<Node>();
-        final var edges = new HashSet<Edge>();
-
-        for (final var element : elements) {
-            switch (element) {
-                case final Node node -> nodes.add(node);
-                case final Edge edge -> edges.add(edge);
-                default -> throw new IllegalArgumentException("Invalid element type: " + element.getClass().getSimpleName());
-            }
-        }
-
-        if (nodes.isEmpty()) {
-            throw new IllegalArgumentException("Component must contain at least one node");
-        }
-
-        validateConnectivity(nodes, edges);
-        validateNoCycles(nodes, edges);
-        validateLeafNodesOnly(nodes, edges);
-    }
-
-    /**
-     * Validates that all elements in the component are connected.
-     */
-    private void validateConnectivity(final Set<Node> nodes, final Set<Edge> edges) {
-
-        if ((nodes.size() == 1) && edges.isEmpty()) {
-            return;
-        }
-
-        // Build a temporary graph with just the component elements to check connectivity
-        final var tempGraph = new DirectedMultigraph<Node, Edge>(null, null, false);
-
-        // Add all nodes
-        for (final var node : nodes) {
-            tempGraph.addVertex(node);
-        }
-
-        // Add all edges
-        for (final var edge : edges) {
-            if (nodes.contains(edge.source()) && nodes.contains(edge.target())) {
-                tempGraph.addEdge(edge.source(), edge.target(), edge);
-            }
-        }
-
-        // Use ConnectivityInspector to check if all nodes are connected
-        final var inspector = new ConnectivityInspector<>(tempGraph);
-        if (!inspector.isConnected()) {
-            throw new IllegalArgumentException("All elements in a component must be connected");
-        }
-    }
-
-
-    /**
-     * Validates that the component contains no cycles.
-     */
-    private void validateNoCycles(final Set<Node> nodes, final Set<Edge> edges) {
-
-        // Create a subgraph containing only the component's nodes and edges
-        final var subgraph = new AsSubgraph<>(graph, nodes, edges);
-
-        // Use JGraphT's CycleDetector to check for cycles
-        final var cycleDetector = new CycleDetector<>(subgraph);
-        if (cycleDetector.detectCycles()) {
-            throw new IllegalArgumentException("Components cannot contain cycles");
-        }
-    }
-
-    /**
-     * Validates that leaf elements are nodes only.
-     */
-    private void validateLeafNodesOnly(final Collection<Node> nodes, final Iterable<Edge> edges) {
-
-        for (final var edge : edges) {
-            // Use the edge's source and target directly instead of querying the graph
-            final var source = edge.source();
-            final var target = edge.target();
-
-            if (!nodes.contains(source) || !nodes.contains(target)) {
-                throw new IllegalArgumentException("All edges in a component must connect nodes within the component");
-            }
-        }
-    }
 }

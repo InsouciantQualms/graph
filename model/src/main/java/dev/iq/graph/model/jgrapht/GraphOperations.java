@@ -55,7 +55,7 @@ public final class GraphOperations {
         if (jgraphtPath == null) {
             return new Path(List.of());
         }
-        return toPath(jgraphtPath);
+        return OperationsHelper.toPath(jgraphtPath);
     }
 
     /**
@@ -80,8 +80,8 @@ public final class GraphOperations {
             final var pathEdges = new HashSet<>(jgraphtPath.getEdgeList());
             
             // Check if this specific path contains a cycle by checking if it revisits any vertex
-            final var path = toPath(jgraphtPath);
-            if (!containsCycle(path)) {
+            final var path = OperationsHelper.toPath(jgraphtPath);
+            if (!OperationsHelper.containsCycle(path)) {
                 result.add(path);
             }
         }
@@ -91,39 +91,4 @@ public final class GraphOperations {
     /**
      * Converts from a JGraphT GraphPath to a Path representation.
      */
-    private static Path toPath(final GraphPath<Node, Edge> jgraphtPath) {
-
-        final var vertices = jgraphtPath.getVertexList();
-        final var edges = jgraphtPath.getEdgeList();
-        if (vertices.size() != (edges.size() + 1)) {
-            throw new IllegalArgumentException("Vertex count must be one greater than edge count");
-        }
-        final List<Element> elements = new ArrayList<>();
-        for (var i = 0; i < vertices.size(); i++) {
-            elements.add(vertices.get(i));
-            if (i < edges.size()) {
-                elements.add(edges.get(i));
-            }
-        }
-        return new Path(elements);
-    }
-
-    /**
-     * Checks if a path contains a cycle (revisits the same node).
-     * Note: This is different from general cycle detection - we're checking if a specific path
-     * revisits any node, which makes it invalid as a simple path.
-     */
-    private static boolean containsCycle(final Path path) {
-
-        final var visitedNodes = new HashSet<Node>();
-        for (final var element : path.elements()) {
-            if (element instanceof final Node node) {
-                if (visitedNodes.contains(node)) {
-                    return true;
-                }
-                visitedNodes.add(node);
-            }
-        }
-        return false;
-    }
 }

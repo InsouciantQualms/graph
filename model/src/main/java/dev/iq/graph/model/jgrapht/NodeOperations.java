@@ -59,7 +59,7 @@ public final class NodeOperations implements Operations<Node> {
 
     public Node update(final NanoId id, final Data data, final Instant timestamp) {
 
-        final var existingNode = Versions.validateForExpiry(findActive(id), id, "Node");
+        final var existingNode = OperationsHelper.validateForExpiry(findActive(id), id, "Node");
 
         // Collect edge information before expiring
         final var edgeRecreationInfo = collectActiveEdgeInfo(existingNode);
@@ -133,7 +133,7 @@ public final class NodeOperations implements Operations<Node> {
     @Override
     public Node expire(final NanoId id, final Instant timestamp) {
 
-        final var node = Versions.validateForExpiry(findActive(id), id, "Node");
+        final var node = OperationsHelper.validateForExpiry(findActive(id), id, "Node");
 
         // Collect all connected edges
         final var allConnectedEdges = collectAllConnectedEdges(node);

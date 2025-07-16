@@ -7,12 +7,12 @@
 
 package dev.iq.graph.persistence.sqllite;
 
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.Jdbi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -23,112 +23,104 @@ import static org.mockito.Mockito.*;
 @DisplayName("SqliteSession Unit Tests")
 final class SqliteSessionTest {
 
-    private Connection mockConnection;
+    private Jdbi mockJdbi;
+    private Handle mockHandle;
     private SqliteSession session;
 
     @BeforeEach
-    void setUp() throws SQLException {
-        mockConnection = mock(Connection.class);
-        when(mockConnection.getAutoCommit()).thenReturn(true);
+    void setUp() {
+        mockJdbi = mock(Jdbi.class);
+        mockHandle = mock(Handle.class);
+        when(mockJdbi.open()).thenReturn(mockHandle);
         
-        session = new SqliteSession(mockConnection);
+        session = new SqliteSession(mockJdbi);
     }
 
     @Test
-    @DisplayName("constructor disables auto-commit")
-    void testConstructorDisablesAutoCommit() throws SQLException {
+    @DisplayName("constructor opens handle and begins transaction")
+    void testConstructorOpensHandleAndBeginsTransaction() {
         
-        verify(mockConnection).setAutoCommit(false);
+        verify(mockJdbi).open();
+        verify(mockHandle).begin();
     }
 
     @Test
     @DisplayName("commit commits transaction")
-    void testCommit() throws SQLException {
+    void testCommit() {
         
         session.commit();
         
-        verify(mockConnection).commit();
+        verify(mockHandle).commit();
     }
 
     @Test
     @DisplayName("rollback rolls back transaction")
-    void testRollback() throws SQLException {
+    void testRollback() {
         
         session.rollback();
         
-        verify(mockConnection).rollback();
+        verify(mockHandle).rollback();
     }
 
     @Test
-    @DisplayName("close closes connection without automatic rollback")
-    void testCloseClosesConnection() throws SQLException {
+    @DisplayName("close rolls back open transaction and closes handle")
+    void testCloseRollsBackOpenTransaction() {
         
-        when(mockConnection.isClosed()).thenReturn(false);
+        when(mockHandle.isInTransaction()).thenReturn(true);
         
         session.close();
         
-        verify(mockConnection, never()).rollback();
-        verify(mockConnection).close();
+        verify(mockHandle).isInTransaction();
+        verify(mockHandle).rollback();
+        verify(mockHandle).close();
     }
 
-    @Test
-    @DisplayName("close does not rollback if connection is already closed")
-    void testCloseSkipsRollbackIfClosed() throws SQLException {
-        
-        when(mockConnection.isClosed()).thenReturn(true);
-        
-        session.close();
-        
-        verify(mockConnection, never()).rollback();
-        verify(mockConnection).close();
-    }
 
     @Test
-    @DisplayName("close after commit only closes connection")
-    void testCloseAfterCommit() throws SQLException {
+    @DisplayName("close after commit only closes handle")
+    void testCloseAfterCommit() {
         
-        when(mockConnection.isClosed()).thenReturn(false);
+        when(mockHandle.isInTransaction()).thenReturn(false);
         
         session.commit();
         session.close();
         
-        verify(mockConnection).commit();
-        verify(mockConnection, never()).rollback();
-        verify(mockConnection).close();
+        verify(mockHandle).commit();
+        verify(mockHandle).isInTransaction();
+        verify(mockHandle, never()).rollback();
+        verify(mockHandle).close();
     }
 
     @Test
-    @DisplayName("connection returns the underlying connection")
-    void testConnectionReturnsConnection() {
+    @DisplayName("handle returns the underlying handle")
+    void testHandleReturnsHandle() {
         
-        assertSame(mockConnection, session.connection());
+        assertSame(mockHandle, session.handle());
     }
 
     @Test
     @DisplayName("multiple commits are allowed")
-    void testMultipleCommits() throws SQLException {
+    void testMultipleCommits() {
         
         session.commit();
         session.commit();
         
-        verify(mockConnection, times(2)).commit();
+        verify(mockHandle, times(2)).commit();
     }
 
     @Test
     @DisplayName("multiple rollbacks are allowed")
-    void testMultipleRollbacks() throws SQLException {
+    void testMultipleRollbacks() {
         
         session.rollback();
         session.rollback();
         
-        verify(mockConnection, times(2)).rollback();
+        verify(mockHandle, times(2)).rollback();
     }
 
     @Test
     @DisplayName("operations after close should not throw")
-    void testOperationsAfterClose() throws SQLException {
-        
-        when(mockConnection.isClosed()).thenReturn(false, true);
+    void testOperationsAfterClose() {
         
         session.close();
         
