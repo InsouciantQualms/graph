@@ -5,7 +5,7 @@
  */
 package dev.iq.graph.model;
 
-import dev.iq.common.adt.Stable;
+import dev.iq.common.annotation.Stable;
 
 /**
  * Represents a directed edge in the graph connecting two nodes.

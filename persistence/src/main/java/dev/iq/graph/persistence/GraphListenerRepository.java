@@ -5,11 +5,10 @@
  */
 package dev.iq.graph.persistence;
 
-import org.jgrapht.event.GraphListener;
-
-import dev.iq.common.adt.Stable;
+import dev.iq.common.annotation.Stable;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import org.jgrapht.event.GraphListener;
 
 /**
  * Repository that listens to graph events, queueing up persistence operations to

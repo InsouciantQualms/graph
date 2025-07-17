@@ -5,9 +5,8 @@
  */
 package dev.iq.graph.model;
 
+import dev.iq.common.annotation.Stable;
 import java.util.List;
-
-import dev.iq.common.adt.Stable;
 
 /**
  * Represents a vertex in the graph that has zero or more edges (which can be incoming or outgoing from the node).

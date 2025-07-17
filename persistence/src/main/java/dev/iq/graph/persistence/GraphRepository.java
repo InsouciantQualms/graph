@@ -5,7 +5,7 @@
  */
 package dev.iq.graph.persistence;
 
-import dev.iq.common.adt.Stable;
+import dev.iq.common.annotation.Stable;
 import dev.iq.common.persist.VersionedRepository;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Edge;
