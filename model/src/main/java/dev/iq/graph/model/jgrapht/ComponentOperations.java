@@ -6,15 +6,13 @@
 
 package dev.iq.graph.model.jgrapht;
 
-import java.time.Instant;
-import java.util.*;
-
-import org.jgrapht.Graph;
-
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.*;
 import dev.iq.graph.model.simple.SimpleComponent;
+import java.time.Instant;
+import java.util.*;
+import org.jgrapht.Graph;
 
 /**
  * Operations for managing components in a JGraphT graph.

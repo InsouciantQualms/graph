@@ -6,8 +6,10 @@
 
 package dev.iq.graph.model.jgrapht;
 
+import dev.iq.graph.model.Edge;
+import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Path;
 import java.util.List;
-
 import org.jgrapht.Graph;
 import org.jgrapht.ListenableGraph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
@@ -16,10 +18,6 @@ import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.event.GraphListener;
 import org.jgrapht.graph.DefaultListenableGraph;
 import org.jgrapht.graph.DirectedMultigraph;
-
-import dev.iq.graph.model.Edge;
-import dev.iq.graph.model.Node;
-import dev.iq.graph.model.Path;
 
 /**
  * Operations that apply to the entire graph.

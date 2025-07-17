@@ -6,12 +6,10 @@
 
 package dev.iq.graph.persistence.tinkerpop;
 
-import java.util.Map;
-
-import org.apache.tinkerpop.gremlin.structure.util.GraphFactory;
-
 import dev.iq.common.persist.Session;
 import dev.iq.common.persist.SessionFactory;
+import java.util.Map;
+import org.apache.tinkerpop.gremlin.structure.util.GraphFactory;
 
 /**
  * Tinkerpop implementation of SessionFactory.

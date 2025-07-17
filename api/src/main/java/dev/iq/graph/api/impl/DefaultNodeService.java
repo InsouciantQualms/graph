@@ -6,11 +6,6 @@
 
 package dev.iq.graph.api.impl;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 import dev.iq.common.persist.SessionExecutor;
 import dev.iq.common.persist.SessionFactory;
 import dev.iq.common.version.Locator;
@@ -20,6 +15,10 @@ import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.jgrapht.NodeOperations;
 import dev.iq.graph.persistence.GraphRepository;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Default implementation of NodeService using session-based transactions.

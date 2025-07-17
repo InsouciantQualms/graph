@@ -6,14 +6,12 @@
 
 package dev.iq.graph.persistence.sqllite;
 
-import javax.sql.DataSource;
-
-import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.sqlobject.SqlObjectPlugin;
-
 import dev.iq.common.fp.Io;
 import dev.iq.common.persist.Session;
 import dev.iq.common.persist.SessionFactory;
+import javax.sql.DataSource;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 
 /**
  * SQLite implementation of SessionFactory.

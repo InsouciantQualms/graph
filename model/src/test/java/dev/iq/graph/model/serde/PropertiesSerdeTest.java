@@ -8,12 +8,10 @@ package dev.iq.graph.model.serde;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.iq.graph.model.simple.SimpleData;
 import java.util.Map;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import dev.iq.graph.model.simple.SimpleData;
 
 /**
  * Unit tests for DataSerializer utility class.

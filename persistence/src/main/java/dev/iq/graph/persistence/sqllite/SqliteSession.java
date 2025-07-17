@@ -6,11 +6,10 @@
 
 package dev.iq.graph.persistence.sqllite;
 
-import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.Jdbi;
-
 import dev.iq.common.fp.Io;
 import dev.iq.common.persist.Session;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.Jdbi;
 
 /**
  * SQLite implementation of Session with transaction support.

@@ -8,15 +8,13 @@ package dev.iq.graph.model.simple;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-
-import org.junit.jupiter.api.Test;
-
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Element;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for SimpleComponent.

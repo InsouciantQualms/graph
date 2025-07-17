@@ -6,10 +6,9 @@
 
 package dev.iq.graph.api;
 
-import java.util.List;
-
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Path;
+import java.util.List;
 
 /**
  * Service for performing graph-wide operations like path finding and connectivity analysis.

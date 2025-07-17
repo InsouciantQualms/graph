@@ -10,16 +10,8 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Sorts.ascending;
 import static com.mongodb.client.model.Sorts.descending;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import org.bson.Document;
-
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-
 import dev.iq.common.fp.Io;
 import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.Locator;
@@ -28,6 +20,11 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.serde.JsonSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import org.bson.Document;
 
 /**
  * MongoDB implementation of EdgeRepository using JsonSerde for data serialization.

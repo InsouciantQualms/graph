@@ -39,13 +39,9 @@ dependencies {
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers)
-    
-    // Mockito for unit testing
-    testImplementation("org.mockito:mockito-core:5.11.0")
-    testImplementation("org.mockito:mockito-junit-jupiter:5.11.0")
 }
 
-// Conflicts stem from de.flapdoodle.embed.mongo and mockito
+// Conflicts stem from de.flapdoodle.embed.mongo
 configurations.all {
     resolutionStrategy {
         force("org.apache.commons:commons-lang3:3.16.0")
@@ -65,8 +61,7 @@ tasks.withType<Test> {
     // Ensure tests don't hang on shutdown and suppress ByteBuddy agent warning
     jvmArgs(
         "-Xmx512m", 
-        "-XX:+UseG1GC",
-        "-XX:+EnableDynamicAgentLoading"  // Suppress ByteBuddy warning for Mockito
+        "-XX:+UseG1GC"
     )
     
     // Log test events - only show failures and skipped tests

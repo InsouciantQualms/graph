@@ -6,15 +6,6 @@
 
 package dev.iq.graph.persistence.sqllite;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.Instant;
-import java.util.*;
-
-import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.mapper.RowMapper;
-import org.jdbi.v3.core.statement.StatementContext;
-
 import dev.iq.common.fp.Io;
 import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.Locator;
@@ -25,6 +16,13 @@ import dev.iq.graph.model.Element;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleComponent;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.Instant;
+import java.util.*;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.statement.StatementContext;
 
 /**
  * SQLite implementation of ComponentRepository.

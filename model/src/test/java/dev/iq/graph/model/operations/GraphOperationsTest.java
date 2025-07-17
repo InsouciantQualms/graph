@@ -9,9 +9,15 @@ package dev.iq.graph.model.operations;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import dev.iq.graph.model.Data;
+import dev.iq.graph.model.Edge;
+import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Path;
+import dev.iq.graph.model.jgrapht.EdgeOperations;
+import dev.iq.graph.model.jgrapht.GraphOperations;
+import dev.iq.graph.model.jgrapht.NodeOperations;
 import java.time.Instant;
 import java.util.List;
-
 import org.jgrapht.event.GraphEdgeChangeEvent;
 import org.jgrapht.event.GraphListener;
 import org.jgrapht.event.GraphVertexChangeEvent;
@@ -20,14 +26,6 @@ import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import dev.iq.graph.model.Data;
-import dev.iq.graph.model.Edge;
-import dev.iq.graph.model.Node;
-import dev.iq.graph.model.Path;
-import dev.iq.graph.model.jgrapht.EdgeOperations;
-import dev.iq.graph.model.jgrapht.GraphOperations;
-import dev.iq.graph.model.jgrapht.NodeOperations;
 
 /**
  * Tests for GraphOperations class to verify shortestPath returns Path

@@ -8,20 +8,18 @@ package dev.iq.graph.persistence;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.Instant;
-
-import org.jgrapht.event.GraphEdgeChangeEvent;
-import org.jgrapht.event.GraphVertexChangeEvent;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.persistence.tinkerpop.TestDataHelper;
+import java.time.Instant;
+import org.jgrapht.event.GraphEdgeChangeEvent;
+import org.jgrapht.event.GraphVertexChangeEvent;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
 

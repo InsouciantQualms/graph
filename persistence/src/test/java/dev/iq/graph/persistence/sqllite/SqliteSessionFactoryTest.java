@@ -9,7 +9,6 @@ package dev.iq.graph.persistence.sqllite;
 import static org.junit.jupiter.api.Assertions.*;
 
 import javax.sql.DataSource;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

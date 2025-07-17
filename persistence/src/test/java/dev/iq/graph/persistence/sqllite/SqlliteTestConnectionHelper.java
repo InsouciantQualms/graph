@@ -6,14 +6,11 @@
 
 package dev.iq.graph.persistence.sqllite;
 
-import java.sql.Connection;
-
-import javax.sql.DataSource;
-
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-
 import dev.iq.common.fp.Io;
+import java.sql.Connection;
+import javax.sql.DataSource;
 
 /**
  * Helper class for managing shared in-memory SQLite database connections for testing.

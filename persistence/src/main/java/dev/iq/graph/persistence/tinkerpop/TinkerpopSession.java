@@ -6,13 +6,11 @@
 
 package dev.iq.graph.persistence.tinkerpop;
 
-import java.util.Optional;
-
-import org.apache.tinkerpop.gremlin.structure.Graph;
-import org.apache.tinkerpop.gremlin.structure.Transaction;
-
 import dev.iq.common.fp.Io;
 import dev.iq.common.persist.Session;
+import java.util.Optional;
+import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.apache.tinkerpop.gremlin.structure.Transaction;
 
 /**
  * Tinkerpop implementation of Session with transaction support.

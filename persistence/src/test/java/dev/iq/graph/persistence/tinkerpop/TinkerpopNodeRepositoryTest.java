@@ -8,21 +8,19 @@ package dev.iq.graph.persistence.tinkerpop;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.iq.common.version.Locator;
+import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.simple.SimpleData;
+import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
-import dev.iq.graph.model.simple.SimpleData;
-import dev.iq.graph.model.simple.SimpleNode;
 
 /**
  * Unit tests for TinkerpopNodeRepository.

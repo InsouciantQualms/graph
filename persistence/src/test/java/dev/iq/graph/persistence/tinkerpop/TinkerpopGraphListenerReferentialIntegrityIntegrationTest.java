@@ -6,10 +6,9 @@
 
 package dev.iq.graph.persistence.tinkerpop;
 
-import org.junit.jupiter.api.DisplayName;
-
 import dev.iq.graph.persistence.AbstractGraphListenerReferentialIntegrityIntegrationTest;
 import dev.iq.graph.persistence.GraphRepository;
+import org.junit.jupiter.api.DisplayName;
 
 /**
  * Integration tests for TinkerpopGraphRepository to validate

@@ -8,20 +8,18 @@ package dev.iq.graph.model.operations;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.Instant;
-import java.util.List;
-
-import org.jgrapht.Graph;
-import org.jgrapht.graph.DirectedMultigraph;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.jgrapht.ComponentOperations;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
 import dev.iq.graph.model.simple.SimpleData;
+import java.time.Instant;
+import java.util.List;
+import org.jgrapht.Graph;
+import org.jgrapht.graph.DirectedMultigraph;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for ComponentOperations referential integrity.

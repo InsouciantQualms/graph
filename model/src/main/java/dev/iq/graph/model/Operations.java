@@ -6,12 +6,11 @@
 
 package dev.iq.graph.model;
 
+import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Versioned;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-
-import dev.iq.common.version.NanoId;
-import dev.iq.common.version.Versioned;
 
 /**
  * Common operations for versioned elements.

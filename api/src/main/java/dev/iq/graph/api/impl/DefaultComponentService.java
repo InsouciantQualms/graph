@@ -6,12 +6,6 @@
 
 package dev.iq.graph.api.impl;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 import dev.iq.common.persist.SessionExecutor;
 import dev.iq.common.persist.SessionFactory;
 import dev.iq.common.version.Locator;
@@ -22,6 +16,11 @@ import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Element;
 import dev.iq.graph.model.jgrapht.ComponentOperations;
 import dev.iq.graph.persistence.GraphRepository;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Default implementation of ComponentService using session-based transactions.

@@ -6,13 +6,12 @@
 
 package dev.iq.graph.api;
 
-import java.time.Instant;
-import java.util.List;
-
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Element;
+import java.time.Instant;
+import java.util.List;
 
 /**
  * Services for retrieving and manipulating a component.  Components conceptually are

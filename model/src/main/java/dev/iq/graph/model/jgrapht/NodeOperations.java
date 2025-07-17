@@ -6,12 +6,6 @@
 
 package dev.iq.graph.model.jgrapht;
 
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Stream;
-
-import org.jgrapht.Graph;
-
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.common.version.Versions;
@@ -21,6 +15,10 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Operations;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleNode;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Stream;
+import org.jgrapht.Graph;
 
 /**
  * JGraphT-based implementation of node operations for versioned graph elements.

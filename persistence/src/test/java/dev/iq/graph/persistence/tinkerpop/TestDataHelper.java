@@ -6,10 +6,6 @@
 
 package dev.iq.graph.persistence.tinkerpop;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Data;
@@ -17,6 +13,9 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleNode;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Helper class for creating test data objects.

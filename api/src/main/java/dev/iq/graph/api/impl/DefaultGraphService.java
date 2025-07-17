@@ -6,12 +6,11 @@
 
 package dev.iq.graph.api.impl;
 
-import java.util.List;
-
 import dev.iq.common.persist.SessionFactory;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.api.GraphService;
 import dev.iq.graph.model.Path;
+import java.util.List;
 
 /**
  * Default implementation of GraphService using session-based transactions.

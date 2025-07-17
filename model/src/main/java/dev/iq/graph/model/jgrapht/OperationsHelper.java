@@ -6,20 +6,18 @@
 
 package dev.iq.graph.model.jgrapht;
 
-import java.util.*;
-
-import org.jgrapht.Graph;
-import org.jgrapht.GraphPath;
-import org.jgrapht.alg.connectivity.ConnectivityInspector;
-import org.jgrapht.alg.cycle.CycleDetector;
-import org.jgrapht.graph.AsSubgraph;
-
 import dev.iq.common.version.NanoId;
 import dev.iq.common.version.Versioned;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Path;
+import java.util.*;
+import org.jgrapht.Graph;
+import org.jgrapht.GraphPath;
+import org.jgrapht.alg.connectivity.ConnectivityInspector;
+import org.jgrapht.alg.cycle.CycleDetector;
+import org.jgrapht.graph.AsSubgraph;
 
 /**
  * Helper utilities for graph operations.
