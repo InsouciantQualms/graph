@@ -4,33 +4,33 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.sqllite;
 
-import dev.iq.common.persist.Session;
-import dev.iq.graph.persistence.AbstractGraphListenerReferentialIntegrityIntegrationTest;
-import dev.iq.graph.persistence.GraphRepository;
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 
-import javax.sql.DataSource;
+import dev.iq.common.persist.Session;
+import dev.iq.graph.persistence.AbstractGraphListenerReferentialIntegrityIntegrationTest;
+import dev.iq.graph.persistence.GraphRepository;
 
 /**
  * Integration tests for SqliteGraphRepository to validate
  * referential integrity when using graph listeners.
  */
 @DisplayName("SQLite Graph Listener Referential Integrity Integration Tests")
-final class SqliteGraphListenerReferentialIntegrityIntegrationTest extends AbstractGraphListenerReferentialIntegrityIntegrationTest {
+final class SqliteGraphListenerReferentialIntegrityIntegrationTest
+        extends AbstractGraphListenerReferentialIntegrityIntegrationTest {
 
-    private static DataSource dataSource;
     private static SqliteSessionFactory sessionFactory;
     private Session currentSession;
 
     @BeforeAll
     static void setUpClass() {
-        dataSource = SqlliteTestConnectionHelper.getSharedDataSource();
+        final DataSource dataSource = SqlliteTestConnectionHelper.getSharedDataSource();
         sessionFactory = new SqliteSessionFactory(dataSource);
     }
 
@@ -50,7 +50,7 @@ final class SqliteGraphListenerReferentialIntegrityIntegrationTest extends Abstr
 
     @Override
     protected GraphRepository createGraphRepository() {
-        
+
         // Create a new session for this test
         currentSession = sessionFactory.create();
         return SqliteGraphRepository.create((SqliteSession) currentSession);

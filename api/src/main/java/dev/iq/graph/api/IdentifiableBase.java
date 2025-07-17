@@ -6,13 +6,13 @@
 
 package dev.iq.graph.api;
 
-import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
-import dev.iq.common.version.Versioned;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+
+import dev.iq.common.version.Locator;
+import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Versioned;
 
 /**
  * Interface defining common behavior across Node, Edge and Component services.

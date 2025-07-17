@@ -4,8 +4,26 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.sqllite;
+
+import static dev.iq.graph.persistence.sqllite.MockHelper.mockResultIterable;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.result.ResultIterable;
+import org.jdbi.v3.core.statement.PreparedBatch;
+import org.jdbi.v3.core.statement.Query;
+import org.jdbi.v3.core.statement.Update;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
@@ -13,23 +31,6 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleNode;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.statement.PreparedBatch;
-import org.jdbi.v3.core.statement.Query;
-import org.jdbi.v3.core.statement.Update;
-import org.jdbi.v3.core.mapper.RowMapper;
-import org.jdbi.v3.core.result.ResultIterable;
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for SqliteEdgeRepository.
@@ -37,47 +38,46 @@ import static org.mockito.Mockito.*;
 @DisplayName("SqliteEdgeRepository Unit Tests")
 final class SqliteEdgeRepositoryTest {
 
-    private SqliteSession mockSession;
     private SqliteNodeRepository mockNodeRepository;
     private Handle mockHandle;
     private Update mockUpdate;
     private Query mockQuery;
     private PreparedBatch mockBatch;
-    private ResultIterable mockResultIterable;
+    private ResultIterable<SimpleEdge> mockResultIterable;
     private SqliteEdgeRepository repository;
 
     @BeforeEach
     void setUp() {
-        mockSession = mock(SqliteSession.class);
+        final SqliteSession mockSession = mock(SqliteSession.class);
         mockNodeRepository = mock(SqliteNodeRepository.class);
         mockHandle = mock(Handle.class);
         mockUpdate = mock(Update.class);
         mockQuery = mock(Query.class);
         mockBatch = mock(PreparedBatch.class);
-        mockResultIterable = mock(ResultIterable.class);
+        mockResultIterable = mockResultIterable();
 
         when(mockSession.handle()).thenReturn(mockHandle);
         when(mockHandle.createUpdate(anyString())).thenReturn(mockUpdate);
         when(mockHandle.createQuery(anyString())).thenReturn(mockQuery);
         when(mockHandle.prepareBatch(anyString())).thenReturn(mockBatch);
-        
+
         // Setup fluent API for Update
         when(mockUpdate.bind(anyString(), anyString())).thenReturn(mockUpdate);
         when(mockUpdate.bind(anyString(), anyInt())).thenReturn(mockUpdate);
         when(mockUpdate.bind(anyString(), (Object) any())).thenReturn(mockUpdate);
         when(mockUpdate.bind(anyString(), (String) eq(null))).thenReturn(mockUpdate);
-        
+
         // Setup fluent API for PreparedBatch
         when(mockBatch.bind(anyString(), anyString())).thenReturn(mockBatch);
         when(mockBatch.bind(anyString(), anyInt())).thenReturn(mockBatch);
         when(mockBatch.bind(anyString(), (Object) any())).thenReturn(mockBatch);
         when(mockBatch.add()).thenReturn(mockBatch);
-        
-        // Setup fluent API for Query  
+
+        // Setup fluent API for Query
         when(mockQuery.bind(anyString(), anyString())).thenReturn(mockQuery);
         when(mockQuery.bind(anyString(), anyInt())).thenReturn(mockQuery);
         when(mockQuery.bind(anyString(), (Object) any())).thenReturn(mockQuery);
-        when(mockQuery.map(any(RowMapper.class))).thenReturn(mockResultIterable);
+        when(mockQuery.map(ArgumentMatchers.<RowMapper<SimpleEdge>>any())).thenReturn(mockResultIterable);
 
         repository = new SqliteEdgeRepository(mockSession, mockNodeRepository);
     }
@@ -87,9 +87,9 @@ final class SqliteEdgeRepositoryTest {
     void testSaveInsertsEdge() {
 
         final var edge = createTestEdge();
-        
+
         when(mockUpdate.execute()).thenReturn(1);
-        when(mockBatch.execute()).thenReturn(new int[]{1, 1}); // For properties
+        when(mockBatch.execute()).thenReturn(new int[] {1, 1}); // For properties
 
         final var result = repository.save(edge);
 
@@ -127,20 +127,21 @@ final class SqliteEdgeRepositoryTest {
 
         // Mock query to return bound query
         when(mockQuery.bind(anyString(), (Object) any())).thenReturn(mockQuery);
-        when(mockQuery.map(any(RowMapper.class))).thenReturn(mockResultIterable);
+        when(mockQuery.map(ArgumentMatchers.<RowMapper<SimpleEdge>>any())).thenReturn(mockResultIterable);
         when(mockResultIterable.findOne()).thenReturn(Optional.of(expectedEdge));
 
         // Mock node repository to return source and target
         when(mockNodeRepository.find(eq(source.locator()))).thenReturn(Optional.of(source));
         when(mockNodeRepository.find(eq(target.locator()))).thenReturn(Optional.of(target));
-        
+
         // Mock properties query for loading properties
-        Query mockPropertiesQuery = mock(Query.class);
-        ResultIterable mockPropertiesResultIterable = mock(ResultIterable.class);
+        final var mockPropertiesQuery = mock(Query.class);
+        final ResultIterable<Object> mockPropertiesResultIterable = mockResultIterable();
         when(mockHandle.createQuery(contains("edge_properties"))).thenReturn(mockPropertiesQuery);
         when(mockPropertiesQuery.bind(anyString(), (Object) any())).thenReturn(mockPropertiesQuery);
         when(mockPropertiesQuery.bind(anyString(), anyInt())).thenReturn(mockPropertiesQuery);
-        when(mockPropertiesQuery.map(any(RowMapper.class))).thenReturn(mockPropertiesResultIterable);
+        when(mockPropertiesQuery.map(ArgumentMatchers.<RowMapper<Object>>any()))
+                .thenReturn(mockPropertiesResultIterable);
         when(mockPropertiesResultIterable.list()).thenReturn(List.of());
 
         final var result = repository.findActive(edgeId);
@@ -149,7 +150,7 @@ final class SqliteEdgeRepositoryTest {
         assertEquals(edgeId, result.get().locator().id());
         assertEquals(1, result.get().locator().version());
         assertFalse(result.get().expired().isPresent());
-        
+
         verify(mockQuery).bind("id", edgeId.id());
     }
 
@@ -158,7 +159,7 @@ final class SqliteEdgeRepositoryTest {
     void testFindActiveReturnsEmpty() {
 
         when(mockQuery.bind(anyString(), (Object) any())).thenReturn(mockQuery);
-        when(mockQuery.map(any(RowMapper.class))).thenReturn(mockResultIterable);
+        when(mockQuery.map(ArgumentMatchers.<RowMapper<SimpleEdge>>any())).thenReturn(mockResultIterable);
         when(mockResultIterable.findOne()).thenReturn(Optional.empty());
 
         final var result = repository.findActive(NanoId.generate());
@@ -184,19 +185,23 @@ final class SqliteEdgeRepositoryTest {
 
         // Mock query to return edges
         when(mockQuery.bind(anyString(), (Object) any())).thenReturn(mockQuery);
-        when(mockQuery.map(any(RowMapper.class))).thenReturn(mockResultIterable);
+        when(mockQuery.map(ArgumentMatchers.<RowMapper<SimpleEdge>>any())).thenReturn(mockResultIterable);
         when(mockResultIterable.list()).thenReturn(List.of(edge1, edge2));
 
         // Mock node repository
-        when(mockNodeRepository.find(any(Locator.class))).thenReturn(Optional.of(source), Optional.of(target));
-        
+        final var nodeReturns = new java.util.concurrent.atomic.AtomicInteger(0);
+        when(mockNodeRepository.find(any(Locator.class)))
+                .thenAnswer(
+                        invocation -> nodeReturns.getAndIncrement() == 0 ? Optional.of(source) : Optional.of(target));
+
         // Mock properties query for loading properties
-        Query mockPropertiesQuery = mock(Query.class);
-        ResultIterable mockPropertiesResultIterable = mock(ResultIterable.class);
+        final var mockPropertiesQuery = mock(Query.class);
+        final ResultIterable<Object> mockPropertiesResultIterable = mockResultIterable();
         when(mockHandle.createQuery(contains("edge_properties"))).thenReturn(mockPropertiesQuery);
         when(mockPropertiesQuery.bind(anyString(), (Object) any())).thenReturn(mockPropertiesQuery);
         when(mockPropertiesQuery.bind(anyString(), anyInt())).thenReturn(mockPropertiesQuery);
-        when(mockPropertiesQuery.map(any(RowMapper.class))).thenReturn(mockPropertiesResultIterable);
+        when(mockPropertiesQuery.map(ArgumentMatchers.<RowMapper<Object>>any()))
+                .thenReturn(mockPropertiesResultIterable);
         when(mockPropertiesResultIterable.list()).thenReturn(List.of());
 
         final var results = repository.findAll(edgeId);
@@ -218,8 +223,10 @@ final class SqliteEdgeRepositoryTest {
 
         // Mock query to throw exception when mapping
         when(mockQuery.bind(anyString(), (Object) any())).thenReturn(mockQuery);
-        when(mockQuery.map(any(RowMapper.class))).thenReturn(mockResultIterable);
-        when(mockResultIterable.findOne()).thenThrow(new RuntimeException("missing source " + source.locator().id()));
+        when(mockQuery.map(ArgumentMatchers.<RowMapper<SimpleEdge>>any())).thenReturn(mockResultIterable);
+        when(mockResultIterable.findOne())
+                .thenThrow(new RuntimeException(
+                        "missing source " + source.locator().id()));
 
         // Mock node repository to return empty for source
         when(mockNodeRepository.find(eq(source.locator()))).thenReturn(Optional.empty());
@@ -257,7 +264,7 @@ final class SqliteEdgeRepositoryTest {
         verify(mockUpdate).execute();
     }
 
-    private SimpleEdge createTestEdge() {
+    private static SimpleEdge createTestEdge() {
 
         final var source = createTestNode();
         final var target = createTestNode();
@@ -266,7 +273,7 @@ final class SqliteEdgeRepositoryTest {
         return new SimpleEdge(locator, source, target, data, Instant.now(), Optional.empty());
     }
 
-    private Node createTestNode() {
+    private static Node createTestNode() {
 
         final var locator = new Locator(NanoId.generate(), 1);
         final var data = new SimpleData(String.class, "test-node");

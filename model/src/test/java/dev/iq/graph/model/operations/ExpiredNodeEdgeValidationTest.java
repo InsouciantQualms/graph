@@ -4,8 +4,17 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.model.operations;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.time.Instant;
+
+import org.jgrapht.graph.DefaultListenableGraph;
+import org.jgrapht.graph.DirectedMultigraph;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import dev.iq.common.version.Versioned;
 import dev.iq.graph.model.Data;
@@ -13,15 +22,6 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
-import org.jgrapht.graph.DefaultListenableGraph;
-import org.jgrapht.graph.DirectedMultigraph;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests to validate that expired nodes have all connected edges expired.
@@ -178,10 +178,11 @@ public class ExpiredNodeEdgeValidationTest {
         assertEquals(timestamp4, expiredNodeB.expired().get());
 
         // Verify the manually expired edge timestamp is unchanged
-        final var currentExpiredEdgeAB = edgeOps.findAllVersions(edgeAB.locator().id())
-            .stream()
-            .filter(e -> e.expired().isPresent())
-            .findFirst();
+        final var currentExpiredEdgeAB = edgeOps
+                .findAllVersions(edgeAB.locator().id())
+                .stream()
+                .filter(e -> e.expired().isPresent())
+                .findFirst();
         assertTrue(currentExpiredEdgeAB.isPresent());
         assertEquals(timestamp3, currentExpiredEdgeAB.get().expired().get());
 
@@ -215,8 +216,14 @@ public class ExpiredNodeEdgeValidationTest {
         // Verify no active edges connect to the expired node B
         final var allActiveEdges = edgeOps.allActive();
         for (final var edge : allActiveEdges) {
-            assertNotEquals(nodeB.locator().id(), edge.source().locator().id(), "Active edge should not have expired node as source");
-            assertNotEquals(nodeB.locator().id(), edge.target().locator().id(), "Active edge should not have expired node as target");
+            assertNotEquals(
+                    nodeB.locator().id(),
+                    edge.source().locator().id(),
+                    "Active edge should not have expired node as source");
+            assertNotEquals(
+                    nodeB.locator().id(),
+                    edge.target().locator().id(),
+                    "Active edge should not have expired node as target");
         }
 
         // Verify there are still some active edges in the graph (between non-expired nodes)
@@ -230,20 +237,28 @@ public class ExpiredNodeEdgeValidationTest {
     private void assertEdgeExpired(final Versioned originalEdge, final Instant expectedExpiredTime) {
         // Verify that at least one version of the edge exists
         final var allVersions = edgeOps.findAllVersions(originalEdge.locator().id());
-        assertFalse(allVersions.isEmpty(), () -> "Edge should exist in version history: " + originalEdge.locator().id());
+        assertFalse(
+                allVersions.isEmpty(),
+                () -> "Edge should exist in version history: "
+                        + originalEdge.locator().id());
 
-        // Verify that there is at least one expired version  
-        final var hasExpiredVersion = allVersions.stream()
-            .anyMatch(e -> e.expired().isPresent());
-        assertTrue(hasExpiredVersion, () -> "Should have at least one expired version for edge " + originalEdge.locator().id());
+        // Verify that there is at least one expired version
+        final var hasExpiredVersion =
+                allVersions.stream().anyMatch(e -> e.expired().isPresent());
+        assertTrue(
+                hasExpiredVersion,
+                () -> "Should have at least one expired version for edge "
+                        + originalEdge.locator().id());
 
         // Check if edge is still active - if so, it should be a different version than the original
         final var activeEdge = edgeOps.findActive(originalEdge.locator().id());
         if (activeEdge.isPresent()) {
             // If there's still an active edge, it should be a different version or the original should be expired
             final var originalStillActive = allVersions.stream()
-                .anyMatch(e -> e.locator().equals(originalEdge.locator()) && e.expired().isEmpty());
-            assertFalse(originalStillActive, () -> "Original edge should not still be active: " + originalEdge.locator());
+                    .anyMatch(e -> e.locator().equals(originalEdge.locator())
+                            && e.expired().isEmpty());
+            assertFalse(
+                    originalStillActive, () -> "Original edge should not still be active: " + originalEdge.locator());
         }
     }
 

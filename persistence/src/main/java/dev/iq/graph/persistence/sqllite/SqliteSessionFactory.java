@@ -4,16 +4,16 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.sqllite;
+
+import javax.sql.DataSource;
+
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 
 import dev.iq.common.fp.Io;
 import dev.iq.common.persist.Session;
 import dev.iq.common.persist.SessionFactory;
-import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.sqlobject.SqlObjectPlugin;
-
-import javax.sql.DataSource;
 
 /**
  * SQLite implementation of SessionFactory.
@@ -24,11 +24,11 @@ public final class SqliteSessionFactory implements SessionFactory {
 
     public SqliteSessionFactory(final DataSource dataSource) {
 
-        this.jdbi = createJdbi(dataSource);
+        jdbi = createJdbi(dataSource);
         initializeSchema();
     }
 
-    private Jdbi createJdbi(final DataSource dataSource) {
+    private static Jdbi createJdbi(final DataSource dataSource) {
 
         final var jdbi = Jdbi.create(dataSource);
         jdbi.installPlugin(new SqlObjectPlugin());
@@ -42,7 +42,8 @@ public final class SqliteSessionFactory implements SessionFactory {
             handle.execute("PRAGMA foreign_keys = ON");
 
             // Create node table
-            handle.execute("""
+            handle.execute(
+                    """
                 CREATE TABLE IF NOT EXISTS node (
                     id TEXT NOT NULL,
                     version_id INTEGER NOT NULL,
@@ -53,7 +54,8 @@ public final class SqliteSessionFactory implements SessionFactory {
                 """);
 
             // Create node properties table
-            handle.execute("""
+            handle.execute(
+                    """
                 CREATE TABLE IF NOT EXISTS node_properties (
                     id TEXT NOT NULL,
                     version_id INTEGER NOT NULL,
@@ -65,7 +67,8 @@ public final class SqliteSessionFactory implements SessionFactory {
                 """);
 
             // Create edge table
-            handle.execute("""
+            handle.execute(
+                    """
                 CREATE TABLE IF NOT EXISTS edge (
                     id TEXT NOT NULL,
                     version_id INTEGER NOT NULL,
@@ -82,7 +85,8 @@ public final class SqliteSessionFactory implements SessionFactory {
                 """);
 
             // Create edge properties table
-            handle.execute("""
+            handle.execute(
+                    """
                 CREATE TABLE IF NOT EXISTS edge_properties (
                     id TEXT NOT NULL,
                     version_id INTEGER NOT NULL,
@@ -94,7 +98,8 @@ public final class SqliteSessionFactory implements SessionFactory {
                 """);
 
             // Create component table
-            handle.execute("""
+            handle.execute(
+                    """
                 CREATE TABLE IF NOT EXISTS component (
                     id TEXT NOT NULL,
                     version_id INTEGER NOT NULL,
@@ -105,7 +110,8 @@ public final class SqliteSessionFactory implements SessionFactory {
                 """);
 
             // Create component properties table
-            handle.execute("""
+            handle.execute(
+                    """
                 CREATE TABLE IF NOT EXISTS component_properties (
                     id TEXT NOT NULL,
                     version_id INTEGER NOT NULL,
@@ -117,7 +123,8 @@ public final class SqliteSessionFactory implements SessionFactory {
                 """);
 
             // Create component-element junction table
-            handle.execute("""
+            handle.execute(
+                    """
                 CREATE TABLE IF NOT EXISTS component_element (
                     component_id TEXT NOT NULL,
                     component_version INTEGER NOT NULL,

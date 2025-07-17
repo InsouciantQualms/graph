@@ -6,6 +6,12 @@
 
 package dev.iq.graph.model.jgrapht;
 
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Stream;
+
+import org.jgrapht.Graph;
+
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.common.version.Versions;
@@ -15,13 +21,6 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Operations;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleNode;
-import org.jgrapht.Graph;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 /**
  * JGraphT-based implementation of node operations for versioned graph elements.
@@ -111,23 +110,15 @@ public final class NodeOperations implements Operations<Node> {
      */
     public List<Node> getNeighbors(final Node node) {
 
-        final var neighbors = new ArrayList<Node>();
+        final var outgoingNeighbors = graph.outgoingEdgesOf(node).stream()
+                .filter(edge -> edge.expired().isEmpty())
+                .map(Edge::target);
 
-        // Get nodes from outgoing edges
-        for (final var edge : graph.outgoingEdgesOf(node)) {
-            if (edge.expired().isEmpty()) {
-                neighbors.add(edge.target());
-            }
-        }
+        final var incomingNeighbors = graph.incomingEdgesOf(node).stream()
+                .filter(edge -> edge.expired().isEmpty())
+                .map(Edge::source);
 
-        // Get nodes from incoming edges
-        for (final var edge : graph.incomingEdgesOf(node)) {
-            if (edge.expired().isEmpty()) {
-                neighbors.add(edge.source());
-            }
-        }
-
-        return neighbors;
+        return Stream.concat(outgoingNeighbors, incomingNeighbors).toList();
     }
 
     @Override
@@ -142,12 +133,11 @@ public final class NodeOperations implements Operations<Node> {
         expireActiveEdges(allConnectedEdges, timestamp);
 
         // Create expired node
-        final var expiredNode = new SimpleNode(
-            node.locator(), node.edges(), node.data(), node.created(), Optional.of(timestamp)
-        );
+        final var expiredNode =
+                new SimpleNode(node.locator(), node.edges(), node.data(), node.created(), Optional.of(timestamp));
 
         // Remove old node and add expired version
-        graph.removeVertex(node);  // This removes all connected edges
+        graph.removeVertex(node); // This removes all connected edges
         graph.addVertex(expiredNode);
 
         // Recreate all edges with updated endpoints
@@ -161,27 +151,15 @@ public final class NodeOperations implements Operations<Node> {
      */
     private List<EdgeRecreationInfo> collectActiveEdgeInfo(final Node node) {
 
-        final var edgeRecreationInfo = new ArrayList<EdgeRecreationInfo>();
+        final var incomingEdgeInfo = graph.incomingEdgesOf(node).stream()
+                .filter(edge -> edge.expired().isEmpty())
+                .map(edge -> new EdgeRecreationInfo(edge.source(), node, edge.data(), true));
 
-        // Collect incoming edges info
-        for (final var edge : graph.incomingEdgesOf(node)) {
-            if (edge.expired().isEmpty()) {
-                edgeRecreationInfo.add(new EdgeRecreationInfo(
-                    edge.source(), node, edge.data(), true
-                ));
-            }
-        }
+        final var outgoingEdgeInfo = graph.outgoingEdgesOf(node).stream()
+                .filter(edge -> edge.expired().isEmpty())
+                .map(edge -> new EdgeRecreationInfo(node, edge.target(), edge.data(), false));
 
-        // Collect outgoing edges info  
-        for (final var edge : graph.outgoingEdgesOf(node)) {
-            if (edge.expired().isEmpty()) {
-                edgeRecreationInfo.add(new EdgeRecreationInfo(
-                    node, edge.target(), edge.data(), false
-                ));
-            }
-        }
-
-        return edgeRecreationInfo;
+        return Stream.concat(incomingEdgeInfo, outgoingEdgeInfo).toList();
     }
 
     /**
@@ -198,37 +176,38 @@ public final class NodeOperations implements Operations<Node> {
     /**
      * Expires all active edges in the given collection.
      */
-    private void expireActiveEdges(final List<Edge> edges, final Instant timestamp) {
+    private void expireActiveEdges(final Collection<Edge> edges, final Instant timestamp) {
 
-        for (final var edge : edges) {
-            if (edge.expired().isEmpty()) {
-                edgeDelegate.expire(edge.locator().id(), timestamp);
-            }
-        }
+        edges.stream()
+                .filter(edge -> edge.expired().isEmpty())
+                .forEach(edge -> edgeDelegate.expire(edge.locator().id(), timestamp));
     }
 
     /**
      * Recreates edges for a new node version.
      */
-    private void recreateEdgesForNode(final Node newNode, final List<EdgeRecreationInfo> edgeInfo, final Instant timestamp) {
+    private void recreateEdgesForNode(
+            final Node newNode, final Iterable<EdgeRecreationInfo> edgeInfo, final Instant timestamp) {
 
-        for (final var info : edgeInfo) {
+        edgeInfo.forEach(info -> {
             if (info.incoming()) {
                 edgeDelegate.add(info.source(), newNode, info.data(), timestamp);
             } else {
                 edgeDelegate.add(newNode, info.target(), info.data(), timestamp);
             }
-        }
+        });
     }
 
     /**
      * Recreates edges after a node has been expired.
      */
-    private void recreateEdgesAfterNodeExpiry(final Node expiredNode, final Node originalNode,
-        final List<Edge> allConnectedEdges, final Instant timestamp
-    ) {
+    private void recreateEdgesAfterNodeExpiry(
+            final Node expiredNode,
+            final Node originalNode,
+            final Iterable<Edge> allConnectedEdges,
+            final Instant timestamp) {
 
-        for (final var edge : allConnectedEdges) {
+        allConnectedEdges.forEach(edge -> {
             // Update the source/target to point to the expired node if it was the original node
             final var source = edge.source().equals(originalNode) ? expiredNode : edge.source();
             final var target = edge.target().equals(originalNode) ? expiredNode : edge.target();
@@ -237,11 +216,9 @@ public final class NodeOperations implements Operations<Node> {
             final var expiredTime = edge.expired().isPresent() ? edge.expired().get() : timestamp;
 
             final var recreatedEdge = new SimpleEdge(
-                edge.locator(), source, target, edge.data(),
-                edge.created(), Optional.of(expiredTime)
-            );
+                    edge.locator(), source, target, edge.data(), edge.created(), Optional.of(expiredTime));
             graph.addEdge(source, target, recreatedEdge);
-        }
+        });
     }
 
     /**

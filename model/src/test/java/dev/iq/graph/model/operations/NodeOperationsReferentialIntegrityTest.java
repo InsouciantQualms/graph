@@ -4,23 +4,23 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.model.operations;
 
-import dev.iq.graph.model.Data;
-import dev.iq.graph.model.Edge;
-import dev.iq.graph.model.Node;
-import dev.iq.graph.model.jgrapht.EdgeOperations;
-import dev.iq.graph.model.jgrapht.NodeOperations;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.time.Instant;
+
 import org.jgrapht.graph.DefaultListenableGraph;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
-
-import static org.junit.jupiter.api.Assertions.*;
+import dev.iq.graph.model.Data;
+import dev.iq.graph.model.Edge;
+import dev.iq.graph.model.Node;
+import dev.iq.graph.model.jgrapht.EdgeOperations;
+import dev.iq.graph.model.jgrapht.NodeOperations;
 
 /**
  * Tests for NodeOperations referential integrity when creating new node versions.
@@ -74,16 +74,20 @@ public class NodeOperationsReferentialIntegrityTest {
 
         // Verify new edges are active and point to updated node
         final var activeEdgesFromA = edgeOps.allActive().stream()
-            .filter(e -> e.source().locator().id().equals(nodeA.locator().id()))
-            .toList();
+                .filter(e -> e.source().locator().id().equals(nodeA.locator().id()))
+                .toList();
         final var activeEdgesToC = edgeOps.allActive().stream()
-            .filter(e -> e.target().locator().id().equals(nodeC.locator().id()))
-            .toList();
+                .filter(e -> e.target().locator().id().equals(nodeC.locator().id()))
+                .toList();
 
         assertEquals(1, activeEdgesFromA.size());
         assertEquals(1, activeEdgesToC.size());
-        assertEquals(updatedNodeB.locator().id(), activeEdgesFromA.getFirst().target().locator().id());
-        assertEquals(updatedNodeB.locator().id(), activeEdgesToC.getFirst().source().locator().id());
+        assertEquals(
+                updatedNodeB.locator().id(),
+                activeEdgesFromA.getFirst().target().locator().id());
+        assertEquals(
+                updatedNodeB.locator().id(),
+                activeEdgesToC.getFirst().source().locator().id());
     }
 
     @Test
@@ -151,10 +155,10 @@ public class NodeOperationsReferentialIntegrityTest {
         assertTrue(nodeOps.findActive(nodeD.locator().id()).isPresent());
 
         // Verify only edges connected to B are expired (AB and BC)
-        assertTrue(edgeOps.findActive(edgeAB.locator().id()).isEmpty() ||
-            edgeOps.findActive(edgeAB.locator().id()).get().expired().isPresent());
-        assertTrue(edgeOps.findActive(edgeBC.locator().id()).isEmpty() ||
-            edgeOps.findActive(edgeBC.locator().id()).get().expired().isPresent());
+        assertTrue(edgeOps.findActive(edgeAB.locator().id()).isEmpty()
+                || edgeOps.findActive(edgeAB.locator().id()).get().expired().isPresent());
+        assertTrue(edgeOps.findActive(edgeBC.locator().id()).isEmpty()
+                || edgeOps.findActive(edgeBC.locator().id()).get().expired().isPresent());
 
         // Verify edge CD remains active (not connected to B)
         final var activeEdgeCD = edgeOps.findActive(edgeCD.locator().id());

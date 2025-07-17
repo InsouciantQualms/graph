@@ -6,6 +6,11 @@
 
 package dev.iq.graph.api.impl;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import dev.iq.common.persist.SessionExecutor;
 import dev.iq.common.persist.SessionFactory;
 import dev.iq.common.version.Locator;
@@ -17,11 +22,6 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.persistence.GraphRepository;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 /**
  * Default implementation of EdgeService using session-based transactions.
  */
@@ -31,7 +31,10 @@ public final class DefaultEdgeService implements EdgeService {
     private final GraphRepository repository;
     private final EdgeOperations edgeOperations;
 
-    public DefaultEdgeService(final SessionFactory sessionFactory, final GraphRepository repository, final EdgeOperations edgeOperations) {
+    public DefaultEdgeService(
+            final SessionFactory sessionFactory,
+            final GraphRepository repository,
+            final EdgeOperations edgeOperations) {
 
         this.sessionFactory = sessionFactory;
         this.repository = repository;
@@ -83,8 +86,10 @@ public final class DefaultEdgeService implements EdgeService {
     public Edge find(final Locator locator) {
 
         try (final var session = sessionFactory.create()) {
-            return repository.edges().find(locator)
-                .orElseThrow(() -> new IllegalArgumentException("Edge not found: " + locator));
+            return repository
+                    .edges()
+                    .find(locator)
+                    .orElseThrow(() -> new IllegalArgumentException("Edge not found: " + locator));
         }
     }
 
@@ -117,9 +122,7 @@ public final class DefaultEdgeService implements EdgeService {
 
         try (final var session = sessionFactory.create()) {
             // This would need proper implementation with repository support
-            return all().stream()
-                .filter(id -> findActive(id).isPresent())
-                .collect(Collectors.toList());
+            return all().stream().filter(id -> findActive(id).isPresent()).collect(Collectors.toList());
         }
     }
 
@@ -128,7 +131,8 @@ public final class DefaultEdgeService implements EdgeService {
 
         try (final var session = sessionFactory.create()) {
             // TODO: This requires repository enhancement to get all edge IDs
-            throw new UnsupportedOperationException("Not yet implemented - requires repository enhancement to get all edge IDs");
+            throw new UnsupportedOperationException(
+                    "Not yet implemented - requires repository enhancement to get all edge IDs");
         }
     }
 
@@ -149,8 +153,6 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public boolean delete(final NanoId id) {
 
-        return SessionExecutor.execute(sessionFactory, () ->
-            repository.edges().delete(id)
-        );
+        return SessionExecutor.execute(sessionFactory, () -> repository.edges().delete(id));
     }
 }

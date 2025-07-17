@@ -6,25 +6,20 @@
 
 package dev.iq.graph.model.jgrapht;
 
-import dev.iq.graph.model.Edge;
-import dev.iq.graph.model.Element;
-import dev.iq.graph.model.Node;
-import dev.iq.graph.model.Path;
+import java.util.List;
+
 import org.jgrapht.Graph;
-import org.jgrapht.GraphPath;
 import org.jgrapht.ListenableGraph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
-import org.jgrapht.alg.cycle.CycleDetector;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.event.GraphListener;
 import org.jgrapht.graph.DefaultListenableGraph;
 import org.jgrapht.graph.DirectedMultigraph;
-import org.jgrapht.graph.GraphWalk;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import dev.iq.graph.model.Edge;
+import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Path;
 
 /**
  * Operations that apply to the entire graph.
@@ -72,23 +67,9 @@ public final class GraphOperations {
         final var allPathsAlgorithm = new AllDirectedPaths<>(graph);
         final var maxPathLength = graph.vertexSet().size();
         final var jgraphtPaths = allPathsAlgorithm.getAllPaths(source, target, true, maxPathLength);
-        final var result = new ArrayList<Path>();
-        
-        for (final var jgraphtPath : jgraphtPaths) {
-            // Create a subgraph from the path to check for cycles
-            final var pathVertices = new HashSet<>(jgraphtPath.getVertexList());
-            final var pathEdges = new HashSet<>(jgraphtPath.getEdgeList());
-            
-            // Check if this specific path contains a cycle by checking if it revisits any vertex
-            final var path = OperationsHelper.toPath(jgraphtPath);
-            if (!OperationsHelper.containsCycle(path)) {
-                result.add(path);
-            }
-        }
-        return result;
+        return jgraphtPaths.stream()
+                .map(OperationsHelper::toPath)
+                .filter(path -> !OperationsHelper.containsCycle(path))
+                .toList();
     }
-
-    /**
-     * Converts from a JGraphT GraphPath to a Path representation.
-     */
 }

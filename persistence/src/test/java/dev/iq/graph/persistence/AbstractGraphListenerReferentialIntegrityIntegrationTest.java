@@ -4,8 +4,17 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.time.Instant;
+
+import org.jgrapht.event.GraphEdgeChangeEvent;
+import org.jgrapht.event.GraphVertexChangeEvent;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.NanoId;
@@ -13,15 +22,6 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.persistence.tinkerpop.TestDataHelper;
-import org.jgrapht.event.GraphEdgeChangeEvent;
-import org.jgrapht.event.GraphVertexChangeEvent;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
 
@@ -122,7 +122,7 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
         final var edge = TestDataHelper.createEdge(NanoId.generate(), 1, nodeA, nodeB, edgeData, timestamp);
 
         // Add edge
-        listener.edgeAdded(new GraphEdgeChangeEvent<Node, Edge>(this, GraphEdgeChangeEvent.EDGE_ADDED, edge, nodeA, nodeB));
+        listener.edgeAdded(new GraphEdgeChangeEvent<>(this, GraphEdgeChangeEvent.EDGE_ADDED, edge, nodeA, nodeB));
         listener.flush();
 
         // Verify edge exists and maintains references to correct nodes
@@ -150,8 +150,7 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
 
         // Expire the node
         final var expiredNode = TestDataHelper.createExpiredNode(
-            node.locator().id(), node.locator().version(), nodeData, timestamp1, timestamp2
-        );
+                node.locator().id(), node.locator().version(), nodeData, timestamp1, timestamp2);
 
         listener.vertexRemoved(new GraphVertexChangeEvent<>(this, GraphVertexChangeEvent.VERTEX_REMOVED, expiredNode));
         listener.flush();
@@ -182,15 +181,15 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
         final var edgeData = new SimpleData(String.class, "test edge");
         final var edge = TestDataHelper.createEdge(NanoId.generate(), 1, nodeA, nodeB, edgeData, timestamp1);
 
-        listener.edgeAdded(new GraphEdgeChangeEvent<Node, Edge>(this, GraphEdgeChangeEvent.EDGE_ADDED, edge, nodeA, nodeB));
+        listener.edgeAdded(new GraphEdgeChangeEvent<>(this, GraphEdgeChangeEvent.EDGE_ADDED, edge, nodeA, nodeB));
         listener.flush();
 
         // Expire the edge
         final var expiredEdge = TestDataHelper.createExpiredEdge(
-            edge.locator().id(), edge.locator().version(), nodeA, nodeB, edgeData, timestamp1, timestamp2
-        );
+                edge.locator().id(), edge.locator().version(), nodeA, nodeB, edgeData, timestamp1, timestamp2);
 
-        listener.edgeRemoved(new GraphEdgeChangeEvent<Node, Edge>(this, GraphEdgeChangeEvent.EDGE_REMOVED, expiredEdge, nodeA, nodeB));
+        listener.edgeRemoved(
+                new GraphEdgeChangeEvent<>(this, GraphEdgeChangeEvent.EDGE_REMOVED, expiredEdge, nodeA, nodeB));
         listener.flush();
 
         // Verify edge still exists but is expired
@@ -230,8 +229,8 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
         final var edgeBC = TestDataHelper.createEdge(NanoId.generate(), 1, nodeB, nodeC, edgeBCData, timestamp2);
 
         // Add edges
-        listener.edgeAdded(new GraphEdgeChangeEvent<Node, Edge>(this, GraphEdgeChangeEvent.EDGE_ADDED, edgeAB, nodeA, nodeB));
-        listener.edgeAdded(new GraphEdgeChangeEvent<Node, Edge>(this, GraphEdgeChangeEvent.EDGE_ADDED, edgeBC, nodeB, nodeC));
+        listener.edgeAdded(new GraphEdgeChangeEvent<>(this, GraphEdgeChangeEvent.EDGE_ADDED, edgeAB, nodeA, nodeB));
+        listener.edgeAdded(new GraphEdgeChangeEvent<>(this, GraphEdgeChangeEvent.EDGE_ADDED, edgeBC, nodeB, nodeC));
         listener.flush();
 
         // Create new version of nodeB

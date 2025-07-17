@@ -4,7 +4,6 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.model.simple;
 
 import dev.iq.graph.model.Data;

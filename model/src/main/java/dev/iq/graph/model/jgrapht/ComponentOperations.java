@@ -6,17 +6,15 @@
 
 package dev.iq.graph.model.jgrapht;
 
-import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
-import dev.iq.common.version.Versions;
-import dev.iq.graph.model.*;
-import dev.iq.graph.model.simple.SimpleComponent;
-import dev.iq.graph.model.simple.SimpleData;
-import org.jgrapht.Graph;
-
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
+
+import org.jgrapht.Graph;
+
+import dev.iq.common.version.Locator;
+import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.*;
+import dev.iq.graph.model.simple.SimpleComponent;
 
 /**
  * Operations for managing components in a JGraphT graph.
@@ -52,12 +50,13 @@ public final class ComponentOperations implements Operations<Component> {
         final var locator = Locator.generate();
 
         // Track component membership externally
-        for (final var element : elements) {
-            elementToComponents.computeIfAbsent(element, k -> new HashSet<>()).add(locator.id());
-        }
+        elements.forEach(element -> elementToComponents
+                .computeIfAbsent(element, k -> new HashSet<>())
+                .add(locator.id()));
 
         // Create component with the original elements
-        final var component = new SimpleComponent(locator, new ArrayList<>(elements), data, timestamp, Optional.empty());
+        final var component =
+                new SimpleComponent(locator, new ArrayList<>(elements), data, timestamp, Optional.empty());
 
         // Store component version
         componentVersions.computeIfAbsent(locator.id(), k -> new ArrayList<>()).add(component);
@@ -74,7 +73,7 @@ public final class ComponentOperations implements Operations<Component> {
         final var existingComponent = OperationsHelper.validateForExpiry(findActive(id), id, "Component");
 
         // Remove component reference from old elements
-        for (final var element : existingComponent.elements()) {
+        existingComponent.elements().forEach(element -> {
             final var componentSet = elementToComponents.get(element);
             if (componentSet != null) {
                 componentSet.remove(id);
@@ -82,18 +81,19 @@ public final class ComponentOperations implements Operations<Component> {
                     elementToComponents.remove(element);
                 }
             }
-        }
+        });
 
         final var expired = expire(id, timestamp);
         final var incremented = expired.locator().increment();
 
         // Add component reference to new elements
-        for (final var element : elements) {
-            elementToComponents.computeIfAbsent(element, k -> new HashSet<>()).add(id);
-        }
+        elements.forEach(element -> elementToComponents
+                .computeIfAbsent(element, k -> new HashSet<>())
+                .add(id));
 
         // Create component with the original elements
-        final var newComponent = new SimpleComponent(incremented, new ArrayList<>(elements), data, timestamp, Optional.empty());
+        final var newComponent =
+                new SimpleComponent(incremented, new ArrayList<>(elements), data, timestamp, Optional.empty());
 
         // Store new version
         componentVersions.get(id).add(newComponent);
@@ -109,9 +109,8 @@ public final class ComponentOperations implements Operations<Component> {
             return Optional.empty();
         }
 
-        return versions.stream()
-            .filter(c -> c.expired().isEmpty())
-            .max(Comparator.comparingInt(c -> c.locator().version()));
+        return versions.stream().filter(c -> c.expired().isEmpty()).max(Comparator.comparingInt(c -> c.locator()
+                .version()));
     }
 
     @Override
@@ -124,9 +123,9 @@ public final class ComponentOperations implements Operations<Component> {
         }
 
         return versions.stream()
-            .filter(c -> !c.created().isAfter(timestamp))
-            .filter(c -> c.expired().isEmpty() || c.expired().get().isAfter(timestamp))
-            .max(Comparator.comparingInt(c -> c.locator().version()));
+                .filter(c -> !c.created().isAfter(timestamp))
+                .filter(c -> c.expired().isEmpty() || c.expired().get().isAfter(timestamp))
+                .max(Comparator.comparingInt(c -> c.locator().version()));
     }
 
     @Override
@@ -140,9 +139,9 @@ public final class ComponentOperations implements Operations<Component> {
     public List<Component> allActive() {
 
         return componentVersions.values().stream()
-            .flatMap(List::stream)
-            .filter(c -> c.expired().isEmpty())
-            .toList();
+                .flatMap(List::stream)
+                .filter(c -> c.expired().isEmpty())
+                .toList();
     }
 
     @Override
@@ -152,9 +151,11 @@ public final class ComponentOperations implements Operations<Component> {
 
         // Create expired version
         final var expiredComponent = new SimpleComponent(
-            component.locator(), component.elements(), component.data(),
-            component.created(), Optional.of(timestamp)
-        );
+                component.locator(),
+                component.elements(),
+                component.data(),
+                component.created(),
+                Optional.of(timestamp));
 
         // Update stored version
         final var versions = componentVersions.get(id);
@@ -178,69 +179,9 @@ public final class ComponentOperations implements Operations<Component> {
         }
 
         return componentIds.stream()
-            .map(this::findActive)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(Collectors.toList());
+                .map(this::findActive)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toList();
     }
-
-    /**
-     * Helper method to find the latest active component.
-     */
-    private Optional<Component> findLatestActiveComponent(final NanoId id, final List<Element> elements) {
-
-        // Since we store components on the graph itself via element references,
-        // we need a better way to track component metadata (version, data, timestamps)
-        // For now, this is a limitation of the current design
-
-        // Check if all elements in the component are active
-        final var allActive = elements.stream().allMatch(e -> e.expired().isEmpty());
-        if (!allActive) {
-            return Optional.empty();
-        }
-
-        if (elements.isEmpty()) {
-            return Optional.empty();
-        }
-
-        // Create a component representation
-        final var locator = new Locator(id, 1); // Version tracking limitation
-        final var data = new SimpleData(Component.class, "Component");
-        final var created = elements.stream()
-            .map(Element::created)
-            .min(Instant::compareTo)
-            .orElse(Instant.now());
-
-        return Optional.of(new SimpleComponent(locator, new ArrayList<>(elements), data, created, Optional.empty()));
-    }
-
-    /**
-     * Helper method to find component at specific timestamp.
-     */
-    private Optional<Component> findComponentAtTimestamp(final NanoId id, final Instant timestamp, final List<Element> elements) {
-
-        // Similar to findLatestActiveComponent but for a specific timestamp
-        if (elements.isEmpty()) {
-            return Optional.empty();
-        }
-
-        final var locator = new Locator(id, 1); // Version tracking needed
-        final var data = new SimpleData(Component.class, "Component at " + timestamp);
-        return Optional.of(new SimpleComponent(locator, new ArrayList<>(elements), data, timestamp, Optional.empty()));
-    }
-
-    /**
-     * Helper method to reconstruct all component versions.
-     */
-    private List<Component> reconstructAllComponentVersions(final NanoId id, final List<Element> elements) {
-
-        // This would need proper version tracking
-        // For now, return a single version
-        final var component = findLatestActiveComponent(id, elements);
-        return component.map(List::of).orElse(List.of());
-    }
-
-    /**
-     * Validates that the elements form a valid component according to the rules.
-     */
 }

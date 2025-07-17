@@ -4,8 +4,10 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.mongodb;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 import de.flapdoodle.embed.mongo.distribution.Version;
 import de.flapdoodle.embed.mongo.transitions.Mongod;
@@ -13,14 +15,12 @@ import de.flapdoodle.embed.mongo.transitions.RunningMongodProcess;
 import de.flapdoodle.reverse.TransitionWalker;
 import dev.iq.graph.persistence.AbstractGraphListenerReferentialIntegrityIntegrationTest;
 import dev.iq.graph.persistence.GraphRepository;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 
 /**
  * Integration test for MongoDB graph repository that verifies referential integrity is maintained.
  */
 final class MongoGraphListenerReferentialIntegrityIntegrationTest
-    extends AbstractGraphListenerReferentialIntegrityIntegrationTest {
+        extends AbstractGraphListenerReferentialIntegrityIntegrationTest {
 
     private static TransitionWalker.ReachedState<RunningMongodProcess> mongodProcess;
 

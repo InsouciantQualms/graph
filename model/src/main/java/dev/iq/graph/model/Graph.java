@@ -12,5 +12,5 @@ package dev.iq.graph.model;
  */
 public interface Graph extends AutoCloseable {
 
-
+    // FIXME Need to determine what operations should be here
 }

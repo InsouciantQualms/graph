@@ -6,9 +6,9 @@
 
 package dev.iq.graph.model;
 
-import dev.iq.common.version.Versioned;
-
 import java.util.List;
+
+import dev.iq.common.version.Versioned;
 
 /**
  * Represents a versioned, maximally connected subgraph containing nodes and edges.

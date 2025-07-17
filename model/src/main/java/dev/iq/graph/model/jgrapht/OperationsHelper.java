@@ -6,20 +6,20 @@
 
 package dev.iq.graph.model.jgrapht;
 
+import java.util.*;
+
+import org.jgrapht.Graph;
+import org.jgrapht.GraphPath;
+import org.jgrapht.alg.connectivity.ConnectivityInspector;
+import org.jgrapht.alg.cycle.CycleDetector;
+import org.jgrapht.graph.AsSubgraph;
+
 import dev.iq.common.version.NanoId;
 import dev.iq.common.version.Versioned;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Path;
-import org.jgrapht.Graph;
-import org.jgrapht.GraphPath;
-import org.jgrapht.alg.connectivity.ConnectivityInspector;
-import org.jgrapht.alg.cycle.CycleDetector;
-import org.jgrapht.graph.AsSubgraph;
-import org.jgrapht.graph.DirectedMultigraph;
-
-import java.util.*;
 
 /**
  * Helper utilities for graph operations.
@@ -34,11 +34,10 @@ public final class OperationsHelper {
     /**
      * Validates that an element can be expired.
      */
-    public static <E extends Versioned> E validateForExpiry(final Optional<E> element, final NanoId id, final String elementType) {
+    public static <E extends Versioned> E validateForExpiry(
+            final Optional<E> element, final NanoId id, final String elementType) {
 
-        return element.orElseThrow(
-            () -> new IllegalArgumentException(elementType + " not found: " + id)
-        );
+        return element.orElseThrow(() -> new IllegalArgumentException(elementType + " not found: " + id));
     }
 
     /**
@@ -67,15 +66,10 @@ public final class OperationsHelper {
     public static boolean containsCycle(final Path path) {
 
         final var visitedNodes = new HashSet<Node>();
-        for (final var element : path.elements()) {
-            if (element instanceof final Node node) {
-                if (visitedNodes.contains(node)) {
-                    return true;
-                }
-                visitedNodes.add(node);
-            }
-        }
-        return false;
+        return path.elements().stream()
+                .filter(element -> element instanceof Node)
+                .map(element -> (Node) element)
+                .anyMatch(node -> !visitedNodes.add(node));
     }
 
     /**
@@ -90,19 +84,20 @@ public final class OperationsHelper {
         final var nodes = new HashSet<Node>();
         final var edges = new HashSet<Edge>();
 
-        for (final var element : elements) {
+        elements.forEach(element -> {
             switch (element) {
                 case final Node node -> nodes.add(node);
                 case final Edge edge -> edges.add(edge);
-                default -> throw new IllegalArgumentException("Invalid element type: " + element.getClass().getSimpleName());
+                default -> throw new IllegalArgumentException(
+                        "Invalid element type: " + element.getClass().getSimpleName());
             }
-        }
+        });
 
         if (nodes.isEmpty()) {
             throw new IllegalArgumentException("Component must contain at least one node");
         }
 
-        validateConnectivity(nodes, edges);
+        validateConnectivity(nodes, edges, graph);
         validateNoCycles(nodes, edges, graph);
         validateLeafNodesOnly(nodes, edges);
     }
@@ -110,29 +105,18 @@ public final class OperationsHelper {
     /**
      * Validates that all elements in a component are connected.
      */
-    private static void validateConnectivity(final Set<Node> nodes, final Set<Edge> edges) {
+    private static void validateConnectivity(
+            final Set<Node> nodes, final Set<Edge> edges, final Graph<Node, Edge> graph) {
 
         if ((nodes.size() == 1) && edges.isEmpty()) {
             return;
         }
 
-        // Build a temporary graph with just the component elements to check connectivity
-        final var tempGraph = new DirectedMultigraph<Node, Edge>(null, null, false);
-
-        // Add all nodes
-        for (final var node : nodes) {
-            tempGraph.addVertex(node);
-        }
-
-        // Add all edges
-        for (final var edge : edges) {
-            if (nodes.contains(edge.source()) && nodes.contains(edge.target())) {
-                tempGraph.addEdge(edge.source(), edge.target(), edge);
-            }
-        }
+        // Create a subgraph containing only the component's nodes and edges
+        final var subgraph = new AsSubgraph<>(graph, nodes, edges);
 
         // Use ConnectivityInspector to check if all nodes are connected
-        final var inspector = new ConnectivityInspector<>(tempGraph);
+        final var inspector = new ConnectivityInspector<>(subgraph);
         if (!inspector.isConnected()) {
             throw new IllegalArgumentException("All elements in a component must be connected");
         }
@@ -158,7 +142,7 @@ public final class OperationsHelper {
      */
     private static void validateLeafNodesOnly(final Collection<Node> nodes, final Iterable<Edge> edges) {
 
-        for (final var edge : edges) {
+        edges.forEach(edge -> {
             // Use the edge's source and target directly instead of querying the graph
             final var source = edge.source();
             final var target = edge.target();
@@ -166,6 +150,6 @@ public final class OperationsHelper {
             if (!nodes.contains(source) || !nodes.contains(target)) {
                 throw new IllegalArgumentException("All edges in a component must connect nodes within the component");
             }
-        }
+        });
     }
 }

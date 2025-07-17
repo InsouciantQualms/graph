@@ -6,16 +6,17 @@
 
 package dev.iq.graph.model.serde;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wnameless.json.flattener.JsonFlattener;
 import com.github.wnameless.json.unflattener.JsonUnflattener;
+
 import dev.iq.common.fp.Io;
 import dev.iq.common.fp.Try;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.simple.SimpleData;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Serde implementation that converts Data to and from flattened properties using the existing DataSerializer.

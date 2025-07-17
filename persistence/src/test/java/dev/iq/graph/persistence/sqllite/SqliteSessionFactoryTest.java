@@ -4,17 +4,16 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.sqllite;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import javax.sql.DataSource;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import javax.sql.DataSource;
 import org.sqlite.SQLiteDataSource;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for SqliteSessionFactory.
@@ -22,25 +21,24 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("SqliteSessionFactory Unit Tests")
 final class SqliteSessionFactoryTest {
 
-    private DataSource dataSource;
     private SqliteSessionFactory sessionFactory;
 
     @BeforeEach
     void setUp() {
         // For testing, we need to use a real in-memory SQLite database
         // since the constructor initializes the schema
-        dataSource = new SQLiteDataSource();
+        final DataSource dataSource = new SQLiteDataSource();
         ((SQLiteDataSource) dataSource).setUrl("jdbc:sqlite::memory:");
-        
+
         sessionFactory = new SqliteSessionFactory(dataSource);
     }
 
     @Test
     @DisplayName("create returns new SqliteSession")
     void testCreateReturnsNewSession() {
-        
+
         final var session = sessionFactory.create();
-        
+
         assertNotNull(session);
         assertInstanceOf(SqliteSession.class, session);
     }
@@ -48,17 +46,17 @@ final class SqliteSessionFactoryTest {
     @Test
     @DisplayName("create returns different sessions on multiple calls")
     void testCreateReturnsDifferentSessions() {
-        
+
         final var session1 = sessionFactory.create();
         final var session2 = sessionFactory.create();
-        
+
         assertNotSame(session1, session2);
     }
 
     @Test
     @DisplayName("constructor initializes schema")
     void testConstructorInitializesSchema() {
-        
+
         // The constructor should initialize the schema
         // In a unit test, we can't easily verify the actual schema creation
         // but we can verify the factory was created successfully

@@ -4,11 +4,22 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.mongodb;
+
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Sorts.ascending;
+import static com.mongodb.client.model.Sorts.descending;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.bson.Document;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+
 import dev.iq.common.fp.Io;
 import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.Locator;
@@ -17,16 +28,6 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.serde.JsonSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
-import org.bson.Document;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Sorts.ascending;
-import static com.mongodb.client.model.Sorts.descending;
 
 /**
  * MongoDB implementation of NodeRepository using JsonSerde for data serialization.
@@ -44,14 +45,15 @@ public final class MongoNodeRepository implements VersionedRepository<Node> {
     public Node save(final Node node) {
         return Io.withReturn(() -> {
             final var document = new Document()
-                .append("_id", node.locator().id().id() + ':' + node.locator().version())
-                .append("id", node.locator().id().id())
-                .append("versionId", node.locator().version())
-                .append("created", node.created().toString())
-                .append("data", (serde.serialize(node.data())));
+                    .append(
+                            "_id",
+                            node.locator().id().id() + ':' + node.locator().version())
+                    .append("id", node.locator().id().id())
+                    .append("versionId", node.locator().version())
+                    .append("created", node.created().toString())
+                    .append("data", (serde.serialize(node.data())));
 
-            node.expired().ifPresent(expired ->
-                document.append("expired", expired.toString()));
+            node.expired().ifPresent(expired -> document.append("expired", expired.toString()));
 
             collection.insertOne(document);
             return node;
@@ -60,17 +62,17 @@ public final class MongoNodeRepository implements VersionedRepository<Node> {
 
     @Override
     public Optional<Node> findActive(final NanoId nodeId) {
-        final var document = collection.find(
-            and(eq("id", nodeId.id()), not(exists("expired")))
-        ).sort(descending("versionId")).first();
+        final var document = collection
+                .find(and(eq("id", nodeId.id()), not(exists("expired"))))
+                .sort(descending("versionId"))
+                .first();
 
         return Optional.ofNullable(document).map(this::documentToNode);
     }
 
     @Override
     public List<Node> findAll(final NanoId nodeId) {
-        final var documents = collection.find(eq("id", nodeId.id()))
-            .sort(ascending("versionId"));
+        final var documents = collection.find(eq("id", nodeId.id())).sort(ascending("versionId"));
 
         final var nodes = new ArrayList<Node>();
         for (final var document : documents) {
@@ -81,9 +83,9 @@ public final class MongoNodeRepository implements VersionedRepository<Node> {
 
     @Override
     public Optional<Node> find(final Locator locator) {
-        final var document = collection.find(
-            and(eq("id", locator.id().id()), eq("versionId", locator.version()))
-        ).first();
+        final var document = collection
+                .find(and(eq("id", locator.id().id()), eq("versionId", locator.version())))
+                .first();
 
         return Optional.ofNullable(document).map(this::documentToNode);
     }
@@ -91,13 +93,13 @@ public final class MongoNodeRepository implements VersionedRepository<Node> {
     @Override
     public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
         final var timestampStr = timestamp.toString();
-        final var document = collection.find(
-            and(
-                eq("id", nodeId.id()),
-                lte("created", timestampStr),
-                or(not(exists("expired")), gt("expired", timestampStr))
-            )
-        ).sort(descending("versionId")).first();
+        final var document = collection
+                .find(and(
+                        eq("id", nodeId.id()),
+                        lte("created", timestampStr),
+                        or(not(exists("expired")), gt("expired", timestampStr))))
+                .sort(descending("versionId"))
+                .first();
 
         return Optional.ofNullable(document).map(this::documentToNode);
     }
@@ -111,9 +113,8 @@ public final class MongoNodeRepository implements VersionedRepository<Node> {
     @Override
     public boolean expire(final NanoId elementId, final Instant expiredAt) {
         final var result = collection.updateMany(
-            and(eq("id", elementId.id()), not(exists("expired"))),
-            new Document("$set", new Document("expired", expiredAt.toString()))
-        );
+                and(eq("id", elementId.id()), not(exists("expired"))),
+                new Document("$set", new Document("expired", expiredAt.toString())));
         return result.getModifiedCount() > 0;
     }
 

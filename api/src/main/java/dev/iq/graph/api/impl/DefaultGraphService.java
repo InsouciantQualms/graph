@@ -6,12 +6,12 @@
 
 package dev.iq.graph.api.impl;
 
+import java.util.List;
+
 import dev.iq.common.persist.SessionFactory;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.api.GraphService;
 import dev.iq.graph.model.Path;
-
-import java.util.List;
 
 /**
  * Default implementation of GraphService using session-based transactions.
@@ -46,7 +46,8 @@ public final class DefaultGraphService implements GraphService {
     public Path getShortestPath(final NanoId sourceNodeId, final NanoId targetNodeId) {
         try (final var session = sessionFactory.create()) {
             // TODO: This requires integration with GraphOperations and building in-memory graph from repository
-            throw new UnsupportedOperationException("Not yet implemented - requires integration with GraphOperations and repository data");
+            throw new UnsupportedOperationException(
+                    "Not yet implemented - requires integration with GraphOperations and repository data");
         }
     }
 }

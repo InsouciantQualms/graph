@@ -4,8 +4,24 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.tinkerpop;
+
+import static org.apache.tinkerpop.gremlin.process.traversal.P.gt;
+import static org.apache.tinkerpop.gremlin.process.traversal.P.lte;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.apache.tinkerpop.gremlin.process.traversal.Order;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
+import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.jetbrains.annotations.NotNull;
 
 import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.Locator;
@@ -15,35 +31,17 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
-import org.apache.tinkerpop.gremlin.process.traversal.Order;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.structure.Graph;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.jetbrains.annotations.NotNull;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static org.apache.tinkerpop.gremlin.process.traversal.P.gt;
-import static org.apache.tinkerpop.gremlin.process.traversal.P.lte;
 
 /**
  * Tinkerpop implementation of EdgeRepository.
  */
 public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> {
 
-    private final Graph graph;
     private final GraphTraversalSource g;
     private final TinkerpopNodeRepository nodeRepository;
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
 
     public TinkerpopEdgeRepository(final @NotNull Graph graph, final TinkerpopNodeRepository nodeRepository) {
-        this.graph = graph;
         g = graph.traversal();
         this.nodeRepository = nodeRepository;
     }
@@ -71,45 +69,36 @@ public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> 
 
     @Override
     public Optional<Edge> findActive(final NanoId edgeId) {
-        final var edgeOpt = g.E()
-            .has("id", edgeId.id())
-            .not(__.has("expired"))
-            .tryNext();
+        final var edgeOpt = g.E().has("id", edgeId.id()).not(__.has("expired")).tryNext();
         return edgeOpt.map(this::edgeToEdge);
     }
 
     @Override
     public List<Edge> findAll(final NanoId edgeId) {
-        return g.E()
-            .has("id", edgeId.id())
-            .order().by("versionId")
-            .toList().stream()
-            .map(this::edgeToEdge)
-            .toList();
+        return g.E().has("id", edgeId.id()).order().by("versionId").toList().stream()
+                .map(this::edgeToEdge)
+                .toList();
     }
 
     @Override
     public Optional<Edge> find(final Locator locator) {
-        final var edgeOpt = g.E()
-            .has("id", locator.id().id())
-            .has("versionId", locator.version())
-            .tryNext();
+        final var edgeOpt = g.E().has("id", locator.id().id())
+                .has("versionId", locator.version())
+                .tryNext();
         return edgeOpt.map(this::edgeToEdge);
     }
 
     @Override
     public Optional<Edge> findAt(final NanoId edgeId, final Instant timestamp) {
         final var timestampStr = timestamp.toString();
-        return g.E()
-            .has("id", edgeId.id())
-            .where(__.values("created").is(lte(timestampStr)))
-            .where(__.or(__.not(__.has("expired")),
-                __.values("expired").is(gt(timestampStr))
-            ))
-            .order().by("versionId", Order.desc)
-            .limit(1)
-            .tryNext()
-            .map(this::edgeToEdge);
+        return g.E().has("id", edgeId.id())
+                .where(__.values("created").is(lte(timestampStr)))
+                .where(__.or(__.not(__.has("expired")), __.values("expired").is(gt(timestampStr))))
+                .order()
+                .by("versionId", Order.desc)
+                .limit(1)
+                .tryNext()
+                .map(this::edgeToEdge);
     }
 
     @Override
@@ -124,10 +113,7 @@ public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> 
 
     @Override
     public boolean expire(final NanoId elementId, final Instant expiredAt) {
-        final var edges = g.E()
-            .has("id", elementId.id())
-            .not(__.has("expired"))
-            .toList();
+        final var edges = g.E().has("id", elementId.id()).not(__.has("expired")).toList();
         if (!edges.isEmpty()) {
             edges.forEach(e -> e.property("expired", expiredAt.toString()));
             return true;
@@ -156,13 +142,17 @@ public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> 
         }
 
         final var properties = tinkerpopEdge.keys().stream()
-            .filter(key -> !List.of("id", "versionId", "sourceId", "sourceVersionId", "targetId", "targetVersionId", "created",
-                "expired"
-            ).contains(key))
-            .collect(Collectors.toMap(
-                Function.identity(),
-                tinkerpopEdge::<Object>value
-            ));
+                .filter(key -> !List.of(
+                                "id",
+                                "versionId",
+                                "sourceId",
+                                "sourceVersionId",
+                                "targetId",
+                                "targetVersionId",
+                                "created",
+                                "expired")
+                        .contains(key))
+                .collect(Collectors.toMap(Function.identity(), tinkerpopEdge::<Object>value));
 
         final var data = serde.deserialize(properties);
         final var locator = new Locator(id, versionId);
@@ -173,8 +163,10 @@ public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> 
         final var targetId = new NanoId(tinkerpopEdge.value("targetId"));
         final var targetVersionId = (Integer) tinkerpopEdge.value("targetVersionId");
 
-        final var source = nodeRepository.find(new Locator(sourceId, sourceVersionId)).orElseThrow();
-        final var target = nodeRepository.find(new Locator(targetId, targetVersionId)).orElseThrow();
+        final var source =
+                nodeRepository.find(new Locator(sourceId, sourceVersionId)).orElseThrow();
+        final var target =
+                nodeRepository.find(new Locator(targetId, targetVersionId)).orElseThrow();
 
         return new SimpleEdge(locator, source, target, data, created, expired);
     }

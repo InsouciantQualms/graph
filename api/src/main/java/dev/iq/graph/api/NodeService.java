@@ -6,11 +6,11 @@
 
 package dev.iq.graph.api;
 
+import java.util.List;
+
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Node;
-
-import java.util.List;
 
 /**
  * Service for retrieving and manipiulating nodes (vertices) in the graph.

@@ -4,15 +4,16 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.sqllite;
+
+import java.sql.Connection;
+
+import javax.sql.DataSource;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import dev.iq.common.fp.Io;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
+import dev.iq.common.fp.Io;
 
 /**
  * Helper class for managing shared in-memory SQLite database connections for testing.
@@ -22,12 +23,10 @@ public final class SqlliteTestConnectionHelper {
     private static HikariDataSource dataSource;
     private static boolean schemaInitialized = false;
     private static final Object LOCK = new Object();
-    
+
     static {
         // Register shutdown hook to ensure pool is closed
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            closeSharedDataSource();
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(SqlliteTestConnectionHelper::closeSharedDataSource));
     }
 
     private SqlliteTestConnectionHelper() {}
@@ -110,7 +109,8 @@ public final class SqlliteTestConnectionHelper {
             statement.execute("PRAGMA foreign_keys = ON");
 
             // Create node table
-            statement.execute("""
+            statement.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS node (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,
@@ -121,7 +121,8 @@ public final class SqlliteTestConnectionHelper {
                 """);
 
             // Create edge table
-            statement.execute("""
+            statement.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS edge (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,
@@ -138,7 +139,8 @@ public final class SqlliteTestConnectionHelper {
                 """);
 
             // Create component table
-            statement.execute("""
+            statement.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS component (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,
@@ -149,7 +151,8 @@ public final class SqlliteTestConnectionHelper {
                 """);
 
             // Create component_nodes table for many-to-many relationship
-            statement.execute("""
+            statement.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS component_nodes (
                         component_id TEXT NOT NULL,
                         component_version INTEGER NOT NULL,
@@ -162,7 +165,8 @@ public final class SqlliteTestConnectionHelper {
                 """);
 
             // Create component_edges table for many-to-many relationship
-            statement.execute("""
+            statement.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS component_edges (
                         component_id TEXT NOT NULL,
                         component_version INTEGER NOT NULL,
@@ -175,7 +179,8 @@ public final class SqlliteTestConnectionHelper {
                 """);
 
             // Create properties tables for storing node/edge/component data
-            statement.execute("""
+            statement.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS node_properties (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,
@@ -186,7 +191,8 @@ public final class SqlliteTestConnectionHelper {
                     )
                 """);
 
-            statement.execute("""
+            statement.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS edge_properties (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,
@@ -197,7 +203,8 @@ public final class SqlliteTestConnectionHelper {
                     )
                 """);
 
-            statement.execute("""
+            statement.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS component_properties (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,

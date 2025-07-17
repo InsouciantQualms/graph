@@ -4,15 +4,15 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.tinkerpop;
 
-import dev.iq.common.fp.Io;
-import dev.iq.common.persist.Session;
+import java.util.Optional;
+
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Transaction;
 
-import java.util.Optional;
+import dev.iq.common.fp.Io;
+import dev.iq.common.persist.Session;
 
 /**
  * Tinkerpop implementation of Session with transaction support.
@@ -31,11 +31,11 @@ public final class TinkerpopSession implements Session {
             final var graphTx = graph.tx();
             graphTx.open();
             tx = Optional.of(graphTx);
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             // Graph doesn't support transactions - that's okay for TinkerGraph
             // We'll operate without explicit transaction management
         }
-        this.transaction = tx;
+        transaction = tx;
     }
 
     @Override

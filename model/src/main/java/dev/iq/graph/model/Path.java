@@ -6,10 +6,10 @@
 
 package dev.iq.graph.model;
 
-import dev.iq.common.error.Invariant;
-
 import java.util.List;
 import java.util.Objects;
+
+import dev.iq.common.error.Invariant;
 
 /**
  * Represents a simple path between elements.  The first and last elements of the
@@ -21,12 +21,10 @@ public record Path(List<Element> elements) {
 
         Objects.requireNonNull(elements);
         if (!elements.isEmpty()) {
-            Invariant.requireTrue(elements.getFirst() instanceof Node,
-                "first element of a non‐empty path must be a Node"
-            );
-            Invariant.requireTrue(elements.getLast() instanceof Node,
-                "last element of a non‐empty path must be a Node"
-            );
+            Invariant.requireTrue(
+                    elements.getFirst() instanceof Node, "first element of a non‐empty path must be a Node");
+            Invariant.requireTrue(
+                    elements.getLast() instanceof Node, "last element of a non‐empty path must be a Node");
         }
         this.elements = List.copyOf(elements);
     }

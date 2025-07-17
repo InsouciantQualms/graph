@@ -4,8 +4,22 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.model.operations;
+
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import java.time.Instant;
+import java.util.List;
+
+import org.jgrapht.event.GraphEdgeChangeEvent;
+import org.jgrapht.event.GraphListener;
+import org.jgrapht.event.GraphVertexChangeEvent;
+import org.jgrapht.graph.DefaultListenableGraph;
+import org.jgrapht.graph.DirectedMultigraph;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
@@ -14,17 +28,6 @@ import dev.iq.graph.model.Path;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.model.jgrapht.GraphOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
-import org.jgrapht.graph.DefaultListenableGraph;
-import org.jgrapht.graph.DirectedMultigraph;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Tests for GraphOperations class to verify shortestPath returns Path
@@ -48,17 +51,20 @@ public class GraphOperationsTest {
         // Create operations that share the same graph
         final var edgeOps = new EdgeOperations(graph);
         final var nodeOps = new NodeOperations(graph, edgeOps);
-        
+
         // Create GraphOperations with an empty listener
-        graphOps = new GraphOperations(new org.jgrapht.event.GraphListener<Node, Edge>() {
+        graphOps = new GraphOperations(new GraphListener<>() {
             @Override
-            public void vertexAdded(org.jgrapht.event.GraphVertexChangeEvent<Node> e) {}
+            public void vertexAdded(final GraphVertexChangeEvent<Node> e) {}
+
             @Override
-            public void vertexRemoved(org.jgrapht.event.GraphVertexChangeEvent<Node> e) {}
+            public void vertexRemoved(final GraphVertexChangeEvent<Node> e) {}
+
             @Override
-            public void edgeAdded(org.jgrapht.event.GraphEdgeChangeEvent<Node, Edge> e) {}
+            public void edgeAdded(final GraphEdgeChangeEvent<Node, Edge> e) {}
+
             @Override
-            public void edgeRemoved(org.jgrapht.event.GraphEdgeChangeEvent<Node, Edge> e) {}
+            public void edgeRemoved(final GraphEdgeChangeEvent<Node, Edge> e) {}
         });
 
         // Create test nodes using NodeOperations so they get added to a graph
@@ -71,15 +77,15 @@ public class GraphOperationsTest {
         final var edgeAB = edgeOps.add(nodeA, nodeB, new TestData("EdgeAB"), timestamp);
         final var edgeBC = edgeOps.add(nodeB, nodeC, new TestData("EdgeBC"), timestamp);
 
-        // Note: GraphOperations creates its own separate graph, so these nodes/edges 
-        // won't be in that graph. For meaningful path tests, we'd need to modify 
+        // Note: GraphOperations creates its own separate graph, so these nodes/edges
+        // won't be in that graph. For meaningful path tests, we'd need to modify
         // GraphOperations to accept an existing graph.
     }
 
     @Test
     @DisplayName("shortestPath returns Path instance")
     final void testShortestPathReturnsPath() {
-        // Test that shortestPath method returns a Path 
+        // Test that shortestPath method returns a Path
         // Since nodes aren't in GraphOps' internal graph, it may throw exception or return empty
         try {
             final var path = graphOps.shortestPath(nodeA, nodeB);

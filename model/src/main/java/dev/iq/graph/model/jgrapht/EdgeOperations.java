@@ -6,6 +6,13 @@
 
 package dev.iq.graph.model.jgrapht;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import org.jgrapht.Graph;
+
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.common.version.Versions;
@@ -14,12 +21,6 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Operations;
 import dev.iq.graph.model.simple.SimpleEdge;
-import org.jgrapht.Graph;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 /**
  * JGraphT-based implementation of edge operations for versioned graph elements.
@@ -43,8 +44,7 @@ public final class EdgeOperations implements Operations<Edge> {
         return graph.incomingEdgesOf(node);
     }
 
-    public Edge add(final Node source, final Node target, final Data data, final Instant timestamp
-    ) {
+    public Edge add(final Node source, final Node target, final Data data, final Instant timestamp) {
         final var locator = Locator.generate();
         final var edge = new SimpleEdge(locator, source, target, data, timestamp, Optional.empty());
         graph.addEdge(edge.source(), edge.target(), edge);
@@ -55,7 +55,8 @@ public final class EdgeOperations implements Operations<Edge> {
 
         final var expired = expire(id, timestamp);
         final var incremented = expired.locator().increment();
-        final var newEdge = new SimpleEdge(incremented, expired.source(), expired.target(), data, timestamp, Optional.empty());
+        final var newEdge =
+                new SimpleEdge(incremented, expired.source(), expired.target(), data, timestamp, Optional.empty());
         graph.addEdge(newEdge.source(), newEdge.target(), newEdge);
         return newEdge;
     }
@@ -89,8 +90,7 @@ public final class EdgeOperations implements Operations<Edge> {
 
         final var edge = OperationsHelper.validateForExpiry(findActive(id), id, "Edge");
         final var expiredEdge = new SimpleEdge(
-            edge.locator(), edge.source(), edge.target(), edge.data(), edge.created(), Optional.of(timestamp)
-        );
+                edge.locator(), edge.source(), edge.target(), edge.data(), edge.created(), Optional.of(timestamp));
         graph.removeEdge(edge);
         graph.addEdge(edge.source(), edge.target(), expiredEdge);
         return expiredEdge;
@@ -102,8 +102,8 @@ public final class EdgeOperations implements Operations<Edge> {
     public List<Edge> getEdgesFrom(final Node node) {
 
         return graph.outgoingEdgesOf(node).stream()
-            .filter(edge -> edge.expired().isEmpty())
-            .toList();
+                .filter(edge -> edge.expired().isEmpty())
+                .toList();
     }
 
     /**
@@ -112,7 +112,7 @@ public final class EdgeOperations implements Operations<Edge> {
     public List<Edge> getEdgesTo(final Node node) {
 
         return graph.incomingEdgesOf(node).stream()
-            .filter(edge -> edge.expired().isEmpty())
-            .toList();
+                .filter(edge -> edge.expired().isEmpty())
+                .toList();
     }
 }

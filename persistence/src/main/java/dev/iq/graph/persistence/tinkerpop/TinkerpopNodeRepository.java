@@ -4,22 +4,10 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.tinkerpop;
 
-import dev.iq.common.persist.VersionedRepository;
-import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
-import dev.iq.graph.model.Node;
-import dev.iq.graph.model.serde.PropertiesSerde;
-import dev.iq.graph.model.serde.Serde;
-import dev.iq.graph.model.simple.SimpleNode;
-import org.apache.tinkerpop.gremlin.process.traversal.Order;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.structure.Graph;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.jetbrains.annotations.NotNull;
+import static org.apache.tinkerpop.gremlin.process.traversal.P.gt;
+import static org.apache.tinkerpop.gremlin.process.traversal.P.lte;
 
 import java.time.Instant;
 import java.util.List;
@@ -28,8 +16,20 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.apache.tinkerpop.gremlin.process.traversal.P.gt;
-import static org.apache.tinkerpop.gremlin.process.traversal.P.lte;
+import org.apache.tinkerpop.gremlin.process.traversal.Order;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
+import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.jetbrains.annotations.NotNull;
+
+import dev.iq.common.persist.VersionedRepository;
+import dev.iq.common.version.Locator;
+import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.Node;
+import dev.iq.graph.model.serde.PropertiesSerde;
+import dev.iq.graph.model.serde.Serde;
+import dev.iq.graph.model.simple.SimpleNode;
 
 /**
  * Tinkerpop implementation of NodeRepository.
@@ -62,29 +62,25 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
     @Override
     public Optional<Node> findActive(final NanoId nodeId) {
         return g.V().hasLabel("node")
-            .has("id", nodeId.id())
-            .not(__.has("expired"))
-            .tryNext()
-            .map(this::vertexToNode);
+                .has("id", nodeId.id())
+                .not(__.has("expired"))
+                .tryNext()
+                .map(this::vertexToNode);
     }
 
     @Override
     public List<Node> findAll(final NanoId nodeId) {
-        return g.V().hasLabel("node")
-            .has("id", nodeId.id())
-            .order().by("versionId")
-            .toList().stream()
-            .map(this::vertexToNode)
-            .toList();
+        return g.V().hasLabel("node").has("id", nodeId.id()).order().by("versionId").toList().stream()
+                .map(this::vertexToNode)
+                .toList();
     }
 
     @Override
     public Optional<Node> find(final Locator locator) {
-        final var vertex = g.V()
-            .hasLabel("node")
-            .has("id", locator.id().id())
-            .has("versionId", locator.version())
-            .tryNext();
+        final var vertex = g.V().hasLabel("node")
+                .has("id", locator.id().id())
+                .has("versionId", locator.version())
+                .tryNext();
         return vertex.map(this::vertexToNode);
     }
 
@@ -92,15 +88,14 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
     public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
         final var timestampStr = timestamp.toString();
         return g.V().hasLabel("node")
-            .has("id", nodeId.id())
-            .where(__.values("created").is(lte(timestampStr)))
-            .where(__.or(__.not(__.has("expired")),
-                __.values("expired").is(gt(timestampStr))
-            ))
-            .order().by("versionId", Order.desc)
-            .limit(1)
-            .tryNext()
-            .map(this::vertexToNode);
+                .has("id", nodeId.id())
+                .where(__.values("created").is(lte(timestampStr)))
+                .where(__.or(__.not(__.has("expired")), __.values("expired").is(gt(timestampStr))))
+                .order()
+                .by("versionId", Order.desc)
+                .limit(1)
+                .tryNext()
+                .map(this::vertexToNode);
     }
 
     @Override
@@ -116,9 +111,9 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
     @Override
     public boolean expire(final NanoId elementId, final Instant expiredAt) {
         final var vertices = g.V().hasLabel("node")
-            .has("id", elementId.id())
-            .not(__.has("expired"))
-            .toList();
+                .has("id", elementId.id())
+                .not(__.has("expired"))
+                .toList();
         if (!vertices.isEmpty()) {
             vertices.forEach(v -> v.property("expired", expiredAt.toString()));
             return true;
@@ -137,11 +132,8 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
         }
 
         final var properties = vertex.keys().stream()
-            .filter(key -> !List.of("id", "versionId", "created", "expired").contains(key))
-            .collect(Collectors.toMap(
-                Function.identity(),
-                vertex::<Object>value
-            ));
+                .filter(key -> !List.of("id", "versionId", "created", "expired").contains(key))
+                .collect(Collectors.toMap(Function.identity(), vertex::<Object>value));
 
         final var data = serde.deserialize(properties);
         final var locator = new Locator(id, versionId);

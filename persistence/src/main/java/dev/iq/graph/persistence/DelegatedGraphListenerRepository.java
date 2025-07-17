@@ -5,17 +5,18 @@
  */
 package dev.iq.graph.persistence;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+
+import org.jgrapht.event.GraphEdgeChangeEvent;
+import org.jgrapht.event.GraphVertexChangeEvent;
+
 import dev.iq.common.adt.Stable;
 import dev.iq.common.fp.Io;
 import dev.iq.common.fp.Proc0;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
-import org.jgrapht.event.GraphEdgeChangeEvent;
-import org.jgrapht.event.GraphVertexChangeEvent;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
 
 /**
  * Graph listener that queues up database operations in response to graph events and then

@@ -4,16 +4,16 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.model.serde;
 
-import dev.iq.graph.model.simple.SimpleData;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import dev.iq.graph.model.simple.SimpleData;
 
 /**
  * Unit tests for DataSerializer utility class.
@@ -24,7 +24,7 @@ final class PropertiesSerdeTest {
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
 
     @Test
-    void testSimple() throws Exception {
+    void testSimple() {
 
         final var data = new SimpleData(Integer.class, 5);
         final var map = serde.serialize(data);
@@ -85,7 +85,6 @@ final class PropertiesSerdeTest {
         assertTrue(deserializedObject.flag());
     }
 
-
     @Test
     @DisplayName("Round trip properties serialization maintains data integrity")
     void testRoundTripPropertiesSerialization() {
@@ -105,7 +104,7 @@ final class PropertiesSerdeTest {
         assertEquals(999, deserializedObject.value());
         assertFalse(deserializedObject.flag());
     }
-    
+
     /**
      * Test POJO class for serialization testing.
      */

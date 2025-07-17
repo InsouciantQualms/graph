@@ -4,10 +4,10 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.mongodb;
 
 import com.mongodb.client.MongoClients;
+
 import dev.iq.common.persist.Session;
 import dev.iq.common.persist.SessionFactory;
 

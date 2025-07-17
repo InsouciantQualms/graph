@@ -4,13 +4,13 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.persistence.sqllite;
+
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.Jdbi;
 
 import dev.iq.common.fp.Io;
 import dev.iq.common.persist.Session;
-import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.Jdbi;
 
 /**
  * SQLite implementation of Session with transaction support.
@@ -21,20 +21,20 @@ public final class SqliteSession implements Session {
 
     public SqliteSession(final Jdbi jdbi) {
 
-        this.handle = jdbi.open();
-        this.handle.begin();
+        handle = jdbi.open();
+        handle.begin();
     }
 
     @Override
     public void commit() {
 
-        Io.withVoid(() -> handle.commit());
+        Io.withVoid(handle::commit);
     }
 
     @Override
     public void rollback() {
 
-        Io.withVoid(() -> handle.rollback());
+        Io.withVoid(handle::rollback);
     }
 
     @Override

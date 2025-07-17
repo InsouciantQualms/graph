@@ -4,8 +4,17 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-
 package dev.iq.graph.model.operations;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.time.Instant;
+import java.util.List;
+
+import org.jgrapht.Graph;
+import org.jgrapht.graph.DirectedMultigraph;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
@@ -14,37 +23,27 @@ import dev.iq.graph.model.jgrapht.ComponentOperations;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
 import dev.iq.graph.model.simple.SimpleData;
-import org.jgrapht.Graph;
-import org.jgrapht.graph.DirectedMultigraph;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for ComponentOperations.
  */
 class ComponentOperationsTest {
 
-    private Graph<Node, Edge> graph;
     private NodeOperations nodeOps;
     private EdgeOperations edgeOps;
     private ComponentOperations componentOps;
     private final Instant timestamp = Instant.now();
 
     @BeforeEach
-    void setUp() {
-        graph = new DirectedMultigraph<>(null, null, false);
+    final void setUp() {
+        final Graph<Node, Edge> graph = new DirectedMultigraph<>(null, null, false);
         edgeOps = new EdgeOperations(graph);
         nodeOps = new NodeOperations(graph, edgeOps);
         componentOps = new ComponentOperations(graph);
     }
 
     @Test
-    void testAddComponent() {
+    final void testAddComponent() {
         // Create nodes
         final var node1 = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
         final var node2 = nodeOps.add(new SimpleData(String.class, "Node2"), timestamp);
@@ -53,7 +52,7 @@ class ComponentOperationsTest {
         final var edge = edgeOps.add(node1, node2, new SimpleData(String.class, "Edge1"), timestamp);
 
         // Create component
-        final List<Element> elements = List.of(node1, node2, edge);
+        final var elements = List.of(node1, node2, edge);
         final var componentData = new SimpleData(String.class, "Component1");
         final var component = componentOps.add(elements, componentData, timestamp);
 
@@ -65,7 +64,7 @@ class ComponentOperationsTest {
     }
 
     @Test
-    void testAddComponentWithSingleNode() {
+    final void testAddComponentWithSingleNode() {
         // Create single node
         final var node = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
 
@@ -76,33 +75,31 @@ class ComponentOperationsTest {
 
         assertNotNull(component);
         assertEquals(1, component.elements().size());
-        assertEquals(node, component.elements().get(0));
+        assertEquals(node, component.elements().getFirst());
     }
 
     @Test
-    void testAddComponentValidatesNoEmptyElements() {
-        assertThrows(IllegalArgumentException.class, () -> {
-                componentOps.add(List.of(), new SimpleData(String.class, "Empty"), timestamp);
-            }
-        );
+    final void testAddComponentValidatesNoEmptyElements() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> componentOps.add(List.of(), new SimpleData(String.class, "Empty"), timestamp));
     }
 
     @Test
-    void testAddComponentValidatesAtLeastOneNode() {
+    final void testAddComponentValidatesAtLeastOneNode() {
         // Create nodes and edge
         final var node1 = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
         final var node2 = nodeOps.add(new SimpleData(String.class, "Node2"), timestamp);
         final var edge = edgeOps.add(node1, node2, new SimpleData(String.class, "Edge1"), timestamp);
 
         // Try to create component with only edge (no nodes)
-        assertThrows(IllegalArgumentException.class, () -> {
-                componentOps.add(List.of(edge), new SimpleData(String.class, "EdgeOnly"), timestamp);
-            }
-        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> componentOps.add(List.of(edge), new SimpleData(String.class, "EdgeOnly"), timestamp));
     }
 
     @Test
-    void testAddComponentValidatesConnectivity() {
+    final void testAddComponentValidatesConnectivity() {
         // Create disconnected nodes
         final var node1 = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
         final var node2 = nodeOps.add(new SimpleData(String.class, "Node2"), timestamp);
@@ -112,14 +109,14 @@ class ComponentOperationsTest {
         final var edge = edgeOps.add(node1, node2, new SimpleData(String.class, "Edge1"), timestamp);
 
         // Try to create component with disconnected node3
-        assertThrows(IllegalArgumentException.class, () -> {
-                componentOps.add(List.of(node1, node2, node3, edge), new SimpleData(String.class, "Disconnected"), timestamp);
-            }
-        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> componentOps.add(
+                        List.of(node1, node2, node3, edge), new SimpleData(String.class, "Disconnected"), timestamp));
     }
 
     @Test
-    void testAddComponentValidatesNoCycles() {
+    final void testAddComponentValidatesNoCycles() {
         // Create nodes
         final var node1 = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
         final var node2 = nodeOps.add(new SimpleData(String.class, "Node2"), timestamp);
@@ -131,24 +128,23 @@ class ComponentOperationsTest {
         final var edge3 = edgeOps.add(node3, node1, new SimpleData(String.class, "Edge3"), timestamp);
 
         // Try to create component with cycle
-        assertThrows(IllegalArgumentException.class, () -> {
-                componentOps.add(List.of(node1, node2, node3, edge1, edge2, edge3),
-                    new SimpleData(String.class, "Cyclic"), timestamp
-                );
-            }
-        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> componentOps.add(
+                        List.of(node1, node2, node3, edge1, edge2, edge3),
+                        new SimpleData(String.class, "Cyclic"),
+                        timestamp));
     }
 
     @Test
-    void testUpdateComponent() {
+    final void testUpdateComponent() {
         // Create initial component
         final var node1 = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
         final var node2 = nodeOps.add(new SimpleData(String.class, "Node2"), timestamp);
         final var edge = edgeOps.add(node1, node2, new SimpleData(String.class, "Edge1"), timestamp);
 
-        final var component = componentOps.add(List.of(node1, node2, edge),
-            new SimpleData(String.class, "Component1"), timestamp
-        );
+        final var component =
+                componentOps.add(List.of(node1, node2, edge), new SimpleData(String.class, "Component1"), timestamp);
 
         // Add new node and edge
         final var node3 = nodeOps.add(new SimpleData(String.class, "Node3"), timestamp.plusSeconds(1));
@@ -156,11 +152,10 @@ class ComponentOperationsTest {
 
         // Update component
         final var updatedComponent = componentOps.update(
-            component.locator().id(),
-            List.of(node1, node2, node3, edge, edge2),
-            new SimpleData(String.class, "UpdatedComponent"),
-            timestamp.plusSeconds(2)
-        );
+                component.locator().id(),
+                List.of(node1, node2, node3, edge, edge2),
+                new SimpleData(String.class, "UpdatedComponent"),
+                timestamp.plusSeconds(2));
 
         assertNotNull(updatedComponent);
         assertEquals(5, updatedComponent.elements().size());
@@ -169,12 +164,10 @@ class ComponentOperationsTest {
     }
 
     @Test
-    void testFindActive() {
+    final void testFindActive() {
         // Create component
         final var node = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
-        final var component = componentOps.add(List.of(node),
-            new SimpleData(String.class, "Component1"), timestamp
-        );
+        final var component = componentOps.add(List.of(node), new SimpleData(String.class, "Component1"), timestamp);
 
         // Find active component
         final var found = componentOps.findActive(component.locator().id());
@@ -183,12 +176,10 @@ class ComponentOperationsTest {
     }
 
     @Test
-    void testExpireComponent() {
+    final void testExpireComponent() {
         // Create component
         final var node = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
-        final var component = componentOps.add(List.of(node),
-            new SimpleData(String.class, "Component1"), timestamp
-        );
+        final var component = componentOps.add(List.of(node), new SimpleData(String.class, "Component1"), timestamp);
 
         // Expire component
         final var expiredComponent = componentOps.expire(component.locator().id(), timestamp.plusSeconds(1));
@@ -203,22 +194,19 @@ class ComponentOperationsTest {
     }
 
     @Test
-    void testFindAllVersions() {
+    final void testFindAllVersions() {
         // Create initial component
         final var node1 = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
-        final var component1 = componentOps.add(List.of(node1),
-            new SimpleData(String.class, "Component1"), timestamp
-        );
+        final var component1 = componentOps.add(List.of(node1), new SimpleData(String.class, "Component1"), timestamp);
 
         // Update component - add connected node and edge
         final var node2 = nodeOps.add(new SimpleData(String.class, "Node2"), timestamp.plusSeconds(1));
         final var edge = edgeOps.add(node1, node2, new SimpleData(String.class, "Edge1"), timestamp.plusSeconds(1));
         final var component2 = componentOps.update(
-            component1.locator().id(),
-            List.of(node1, node2, edge),
-            new SimpleData(String.class, "Component2"),
-            timestamp.plusSeconds(2)
-        );
+                component1.locator().id(),
+                List.of(node1, node2, edge),
+                new SimpleData(String.class, "Component2"),
+                timestamp.plusSeconds(2));
 
         // Find all versions
         final var versions = componentOps.findAllVersions(component1.locator().id());
@@ -229,7 +217,7 @@ class ComponentOperationsTest {
     }
 
     @Test
-    void testFindComponentsContaining() {
+    final void testFindComponentsContaining() {
         // Create nodes
         final var node1 = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
         final var node2 = nodeOps.add(new SimpleData(String.class, "Node2"), timestamp);
@@ -240,18 +228,18 @@ class ComponentOperationsTest {
         final var edge2 = edgeOps.add(node2, node3, new SimpleData(String.class, "Edge2"), timestamp);
 
         // Create components
-        final var component1 = componentOps.add(List.of(node1, node2, edge1),
-            new SimpleData(String.class, "Component1"), timestamp
-        );
-        final var component2 = componentOps.add(List.of(node2, node3, edge2),
-            new SimpleData(String.class, "Component2"), timestamp
-        );
+        final var component1 =
+                componentOps.add(List.of(node1, node2, edge1), new SimpleData(String.class, "Component1"), timestamp);
+        final var component2 =
+                componentOps.add(List.of(node2, node3, edge2), new SimpleData(String.class, "Component2"), timestamp);
 
         // Find components containing node2
         final var components = componentOps.findComponentsContaining(node2);
 
         assertEquals(2, components.size());
-        assertTrue(components.stream().anyMatch(c -> c.locator().id().equals(component1.locator().id())));
-        assertTrue(components.stream().anyMatch(c -> c.locator().id().equals(component2.locator().id())));
+        assertTrue(components.stream()
+                .anyMatch(c -> c.locator().id().equals(component1.locator().id())));
+        assertTrue(components.stream()
+                .anyMatch(c -> c.locator().id().equals(component2.locator().id())));
     }
 }
