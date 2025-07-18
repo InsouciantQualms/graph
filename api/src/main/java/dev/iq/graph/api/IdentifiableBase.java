@@ -21,7 +21,8 @@ import java.util.Optional;
 interface IdentifiableBase<T extends Versioned> {
 
     /**
-     * Returns the exact item specified by an ID and version (active or inactive).  If it does not exist, an exception will be thrown.
+     * Returns the exact item specified by an ID and version (active or inactive).
+     * If it does not exist, an exception will be thrown.
      */
     T find(Locator locator);
 
@@ -51,7 +52,8 @@ interface IdentifiableBase<T extends Versioned> {
     List<NanoId> all();
 
     /**
-     * Expires (makes inactive) the specified ID.  This also serves a a logical delete.  The expired entry is returned if the ID existed.
+     * Expires (makes inactive) the specified ID.  This also serves a a logical delete.
+     * The expired entry is returned if the ID existed.
      */
     Optional<T> expire(NanoId id);
 

@@ -47,9 +47,9 @@ public final class SqliteNodeRepository implements VersionedRepository<Node> {
     public Node save(final Node node) {
         final var sql =
                 """
-            INSERT INTO node (id, version_id, created, expired)
-            VALUES (:id, :version_id, :created, :expired)
-            """;
+                INSERT INTO node (id, version_id, created, expired)
+                VALUES (:id, :version_id, :created, :expired)
+                """;
 
         Io.withVoid(() -> {
             getHandle()
@@ -105,11 +105,12 @@ public final class SqliteNodeRepository implements VersionedRepository<Node> {
     public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
         final var sql =
                 """
-            SELECT * FROM node
-            WHERE id = :id AND created <= :timestamp AND (expired IS NULL OR expired > :timestamp)
-            ORDER BY version_id DESC
-            LIMIT 1
-            """;
+                SELECT * FROM node
+                WHERE id = :id AND created <= :timestamp
+                      AND (expired IS NULL OR expired > :timestamp)
+                ORDER BY version_id DESC
+                LIMIT 1
+                """;
 
         return Io.withReturn(() -> {
             final var timestampStr = timestamp.toString();
@@ -167,9 +168,9 @@ public final class SqliteNodeRepository implements VersionedRepository<Node> {
     private void saveProperties(final NanoId nodeId, final int version, final Data data) {
         final var sql =
                 """
-            INSERT INTO node_properties (id, version_id, property_key, property_value)
-            VALUES (:id, :version_id, :property_key, :property_value)
-            """;
+                INSERT INTO node_properties (id, version_id, property_key, property_value)
+                VALUES (:id, :version_id, :property_key, :property_value)
+                """;
 
         final var properties = serde.serialize(data);
         Io.withVoid(() -> {
@@ -188,10 +189,10 @@ public final class SqliteNodeRepository implements VersionedRepository<Node> {
     private Data loadProperties(final NanoId nodeId, final int version) {
         final var sql =
                 """
-            SELECT property_key, property_value
-            FROM node_properties
-            WHERE id = :id AND version_id = :version_id
-            """;
+                SELECT property_key, property_value
+                FROM node_properties
+                WHERE id = :id AND version_id = :version_id
+                """;
 
         return Io.withReturn(() -> {
             final var properties = new HashMap<String, Object>();

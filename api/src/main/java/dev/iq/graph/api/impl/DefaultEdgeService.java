@@ -62,7 +62,7 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public List<Edge> getEdgesFrom(final NanoId nodeId) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // Need NodeOperations to find the node in the graph
             // This indicates we need better integration between services and operations
             // For now, return empty list as operations are not properly integrated
@@ -73,7 +73,7 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public List<Edge> getEdgesTo(final NanoId nodeId) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // Need NodeOperations to find the node in the graph
             // This indicates we need better integration between services and operations
             // For now, return empty list as operations are not properly integrated
@@ -84,7 +84,7 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public Edge find(final Locator locator) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository
                     .edges()
                     .find(locator)
@@ -95,7 +95,7 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public Optional<Edge> findActive(final NanoId id) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository.edges().findActive(id);
         }
     }
@@ -103,7 +103,7 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public Optional<Edge> findAt(final NanoId id, final Instant timestamp) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository.edges().findAt(id, timestamp);
         }
     }
@@ -111,7 +111,7 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public List<Edge> findAllVersions(final NanoId id) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository.edges().findAll(id);
         }
     }
@@ -119,7 +119,7 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public List<NanoId> allActive() {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // This would need proper implementation with repository support
             return all().stream().filter(id -> findActive(id).isPresent()).collect(Collectors.toList());
         }
@@ -128,7 +128,7 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public List<NanoId> all() {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // TODO: This requires repository enhancement to get all edge IDs
             throw new UnsupportedOperationException(
                     "Not yet implemented - requires repository enhancement to get all edge IDs");

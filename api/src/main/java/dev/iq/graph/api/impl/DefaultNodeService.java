@@ -62,7 +62,7 @@ public final class DefaultNodeService implements NodeService {
     @Override
     public List<Node> getNeighbors(final NanoId nodeId) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             final var node = nodeOperations
                     .findActive(nodeId)
                     .orElseThrow(() -> new IllegalArgumentException("Node not found: " + nodeId));
@@ -72,7 +72,7 @@ public final class DefaultNodeService implements NodeService {
 
     @Override
     public Node find(final Locator locator) {
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository
                     .nodes()
                     .find(locator)
@@ -82,28 +82,28 @@ public final class DefaultNodeService implements NodeService {
 
     @Override
     public Optional<Node> findActive(final NanoId id) {
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository.nodes().findActive(id);
         }
     }
 
     @Override
     public Optional<Node> findAt(final NanoId id, final Instant timestamp) {
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository.nodes().findAt(id, timestamp);
         }
     }
 
     @Override
     public List<Node> findAllVersions(final NanoId id) {
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository.nodes().findAll(id);
         }
     }
 
     @Override
     public List<NanoId> allActive() {
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // This is a simplified implementation - in reality would need a more efficient approach
             return all().stream().filter(id -> findActive(id).isPresent()).collect(Collectors.toList());
         }
@@ -111,7 +111,7 @@ public final class DefaultNodeService implements NodeService {
 
     @Override
     public List<NanoId> all() {
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // TODO: This requires repository enhancement to get all node IDs
             throw new UnsupportedOperationException(
                     "Not yet implemented - requires repository enhancement to get all node IDs");

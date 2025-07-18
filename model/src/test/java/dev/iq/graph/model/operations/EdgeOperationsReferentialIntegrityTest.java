@@ -6,7 +6,9 @@
 
 package dev.iq.graph.model.operations;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
@@ -30,7 +32,7 @@ public class EdgeOperationsReferentialIntegrityTest {
     private EdgeOperations edgeOps;
 
     @BeforeEach
-    final void setUp() {
+    final void before() {
 
         final var base = new DirectedMultigraph<Node, Edge>(null, null, false);
         final var graph = new DefaultListenableGraph<>(base);

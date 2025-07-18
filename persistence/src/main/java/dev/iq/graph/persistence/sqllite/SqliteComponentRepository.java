@@ -19,7 +19,11 @@ import dev.iq.graph.model.simple.SimpleComponent;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -53,9 +57,9 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     public Component save(final Component component) {
         final var sql =
                 """
-            INSERT INTO component (id, version_id, created, expired)
-            VALUES (:id, :version_id, :created, :expired)
-            """;
+                INSERT INTO component (id, version_id, created, expired)
+                VALUES (:id, :version_id, :created, :expired)
+                """;
 
         Io.withVoid(() -> {
             getHandle()
@@ -78,12 +82,12 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     public Optional<Component> findActive(final NanoId id) {
         final var sql =
                 """
-            SELECT id, version_id, created, expired
-            FROM component
-            WHERE id = :id AND expired IS NULL
-            ORDER BY version_id DESC
-            LIMIT 1
-            """;
+                SELECT id, version_id, created, expired
+                FROM component
+                WHERE id = :id AND expired IS NULL
+                ORDER BY version_id DESC
+                LIMIT 1
+                """;
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
@@ -96,14 +100,14 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     public Optional<Component> findAt(final NanoId id, final Instant timestamp) {
         final var sql =
                 """
-            SELECT id, version_id, created, expired
-            FROM component
-            WHERE id = :id
-              AND created <= :timestamp
-              AND (expired IS NULL OR expired > :timestamp)
-            ORDER BY version_id DESC
-            LIMIT 1
-            """;
+                SELECT id, version_id, created, expired
+                FROM component
+                WHERE id = :id
+                  AND created <= :timestamp
+                  AND (expired IS NULL OR expired > :timestamp)
+                ORDER BY version_id DESC
+                LIMIT 1
+                """;
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
@@ -117,10 +121,10 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     public Optional<Component> find(final Locator locator) {
         final var sql =
                 """
-            SELECT id, version_id, created, expired
-            FROM component
-            WHERE id = :id AND version_id = :version_id
-            """;
+                SELECT id, version_id, created, expired
+                FROM component
+                WHERE id = :id AND version_id = :version_id
+                """;
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
@@ -134,11 +138,11 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     public List<Component> findAll(final NanoId id) {
         final var sql =
                 """
-            SELECT id, version_id, created, expired
-            FROM component
-            WHERE id = :id
-            ORDER BY version_id
-            """;
+                SELECT id, version_id, created, expired
+                FROM component
+                WHERE id = :id
+                ORDER BY version_id
+                """;
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
@@ -151,10 +155,10 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     public boolean expire(final NanoId id, final Instant expiredAt) {
         final var sql =
                 """
-            UPDATE component
-            SET expired = :expired
-            WHERE id = :id AND expired IS NULL
-            """;
+                UPDATE component
+                SET expired = :expired
+                WHERE id = :id AND expired IS NULL
+                """;
 
         return Io.withReturn(() -> getHandle()
                         .createUpdate(sql)
@@ -168,14 +172,15 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     public boolean delete(final NanoId id) {
         final var deleteElementsSql =
                 """
-            DELETE FROM component_element
-            WHERE component_id = :id
-            """;
+                DELETE FROM component_element
+                WHERE component_id = :id
+                """;
 
-        final var deleteComponentSql = """
-            DELETE FROM component
-            WHERE id = :id
-            """;
+        final var deleteComponentSql =
+                """
+                DELETE FROM component
+                WHERE id = :id
+                """;
 
         return Io.withReturn(() -> {
             getHandle().createUpdate(deleteElementsSql).bind("id", id.id()).execute();
@@ -211,9 +216,9 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     private void saveProperties(final NanoId componentId, final int version, final Data data) {
         final var sql =
                 """
-            INSERT INTO component_properties (id, version_id, property_key, property_value)
-            VALUES (:id, :version_id, :property_key, :property_value)
-            """;
+                INSERT INTO component_properties (id, version_id, property_key, property_value)
+                VALUES (:id, :version_id, :property_key, :property_value)
+                """;
 
         final var properties = serde.serialize(data);
         Io.withVoid(() -> {
@@ -232,10 +237,10 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     private Data loadProperties(final NanoId componentId, final int version) {
         final var sql =
                 """
-            SELECT property_key, property_value
-            FROM component_properties
-            WHERE id = :id AND version_id = :version_id
-            """;
+                SELECT property_key, property_value
+                FROM component_properties
+                WHERE id = :id AND version_id = :version_id
+                """;
 
         return Io.withReturn(() -> {
             final var properties = new HashMap<String, Object>();
@@ -255,9 +260,11 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     private void saveComponentElements(final Component component) {
         final var sql =
                 """
-            INSERT INTO component_element (component_id, component_version, element_id, element_version, element_type)
-            VALUES (:component_id, :component_version, :element_id, :element_version, :element_type)
-            """;
+                INSERT INTO component_element (component_id, component_version,
+                                               element_id, element_version, element_type)
+                VALUES (:component_id, :component_version,
+                        :element_id, :element_version, :element_type)
+                """;
 
         Io.withVoid(() -> {
             final var batch = getHandle().prepareBatch(sql);
@@ -276,10 +283,10 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
     private List<Element> loadComponentElements(final NanoId componentId, final int componentVersion) {
         final var sql =
                 """
-            SELECT element_id, element_version, element_type
-            FROM component_element
-            WHERE component_id = :component_id AND component_version = :component_version
-            """;
+                SELECT element_id, element_version, element_type
+                FROM component_element
+                WHERE component_id = :component_id AND component_version = :component_version
+                """;
 
         return Io.withReturn(() -> {
             final var elements = new ArrayList<Element>();

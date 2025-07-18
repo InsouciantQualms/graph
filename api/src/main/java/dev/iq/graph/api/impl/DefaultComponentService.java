@@ -65,7 +65,7 @@ public final class DefaultComponentService implements ComponentService {
     @Override
     public List<Component> findActiveContaining(final NanoId id) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // Find all active components and check if they contain an element with this ID
             return componentOperations.allActive().stream()
                     .filter(component -> component.elements().stream()
@@ -78,7 +78,7 @@ public final class DefaultComponentService implements ComponentService {
     @Override
     public List<Component> findContaining(final NanoId id, final Instant timestamp) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // Find all components active at the timestamp and check if they contain the element
             final var allComponents = new ArrayList<Component>();
 
@@ -109,7 +109,7 @@ public final class DefaultComponentService implements ComponentService {
     @Override
     public Component find(final Locator locator) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository
                     .components()
                     .find(locator)
@@ -120,7 +120,7 @@ public final class DefaultComponentService implements ComponentService {
     @Override
     public Optional<Component> findActive(final NanoId id) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository.components().findActive(id);
         }
     }
@@ -128,7 +128,7 @@ public final class DefaultComponentService implements ComponentService {
     @Override
     public Optional<Component> findAt(final NanoId id, final Instant timestamp) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository.components().findAt(id, timestamp);
         }
     }
@@ -136,7 +136,7 @@ public final class DefaultComponentService implements ComponentService {
     @Override
     public List<Component> findAllVersions(final NanoId id) {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             return repository.components().findAll(id);
         }
     }
@@ -144,7 +144,7 @@ public final class DefaultComponentService implements ComponentService {
     @Override
     public List<NanoId> allActive() {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // This would need proper implementation with repository support
             return all().stream().filter(id -> findActive(id).isPresent()).collect(Collectors.toList());
         }
@@ -153,7 +153,7 @@ public final class DefaultComponentService implements ComponentService {
     @Override
     public List<NanoId> all() {
 
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // TODO: This requires repository enhancement to get all component IDs
             throw new UnsupportedOperationException(
                     "Not yet implemented - requires repository enhancement to get all component IDs");

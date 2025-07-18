@@ -6,7 +6,8 @@
 
 package dev.iq.graph.persistence;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.NanoId;
@@ -23,12 +24,12 @@ import org.junit.jupiter.api.Test;
 
 public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
 
-    protected GraphListenerRepository listener;
-    protected VersionedRepository<Node> nodes;
-    protected VersionedRepository<Edge> edges;
+    private GraphListenerRepository listener;
+    private VersionedRepository<Node> nodes;
+    private VersionedRepository<Edge> edges;
 
     @BeforeEach
-    final void setUp() {
+    final void before() {
         final var repository = createGraphRepository();
         nodes = repository.nodes();
         edges = repository.edges();
@@ -59,12 +60,12 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
         // Verify nodes can be retrieved through the underlying repository
         final var retrievedStringNode = nodes.findActive(stringNode.locator().id());
         assertTrue(retrievedStringNode.isPresent());
-        assertSame(String.class, retrievedStringNode.get().data().type());
+        assertEquals(String.class, retrievedStringNode.get().data().type());
         assertEquals("test string", retrievedStringNode.get().data().value());
 
         final var retrievedIntegerNode = nodes.findActive(integerNode.locator().id());
         assertTrue(retrievedIntegerNode.isPresent());
-        assertSame(Integer.class, retrievedIntegerNode.get().data().type());
+        assertEquals(Integer.class, retrievedIntegerNode.get().data().type());
         assertEquals(42, retrievedIntegerNode.get().data().value());
     }
 
@@ -94,8 +95,10 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
         final var nodeVersions = nodes.findAll(nodeV1.locator().id());
 
         assertEquals(2, nodeVersions.size());
-        assertTrue(nodeVersions.stream().anyMatch(n -> n.locator().version() == 1));
-        assertTrue(nodeVersions.stream().anyMatch(n -> n.locator().version() == 2));
+        final var versions =
+                nodeVersions.stream().map(node -> node.locator().version()).toList();
+        assertTrue(versions.contains(1));
+        assertTrue(versions.contains(2));
     }
 
     @Test
@@ -220,15 +223,15 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
         listener.flush();
 
         // Create edges between nodes
-        final var edgeABData = new SimpleData(String.class, "Edge A->B");
-        final var edgeAB = TestDataHelper.createEdge(NanoId.generate(), 1, nodeA, nodeB, edgeABData, timestamp2);
+        final var edgeAbData = new SimpleData(String.class, "Edge A->B");
+        final var edgeAb = TestDataHelper.createEdge(NanoId.generate(), 1, nodeA, nodeB, edgeAbData, timestamp2);
 
-        final var edgeBCData = new SimpleData(String.class, "Edge B->C");
-        final var edgeBC = TestDataHelper.createEdge(NanoId.generate(), 1, nodeB, nodeC, edgeBCData, timestamp2);
+        final var edgeBcData = new SimpleData(String.class, "Edge B->C");
+        final var edgeBc = TestDataHelper.createEdge(NanoId.generate(), 1, nodeB, nodeC, edgeBcData, timestamp2);
 
         // Add edges
-        listener.edgeAdded(new GraphEdgeChangeEvent<>(this, GraphEdgeChangeEvent.EDGE_ADDED, edgeAB, nodeA, nodeB));
-        listener.edgeAdded(new GraphEdgeChangeEvent<>(this, GraphEdgeChangeEvent.EDGE_ADDED, edgeBC, nodeB, nodeC));
+        listener.edgeAdded(new GraphEdgeChangeEvent<>(this, GraphEdgeChangeEvent.EDGE_ADDED, edgeAb, nodeA, nodeB));
+        listener.edgeAdded(new GraphEdgeChangeEvent<>(this, GraphEdgeChangeEvent.EDGE_ADDED, edgeBc, nodeB, nodeC));
         listener.flush();
 
         // Create new version of nodeB
@@ -249,14 +252,14 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
         assertEquals(1, nodeCVersions.size());
 
         // Verify edges exist and maintain correct relationships
-        final var foundEdgeAB = edges.findActive(edgeAB.locator().id()).orElseThrow();
-        final var foundEdgeBC = edges.findActive(edgeBC.locator().id()).orElseThrow();
+        final var foundEdgeAb = edges.findActive(edgeAb.locator().id()).orElseThrow();
+        final var foundEdgeBc = edges.findActive(edgeBc.locator().id()).orElseThrow();
 
-        assertEquals(nodeA.locator().id(), foundEdgeAB.source().locator().id());
-        assertEquals(nodeB.locator().id(), foundEdgeAB.target().locator().id());
-        assertEquals(1, foundEdgeAB.target().locator().version()); // Should still point to v1
+        assertEquals(nodeA.locator().id(), foundEdgeAb.source().locator().id());
+        assertEquals(nodeB.locator().id(), foundEdgeAb.target().locator().id());
+        assertEquals(1, foundEdgeAb.target().locator().version()); // Should still point to v1
 
-        assertEquals(nodeB.locator().id(), foundEdgeBC.source().locator().id());
-        assertEquals(nodeC.locator().id(), foundEdgeBC.target().locator().id());
+        assertEquals(nodeB.locator().id(), foundEdgeBc.source().locator().id());
+        assertEquals(nodeC.locator().id(), foundEdgeBc.target().locator().id());
     }
 }

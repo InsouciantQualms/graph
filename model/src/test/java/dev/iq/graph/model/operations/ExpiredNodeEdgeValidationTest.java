@@ -6,7 +6,10 @@
 
 package dev.iq.graph.model.operations;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.common.version.Versioned;
 import dev.iq.graph.model.Data;
@@ -31,7 +34,7 @@ public class ExpiredNodeEdgeValidationTest {
     private EdgeOperations edgeOps;
 
     @BeforeEach
-    final void setUp() {
+    final void before() {
 
         final var base = new DirectedMultigraph<Node, Edge>(null, null, false);
         final var graph = new DefaultListenableGraph<>(base);

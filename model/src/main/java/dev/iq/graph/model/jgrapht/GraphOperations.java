@@ -28,7 +28,7 @@ public final class GraphOperations {
     private final Graph<Node, Edge> graph;
 
     /**
-     * Creates graph operations that will forward any events on to the specified listener
+     * Creates graph operations that will forward any events on to the specified listener.
      */
     public GraphOperations(final GraphListener<Node, Edge> listener) {
 

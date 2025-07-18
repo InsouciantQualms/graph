@@ -8,10 +8,22 @@ package dev.iq.graph.model.jgrapht;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
-import dev.iq.graph.model.*;
+import dev.iq.graph.model.Component;
+import dev.iq.graph.model.Data;
+import dev.iq.graph.model.Edge;
+import dev.iq.graph.model.Element;
+import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Operations;
 import dev.iq.graph.model.simple.SimpleComponent;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import org.jgrapht.Graph;
 
 /**

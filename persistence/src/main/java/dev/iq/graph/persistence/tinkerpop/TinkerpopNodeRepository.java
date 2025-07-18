@@ -35,12 +35,12 @@ import org.jetbrains.annotations.NotNull;
 public final class TinkerpopNodeRepository implements VersionedRepository<Node> {
 
     private final Graph graph;
-    private final GraphTraversalSource g;
+    private final GraphTraversalSource traversal;
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
 
     public TinkerpopNodeRepository(final @NotNull Graph graph) {
         this.graph = graph;
-        g = graph.traversal();
+        traversal = graph.traversal();
     }
 
     @Override
@@ -59,7 +59,9 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
 
     @Override
     public Optional<Node> findActive(final NanoId nodeId) {
-        return g.V().hasLabel("node")
+        return traversal
+                .V()
+                .hasLabel("node")
                 .has("id", nodeId.id())
                 .not(__.has("expired"))
                 .tryNext()
@@ -68,14 +70,16 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
 
     @Override
     public List<Node> findAll(final NanoId nodeId) {
-        return g.V().hasLabel("node").has("id", nodeId.id()).order().by("versionId").toList().stream()
+        return traversal.V().hasLabel("node").has("id", nodeId.id()).order().by("versionId").toList().stream()
                 .map(this::vertexToNode)
                 .toList();
     }
 
     @Override
     public Optional<Node> find(final Locator locator) {
-        final var vertex = g.V().hasLabel("node")
+        final var vertex = traversal
+                .V()
+                .hasLabel("node")
                 .has("id", locator.id().id())
                 .has("versionId", locator.version())
                 .tryNext();
@@ -85,7 +89,9 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
     @Override
     public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
         final var timestampStr = timestamp.toString();
-        return g.V().hasLabel("node")
+        return traversal
+                .V()
+                .hasLabel("node")
                 .has("id", nodeId.id())
                 .where(__.values("created").is(lte(timestampStr)))
                 .where(__.or(__.not(__.has("expired")), __.values("expired").is(gt(timestampStr))))
@@ -98,9 +104,10 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
 
     @Override
     public boolean delete(final NanoId nodeId) {
-        final var count = g.V().hasLabel("node").has("id", nodeId.id()).count().next();
+        final var count =
+                traversal.V().hasLabel("node").has("id", nodeId.id()).count().next();
         if (count > 0) {
-            g.V().hasLabel("node").has("id", nodeId.id()).drop().iterate();
+            traversal.V().hasLabel("node").has("id", nodeId.id()).drop().iterate();
             return true;
         }
         return false;
@@ -108,7 +115,9 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
 
     @Override
     public boolean expire(final NanoId elementId, final Instant expiredAt) {
-        final var vertices = g.V().hasLabel("node")
+        final var vertices = traversal
+                .V()
+                .hasLabel("node")
                 .has("id", elementId.id())
                 .not(__.has("expired"))
                 .toList();

@@ -6,7 +6,10 @@
 
 package dev.iq.graph.model.operations;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
@@ -33,7 +36,7 @@ class ComponentOperationsTest {
     private final Instant timestamp = Instant.now();
 
     @BeforeEach
-    final void setUp() {
+    final void before() {
         final Graph<Node, Edge> graph = new DirectedMultigraph<>(null, null, false);
         edgeOps = new EdgeOperations(graph);
         nodeOps = new NodeOperations(graph, edgeOps);

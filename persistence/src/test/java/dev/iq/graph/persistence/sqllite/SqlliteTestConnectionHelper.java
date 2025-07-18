@@ -15,7 +15,7 @@ import javax.sql.DataSource;
 /**
  * Helper class for managing shared in-memory SQLite database connections for testing.
  */
-public final class SqlliteTestConnectionHelper {
+final class SqlliteTestConnectionHelper {
 
     private static HikariDataSource dataSource;
     private static boolean schemaInitialized = false;
@@ -31,7 +31,7 @@ public final class SqlliteTestConnectionHelper {
     /**
      * Gets or creates a shared DataSource for testing with an in-memory SQLite database.
      */
-    public static DataSource getSharedDataSource() {
+    static DataSource getSharedDataSource() {
 
         synchronized (LOCK) {
             if ((dataSource == null) || dataSource.isClosed()) {
@@ -45,7 +45,7 @@ public final class SqlliteTestConnectionHelper {
     /**
      * Closes the shared DataSource if it exists.
      */
-    public static void closeSharedDataSource() {
+    static void closeSharedDataSource() {
 
         synchronized (LOCK) {
             if ((dataSource != null) && !dataSource.isClosed()) {
@@ -91,7 +91,7 @@ public final class SqlliteTestConnectionHelper {
 
         if (!schemaInitialized) {
             Io.withVoid(() -> {
-                try (final var connection = dataSource.getConnection()) {
+                try (var connection = dataSource.getConnection()) {
                     createSchema(connection);
                     schemaInitialized = true;
                 }
@@ -101,116 +101,116 @@ public final class SqlliteTestConnectionHelper {
 
     private static void createSchema(final Connection connection) throws Exception {
 
-        try (final var statement = connection.createStatement()) {
+        try (var statement = connection.createStatement()) {
             // Enable foreign keys for SQLite
             statement.execute("PRAGMA foreign_keys = ON");
 
             // Create node table
             statement.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS node (
-                        id TEXT NOT NULL,
-                        version_id INTEGER NOT NULL,
-                        created TEXT NOT NULL,
-                        expired TEXT,
-                        PRIMARY KEY (id, version_id)
-                    )
-                """);
+                            CREATE TABLE IF NOT EXISTS node (
+                                id TEXT NOT NULL,
+                                version_id INTEGER NOT NULL,
+                                created TEXT NOT NULL,
+                                expired TEXT,
+                                PRIMARY KEY (id, version_id)
+                            )
+                            """);
 
             // Create edge table
             statement.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS edge (
-                        id TEXT NOT NULL,
-                        version_id INTEGER NOT NULL,
-                        source_id TEXT NOT NULL,
-                        source_version_id INTEGER NOT NULL,
-                        target_id TEXT NOT NULL,
-                        target_version_id INTEGER NOT NULL,
-                        created TEXT NOT NULL,
-                        expired TEXT,
-                        PRIMARY KEY (id, version_id),
-                        FOREIGN KEY (source_id, source_version_id) REFERENCES node(id, version_id),
-                        FOREIGN KEY (target_id, target_version_id) REFERENCES node(id, version_id)
-                    )
-                """);
+                            CREATE TABLE IF NOT EXISTS edge (
+                                id TEXT NOT NULL,
+                                version_id INTEGER NOT NULL,
+                                source_id TEXT NOT NULL,
+                                source_version_id INTEGER NOT NULL,
+                                target_id TEXT NOT NULL,
+                                target_version_id INTEGER NOT NULL,
+                                created TEXT NOT NULL,
+                                expired TEXT,
+                                PRIMARY KEY (id, version_id),
+                                FOREIGN KEY (source_id, source_version_id) REFERENCES node(id, version_id),
+                                FOREIGN KEY (target_id, target_version_id) REFERENCES node(id, version_id)
+                            )
+                            """);
 
             // Create component table
             statement.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS component (
-                        id TEXT NOT NULL,
-                        version_id INTEGER NOT NULL,
-                        created TEXT NOT NULL,
-                        expired TEXT,
-                        PRIMARY KEY (id, version_id)
-                    )
-                """);
+                            CREATE TABLE IF NOT EXISTS component (
+                                id TEXT NOT NULL,
+                                version_id INTEGER NOT NULL,
+                                created TEXT NOT NULL,
+                                expired TEXT,
+                                PRIMARY KEY (id, version_id)
+                            )
+                            """);
 
             // Create component_nodes table for many-to-many relationship
             statement.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS component_nodes (
-                        component_id TEXT NOT NULL,
-                        component_version INTEGER NOT NULL,
-                        node_id TEXT NOT NULL,
-                        node_version INTEGER NOT NULL,
-                        PRIMARY KEY (component_id, component_version, node_id, node_version),
-                        FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id),
-                        FOREIGN KEY (node_id, node_version) REFERENCES node(id, version_id)
-                    )
-                """);
+                            CREATE TABLE IF NOT EXISTS component_nodes (
+                                component_id TEXT NOT NULL,
+                                component_version INTEGER NOT NULL,
+                                node_id TEXT NOT NULL,
+                                node_version INTEGER NOT NULL,
+                                PRIMARY KEY (component_id, component_version, node_id, node_version),
+                                FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id),
+                                FOREIGN KEY (node_id, node_version) REFERENCES node(id, version_id)
+                            )
+                            """);
 
             // Create component_edges table for many-to-many relationship
             statement.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS component_edges (
-                        component_id TEXT NOT NULL,
-                        component_version INTEGER NOT NULL,
-                        edge_id TEXT NOT NULL,
-                        edge_version INTEGER NOT NULL,
-                        PRIMARY KEY (component_id, component_version, edge_id, edge_version),
-                        FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id),
-                        FOREIGN KEY (edge_id, edge_version) REFERENCES edge(id, version_id)
-                    )
-                """);
+                            CREATE TABLE IF NOT EXISTS component_edges (
+                                component_id TEXT NOT NULL,
+                                component_version INTEGER NOT NULL,
+                                edge_id TEXT NOT NULL,
+                                edge_version INTEGER NOT NULL,
+                                PRIMARY KEY (component_id, component_version, edge_id, edge_version),
+                                FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id),
+                                FOREIGN KEY (edge_id, edge_version) REFERENCES edge(id, version_id)
+                            )
+                            """);
 
             // Create properties tables for storing node/edge/component data
             statement.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS node_properties (
-                        id TEXT NOT NULL,
-                        version_id INTEGER NOT NULL,
-                        property_key TEXT NOT NULL,
-                        property_value TEXT NOT NULL,
-                        PRIMARY KEY (id, version_id, property_key),
-                        FOREIGN KEY (id, version_id) REFERENCES node(id, version_id)
-                    )
-                """);
+                            CREATE TABLE IF NOT EXISTS node_properties (
+                                id TEXT NOT NULL,
+                                version_id INTEGER NOT NULL,
+                                property_key TEXT NOT NULL,
+                                property_value TEXT NOT NULL,
+                                PRIMARY KEY (id, version_id, property_key),
+                                FOREIGN KEY (id, version_id) REFERENCES node(id, version_id)
+                            )
+                            """);
 
             statement.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS edge_properties (
-                        id TEXT NOT NULL,
-                        version_id INTEGER NOT NULL,
-                        property_key TEXT NOT NULL,
-                        property_value TEXT NOT NULL,
-                        PRIMARY KEY (id, version_id, property_key),
-                        FOREIGN KEY (id, version_id) REFERENCES edge(id, version_id)
-                    )
-                """);
+                            CREATE TABLE IF NOT EXISTS edge_properties (
+                                id TEXT NOT NULL,
+                                version_id INTEGER NOT NULL,
+                                property_key TEXT NOT NULL,
+                                property_value TEXT NOT NULL,
+                                PRIMARY KEY (id, version_id, property_key),
+                                FOREIGN KEY (id, version_id) REFERENCES edge(id, version_id)
+                            )
+                            """);
 
             statement.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS component_properties (
-                        id TEXT NOT NULL,
-                        version_id INTEGER NOT NULL,
-                        property_key TEXT NOT NULL,
-                        property_value TEXT NOT NULL,
-                        PRIMARY KEY (id, version_id, property_key),
-                        FOREIGN KEY (id, version_id) REFERENCES component(id, version_id)
-                    )
-                """);
+                            CREATE TABLE IF NOT EXISTS component_properties (
+                                id TEXT NOT NULL,
+                                version_id INTEGER NOT NULL,
+                                property_key TEXT NOT NULL,
+                                property_value TEXT NOT NULL,
+                                PRIMARY KEY (id, version_id, property_key),
+                                FOREIGN KEY (id, version_id) REFERENCES component(id, version_id)
+                            )
+                            """);
 
             // Create indexes for better query performance
             statement.execute("CREATE INDEX IF NOT EXISTS idx_node_expired ON node(id, expired)");

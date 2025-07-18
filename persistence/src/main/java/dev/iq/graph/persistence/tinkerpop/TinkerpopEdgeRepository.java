@@ -35,12 +35,12 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> {
 
-    private final GraphTraversalSource g;
+    private final GraphTraversalSource traversal;
     private final TinkerpopNodeRepository nodeRepository;
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
 
     public TinkerpopEdgeRepository(final @NotNull Graph graph, final TinkerpopNodeRepository nodeRepository) {
-        g = graph.traversal();
+        traversal = graph.traversal();
         this.nodeRepository = nodeRepository;
     }
 
@@ -67,20 +67,23 @@ public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> 
 
     @Override
     public Optional<Edge> findActive(final NanoId edgeId) {
-        final var edgeOpt = g.E().has("id", edgeId.id()).not(__.has("expired")).tryNext();
+        final var edgeOpt =
+                traversal.E().has("id", edgeId.id()).not(__.has("expired")).tryNext();
         return edgeOpt.map(this::edgeToEdge);
     }
 
     @Override
     public List<Edge> findAll(final NanoId edgeId) {
-        return g.E().has("id", edgeId.id()).order().by("versionId").toList().stream()
+        return traversal.E().has("id", edgeId.id()).order().by("versionId").toList().stream()
                 .map(this::edgeToEdge)
                 .toList();
     }
 
     @Override
     public Optional<Edge> find(final Locator locator) {
-        final var edgeOpt = g.E().has("id", locator.id().id())
+        final var edgeOpt = traversal
+                .E()
+                .has("id", locator.id().id())
                 .has("versionId", locator.version())
                 .tryNext();
         return edgeOpt.map(this::edgeToEdge);
@@ -89,7 +92,9 @@ public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> 
     @Override
     public Optional<Edge> findAt(final NanoId edgeId, final Instant timestamp) {
         final var timestampStr = timestamp.toString();
-        return g.E().has("id", edgeId.id())
+        return traversal
+                .E()
+                .has("id", edgeId.id())
                 .where(__.values("created").is(lte(timestampStr)))
                 .where(__.or(__.not(__.has("expired")), __.values("expired").is(gt(timestampStr))))
                 .order()
@@ -101,9 +106,9 @@ public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> 
 
     @Override
     public boolean delete(final NanoId edgeId) {
-        final var count = g.E().has("id", edgeId.id()).count().next();
+        final var count = traversal.E().has("id", edgeId.id()).count().next();
         if (count > 0) {
-            g.E().has("id", edgeId.id()).drop().iterate();
+            traversal.E().has("id", edgeId.id()).drop().iterate();
             return true;
         }
         return false;
@@ -111,7 +116,8 @@ public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> 
 
     @Override
     public boolean expire(final NanoId elementId, final Instant expiredAt) {
-        final var edges = g.E().has("id", elementId.id()).not(__.has("expired")).toList();
+        final var edges =
+                traversal.E().has("id", elementId.id()).not(__.has("expired")).toList();
         if (!edges.isEmpty()) {
             edges.forEach(e -> e.property("expired", expiredAt.toString()));
             return true;
@@ -120,13 +126,13 @@ public final class TinkerpopEdgeRepository implements VersionedRepository<Edge> 
     }
 
     private Vertex findOrCreateVertexForNode(final Node node) {
-        final var existing = g.V().has("id", node.locator().id().id()).tryNext();
+        final var existing = traversal.V().has("id", node.locator().id().id()).tryNext();
         if (existing.isPresent()) {
             return existing.get();
         }
         // Create vertex if it doesn't exist
         nodeRepository.save(node);
-        return g.V().has("id", node.locator().id().id()).next();
+        return traversal.V().has("id", node.locator().id().id()).next();
     }
 
     private Edge edgeToEdge(final org.apache.tinkerpop.gremlin.structure.Edge tinkerpopEdge) {

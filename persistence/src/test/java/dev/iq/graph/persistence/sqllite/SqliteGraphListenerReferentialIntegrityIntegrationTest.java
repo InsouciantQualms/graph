@@ -38,7 +38,7 @@ final class SqliteGraphListenerReferentialIntegrityIntegrationTest
     }
 
     @AfterEach
-    void tearDown() {
+    void after() {
         if (currentSession != null) {
             currentSession.rollback();
             currentSession.close();

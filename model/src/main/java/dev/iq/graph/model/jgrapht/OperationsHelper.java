@@ -12,7 +12,12 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
@@ -87,7 +92,7 @@ public final class OperationsHelper {
                 case final Node node -> nodes.add(node);
                 case final Edge edge -> edges.add(edge);
                 default -> throw new IllegalArgumentException(
-                        "Invalid element type: " + element.getClass().getSimpleName());
+                        "Unknown element type: " + element.getClass().getSimpleName());
             }
         });
 

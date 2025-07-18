@@ -25,7 +25,7 @@ public final class DefaultGraphService implements GraphService {
 
     @Override
     public boolean hasPath(final NanoId sourceNodeId, final NanoId targetNodeId) {
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // TODO: This requires integration with GraphOperations and building in-memory graph from repository
             // For now, returning false as a placeholder
             return false;
@@ -34,7 +34,7 @@ public final class DefaultGraphService implements GraphService {
 
     @Override
     public List<Path> getActiveConnected() {
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // TODO: This requires integration with GraphOperations and building in-memory graph from repository
             // For now, returning empty list as a placeholder
             return List.of();
@@ -43,7 +43,7 @@ public final class DefaultGraphService implements GraphService {
 
     @Override
     public Path getShortestPath(final NanoId sourceNodeId, final NanoId targetNodeId) {
-        try (final var session = sessionFactory.create()) {
+        try (var session = sessionFactory.create()) {
             // TODO: This requires integration with GraphOperations and building in-memory graph from repository
             throw new UnsupportedOperationException(
                     "Not yet implemented - requires integration with GraphOperations and repository data");

@@ -6,7 +6,9 @@
 
 package dev.iq.graph.persistence.sqllite;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +25,7 @@ final class SqliteSessionFactoryTest {
     private SqliteSessionFactory sessionFactory;
 
     @BeforeEach
-    void setUp() {
+    void before() {
         // For testing, we need to use a real in-memory SQLite database
         // since the constructor initializes the schema
         final DataSource dataSource = new SQLiteDataSource();

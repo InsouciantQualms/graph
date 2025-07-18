@@ -6,7 +6,10 @@
 
 package dev.iq.graph.persistence.tinkerpop;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,7 +24,7 @@ final class TinkerpopSessionFactoryTest {
     private TinkerpopSessionFactory sessionFactory;
 
     @BeforeEach
-    void setUp() {
+    void before() {
         sessionFactory = new TinkerpopSessionFactory();
     }
 

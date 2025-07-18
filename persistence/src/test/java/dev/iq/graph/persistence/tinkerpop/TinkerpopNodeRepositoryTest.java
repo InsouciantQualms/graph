@@ -6,7 +6,9 @@
 
 package dev.iq.graph.persistence.tinkerpop;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
@@ -28,13 +30,13 @@ import org.junit.jupiter.api.Test;
 @DisplayName("TinkerpopNodeRepository Unit Tests")
 final class TinkerpopNodeRepositoryTest {
 
-    private GraphTraversalSource g;
+    private GraphTraversalSource traversalSource;
     private TinkerpopNodeRepository repository;
 
     @BeforeEach
-    void setUp() {
+    void before() {
         final Graph graph = TinkerGraph.open();
-        g = graph.traversal();
+        traversalSource = graph.traversal();
         repository = new TinkerpopNodeRepository(graph);
     }
 
@@ -50,7 +52,9 @@ final class TinkerpopNodeRepositoryTest {
         assertEquals(node, result);
 
         // Verify node exists in graph
-        final var vertices = g.V().hasLabel("node")
+        final var vertices = traversalSource
+                .V()
+                .hasLabel("node")
                 .has("id", node.locator().id().id())
                 .has("versionId", node.locator().version())
                 .toList();
@@ -185,7 +189,8 @@ final class TinkerpopNodeRepositoryTest {
         assertTrue(result);
 
         // Verify node is gone
-        final var vertices = g.V().hasLabel("node").has("id", nodeId.id()).toList();
+        final var vertices =
+                traversalSource.V().hasLabel("node").has("id", nodeId.id()).toList();
 
         assertTrue(vertices.isEmpty());
     }

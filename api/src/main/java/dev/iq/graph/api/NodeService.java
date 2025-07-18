@@ -22,7 +22,8 @@ public interface NodeService extends IdentifiableBase<Node> {
     Node add(Data data);
 
     /**
-     * Updates an existing node (creating a new version) with the specified data.  Updating a node will create a new version.
+     * Updates an existing node (creating a new version) with the specified data.
+     * Updating a node will create a new version.
      */
     Node update(NanoId id, Data data);
 

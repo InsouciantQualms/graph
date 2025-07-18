@@ -28,8 +28,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for GraphOperations class to verify shortestPath returns Path
- * and allPaths returns List<Path> while avoiding cycles.
+ * Tests for GraphOperations class to verify shortestPath returns Path and allPaths returns List of Path.
  */
 @DisplayName("GraphOperations Tests")
 public class GraphOperationsTest {
@@ -40,7 +39,7 @@ public class GraphOperationsTest {
     private Node nodeC;
 
     @BeforeEach
-    final void setUp() {
+    final void before() {
 
         // Create shared graph and operations
         final var base = new DirectedMultigraph<Node, Edge>(null, null, false);

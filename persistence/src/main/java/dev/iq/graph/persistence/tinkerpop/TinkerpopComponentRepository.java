@@ -36,7 +36,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 public final class TinkerpopComponentRepository implements VersionedRepository<Component> {
 
     private final Graph graph;
-    private final GraphTraversalSource g;
+    private final GraphTraversalSource traversal;
     private final TinkerpopNodeRepository nodeRepository;
     private final TinkerpopEdgeRepository edgeRepository;
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
@@ -46,7 +46,7 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
             final TinkerpopNodeRepository nodeRepository,
             final TinkerpopEdgeRepository edgeRepository) {
         this.graph = graph;
-        g = graph.traversal();
+        traversal = graph.traversal();
         this.nodeRepository = nodeRepository;
         this.edgeRepository = edgeRepository;
     }
@@ -67,7 +67,9 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
 
             // Save element associations
             for (final var element : component.elements()) {
-                final var elementVertex = g.V().has("id", element.locator().id().id())
+                final var elementVertex = traversal
+                        .V()
+                        .has("id", element.locator().id().id())
                         .has("version", element.locator().version())
                         .tryNext();
 
@@ -81,7 +83,9 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
 
     @Override
     public Optional<Component> findActive(final NanoId id) {
-        return Io.withReturn(() -> g.V().hasLabel("component")
+        return Io.withReturn(() -> traversal
+                .V()
+                .hasLabel("component")
                 .has("id", id.id())
                 .not(__.has("expired"))
                 .order()
@@ -95,7 +99,9 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
     public Optional<Component> findAt(final NanoId id, final Instant timestamp) {
         return Io.withReturn(() -> {
             final var timestampStr = timestamp.toString();
-            return g.V().hasLabel("component")
+            return traversal
+                    .V()
+                    .hasLabel("component")
                     .has("id", id.id())
                     .where(__.values("created").is(P.lte(timestampStr)))
                     .where(__.or(__.not(__.has("expired")), __.values("expired").is(P.gt(timestampStr))))
@@ -109,7 +115,9 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
 
     @Override
     public Optional<Component> find(final Locator locator) {
-        return Io.withReturn(() -> g.V().hasLabel("component")
+        return Io.withReturn(() -> traversal
+                .V()
+                .hasLabel("component")
                 .has("id", locator.id().id())
                 .has("version", locator.version())
                 .tryNext()
@@ -119,7 +127,7 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
     @Override
     public List<Component> findAll(final NanoId id) {
         return Io.withReturn(
-                () -> g.V().hasLabel("component").has("id", id.id()).order().by("version").toList().stream()
+                () -> traversal.V().hasLabel("component").has("id", id.id()).order().by("version").toList().stream()
                         .map(this::vertexToComponent)
                         .toList());
     }
@@ -127,7 +135,9 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
     @Override
     public boolean expire(final NanoId id, final Instant expiredAt) {
         return Io.withReturn(() -> {
-            final var vertices = g.V().hasLabel("component")
+            final var vertices = traversal
+                    .V()
+                    .hasLabel("component")
                     .has("id", id.id())
                     .not(__.has("expired"))
                     .toList();
@@ -142,14 +152,24 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
     @Override
     public boolean delete(final NanoId id) {
         return Io.withReturn(() -> {
-            final var count =
-                    g.V().hasLabel("component").has("id", id.id()).count().next();
+            final var count = traversal
+                    .V()
+                    .hasLabel("component")
+                    .has("id", id.id())
+                    .count()
+                    .next();
             if (count > 0) {
                 // First delete all edges
-                g.V().hasLabel("component").has("id", id.id()).bothE().drop().iterate();
+                traversal
+                        .V()
+                        .hasLabel("component")
+                        .has("id", id.id())
+                        .bothE()
+                        .drop()
+                        .iterate();
 
                 // Then delete the vertices
-                g.V().hasLabel("component").has("id", id.id()).drop().iterate();
+                traversal.V().hasLabel("component").has("id", id.id()).drop().iterate();
                 return true;
             }
             return false;
@@ -181,7 +201,8 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
     private List<Element> loadComponentElements(final Vertex componentVertex) {
         final var elements = new ArrayList<Element>();
 
-        g.V(componentVertex)
+        traversal
+                .V(componentVertex)
                 .outE("contains")
                 .as("edge")
                 .inV()

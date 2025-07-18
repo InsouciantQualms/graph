@@ -6,7 +6,10 @@
 
 package dev.iq.graph.persistence.mongodb;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -22,7 +25,11 @@ import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Unit tests for MongoNodeRepository using embedded MongoDB.
@@ -65,7 +72,7 @@ final class MongoNodeRepositoryTest {
     }
 
     @BeforeEach
-    void setUp() {
+    void before() {
         database.drop();
         repository = new MongoNodeRepository(database);
     }

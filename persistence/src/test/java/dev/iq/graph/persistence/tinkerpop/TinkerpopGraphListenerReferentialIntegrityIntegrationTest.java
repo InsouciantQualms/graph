@@ -22,7 +22,7 @@ final class TinkerpopGraphListenerReferentialIntegrityIntegrationTest
     protected GraphRepository createGraphRepository() {
 
         final var factory = new TinkerpopSessionFactory();
-        try (final var session = (TinkerpopSession) factory.create()) {
+        try (var session = (TinkerpopSession) factory.create()) {
             return TinkerpopGraphRepository.create(session);
         }
     }

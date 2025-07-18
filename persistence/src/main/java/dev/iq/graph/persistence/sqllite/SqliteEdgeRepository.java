@@ -31,6 +31,13 @@ import org.jdbi.v3.core.statement.StatementContext;
  */
 public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
 
+    private static final String EDGE_BASE_QUERY =
+            """
+            SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id,
+                            e.target_id, e.target_version_id, e.created, e.expired
+            FROM edge e
+            """;
+
     private final SqliteNodeRepository nodeRepository;
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
     private final SqliteSession session;
@@ -50,9 +57,11 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
     public Edge save(final Edge edge) {
         final var sql =
                 """
-            INSERT INTO edge (id, version_id, source_id, source_version_id, target_id, target_version_id, created, expired)
-            VALUES (:id, :version_id, :source_id, :source_version_id, :target_id, :target_version_id, :created, :expired)
-            """;
+                INSERT INTO edge (id, version_id, source_id, source_version_id,
+                                  target_id, target_version_id, created, expired)
+                VALUES (:id, :version_id, :source_id, :source_version_id,
+                        :target_id, :target_version_id, :created, :expired)
+                """;
 
         Io.withVoid(() -> {
             getHandle()
@@ -76,13 +85,11 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
 
     @Override
     public Optional<Edge> findActive(final NanoId edgeId) {
-        final var sql =
-                """
-            SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id, e.target_id, e.target_version_id, e.created, e.expired
-            FROM edge e
-            WHERE e.id = :id AND e.expired IS NULL
-            ORDER BY e.version_id DESC LIMIT 1
-            """;
+        final var sql = EDGE_BASE_QUERY
+                + """
+                WHERE e.id = :id AND e.expired IS NULL
+                ORDER BY e.version_id DESC LIMIT 1
+                """;
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
@@ -93,13 +100,11 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
 
     @Override
     public List<Edge> findAll(final NanoId edgeId) {
-        final var sql =
-                """
-            SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id, e.target_id, e.target_version_id, e.created, e.expired
-            FROM edge e
-            WHERE e.id = :id
-            ORDER BY e.version_id
-            """;
+        final var sql = EDGE_BASE_QUERY
+                + """
+                WHERE e.id = :id
+                ORDER BY e.version_id
+                """;
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
@@ -110,12 +115,10 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
 
     @Override
     public Optional<Edge> find(final Locator locator) {
-        final var sql =
-                """
-            SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id, e.target_id, e.target_version_id, e.created, e.expired
-            FROM edge e
-            WHERE e.id = :id AND e.version_id = :version_id
-            """;
+        final var sql = EDGE_BASE_QUERY
+                + """
+                WHERE e.id = :id AND e.version_id = :version_id
+                """;
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
@@ -127,14 +130,13 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
 
     @Override
     public Optional<Edge> findAt(final NanoId edgeId, final Instant timestamp) {
-        final var sql =
-                """
-            SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id, e.target_id, e.target_version_id, e.created, e.expired
-            FROM edge e
-            WHERE e.id = :id AND e.created <= :timestamp AND (e.expired IS NULL OR e.expired > :timestamp)
-            ORDER BY e.version_id DESC
-            LIMIT 1
-            """;
+        final var sql = EDGE_BASE_QUERY
+                + """
+                WHERE e.id = :id AND e.created <= :timestamp
+                      AND (e.expired IS NULL OR e.expired > :timestamp)
+                ORDER BY e.version_id DESC
+                LIMIT 1
+                """;
 
         return Io.withReturn(() -> {
             final var timestampStr = timestamp.toString();
@@ -205,9 +207,9 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
     private void saveProperties(final NanoId edgeId, final int version, final Data data) {
         final var sql =
                 """
-            INSERT INTO edge_properties (id, version_id, property_key, property_value)
-            VALUES (:id, :version_id, :property_key, :property_value)
-            """;
+                INSERT INTO edge_properties (id, version_id, property_key, property_value)
+                VALUES (:id, :version_id, :property_key, :property_value)
+                """;
 
         final var properties = serde.serialize(data);
         Io.withVoid(() -> {
@@ -226,10 +228,10 @@ public final class SqliteEdgeRepository implements VersionedRepository<Edge> {
     private Data loadProperties(final NanoId edgeId, final int version) {
         final var sql =
                 """
-            SELECT property_key, property_value
-            FROM edge_properties
-            WHERE id = :id AND version_id = :version_id
-            """;
+                SELECT property_key, property_value
+                FROM edge_properties
+                WHERE id = :id AND version_id = :version_id
+                """;
 
         return Io.withReturn(() -> {
             final var properties = new HashMap<String, Object>();

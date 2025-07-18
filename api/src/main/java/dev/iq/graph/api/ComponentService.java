@@ -28,7 +28,8 @@ public interface ComponentService extends IdentifiableBase<Component> {
     Component add(List<Element> elements, Data data);
 
     /**
-     * Updates an existing component (creating a new version) with the specified list of elements.  All elements must exist and be active.
+     * Updates an existing component (creating a new version) with the specified list of elements.
+     * All elements must exist and be active.
      */
     Component update(NanoId id, List<Element> elements, Data data);
 
@@ -38,7 +39,8 @@ public interface ComponentService extends IdentifiableBase<Component> {
     List<Component> findActiveContaining(NanoId id);
 
     /**
-     * Finds all components that contain the specified element (node or edge) at the specified timestamp (active or expired).
+     * Finds all components that contain the specified element (node or edge) at the specified timestamp
+     * (active or expired).
      */
     List<Component> findContaining(NanoId id, Instant timestamp);
 }

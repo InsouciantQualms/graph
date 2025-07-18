@@ -43,7 +43,7 @@ final class MongoGraphListenerReferentialIntegrityIntegrationTest
         final var serverAddress = mongodProcess.current().getServerAddress();
         final var uri = "mongodb://" + serverAddress.getHost() + ':' + serverAddress.getPort();
         final var factory = new MongoSessionFactory(uri, "test_graph_integration");
-        try (final var session = (MongoSession) factory.create()) {
+        try (var session = (MongoSession) factory.create()) {
             return MongoGraphRepository.create(session);
         }
     }
