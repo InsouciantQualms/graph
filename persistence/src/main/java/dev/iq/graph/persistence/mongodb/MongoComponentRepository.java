@@ -60,18 +60,9 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
     @Override
     public Component save(final Component component) {
         return Io.withReturn(() -> {
-            final var document = new Document()
-                    .append(
-                            "_id",
-                            component.locator().id().id()
-                                    + ':'
-                                    + component.locator().version())
-                    .append("id", component.locator().id().id())
-                    .append("versionId", component.locator().version())
-                    .append("created", component.created().toString())
-                    .append("data", serde.serialize(component.data()));
-
-            component.expired().ifPresent(expired -> document.append("expired", expired.toString()));
+            final var document = MongoHelper.createBaseDocument(
+                    component.locator(), component.created(), serde.serialize(component.data()));
+            MongoHelper.addExpiryToDocument(document, component.expired());
 
             collection.insertOne(document);
 
@@ -152,23 +143,14 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
 
     private Component documentToComponent(final Document document) {
         return Io.withReturn(() -> {
-            final var id = new NanoId(document.getString("id"));
-            final var versionId = document.getInteger("versionId");
-            final var created = Instant.parse(document.getString("created"));
-
-            Optional<Instant> expired = Optional.empty();
-            final var expiredStr = document.getString("expired");
-            if (expiredStr != null) {
-                expired = Optional.of(Instant.parse(expiredStr));
-            }
-
-            final var json = document.getString("data");
-            final var data = serde.deserialize(json);
+            final var versionedData = MongoHelper.extractVersionedData(document);
+            final var data = serde.deserialize(versionedData.serializedData());
 
             // Load component elements
             final var elements = new ArrayList<Element>();
-            final var elementDocs =
-                    elementsCollection.find(and(eq("componentId", id.id()), eq("componentVersionId", versionId)));
+            final var elementDocs = elementsCollection.find(and(
+                    eq("componentId", versionedData.locator().id().id()),
+                    eq("componentVersionId", versionedData.locator().version())));
 
             for (final var elementDoc : elementDocs) {
                 final var elementId = new NanoId(elementDoc.getString("elementId"));
@@ -183,32 +165,18 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
                 }
             }
 
-            final var locator = new Locator(id, versionId);
-            return new SimpleComponent(locator, elements, data, created, expired);
+            return new SimpleComponent(
+                    versionedData.locator(), elements, data, versionedData.created(), versionedData.expired());
         });
     }
 
     @Override
     public List<NanoId> allIds() {
-        return Io.withReturn(() -> {
-            final var distinctIds = collection.distinct("id", String.class);
-            final var result = new ArrayList<NanoId>();
-            for (final var id : distinctIds) {
-                result.add(new NanoId(id));
-            }
-            return result;
-        });
+        return MongoHelper.convertToNanoIdList(collection.distinct("id", String.class));
     }
 
     @Override
     public List<NanoId> allActiveIds() {
-        return Io.withReturn(() -> {
-            final var distinctIds = collection.distinct("id", not(exists("expired")), String.class);
-            final var result = new ArrayList<NanoId>();
-            for (final var id : distinctIds) {
-                result.add(new NanoId(id));
-            }
-            return result;
-        });
+        return MongoHelper.convertToNanoIdList(collection.distinct("id", not(exists("expired")), String.class));
     }
 }

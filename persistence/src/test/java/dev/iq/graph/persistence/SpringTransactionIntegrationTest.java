@@ -20,7 +20,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.context.annotation.Configuration;
@@ -40,7 +39,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ContextConfiguration(classes = SpringTransactionIntegrationTest.TestConfig.class)
 @ActiveProfiles("tinkerpop") // Can be changed to "sqlite" or "mongodb"
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-@Disabled // Temporarily disabled due to logging conflicts
 public class SpringTransactionIntegrationTest {
 
     @Configuration

@@ -49,16 +49,9 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     @Override
     public Node save(final Node node) {
         return Io.withReturn(() -> {
-            final var document = new Document()
-                    .append(
-                            "_id",
-                            node.locator().id().id() + ':' + node.locator().version())
-                    .append("id", node.locator().id().id())
-                    .append("versionId", node.locator().version())
-                    .append("created", node.created().toString())
-                    .append("data", (serde.serialize(node.data())));
-
-            node.expired().ifPresent(expired -> document.append("expired", expired.toString()));
+            final var document = MongoHelper.createBaseDocument(
+                    node.locator(), node.created(), serde.serialize(node.data()));
+            MongoHelper.addExpiryToDocument(document, node.expired());
 
             collection.insertOne(document);
             return node;
@@ -125,45 +118,21 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
 
     private Node documentToNode(final Document document) {
         return Io.withReturn(() -> {
-            final var id = new NanoId(document.getString("id"));
-            final var versionId = document.getInteger("versionId");
-            final var created = Instant.parse(document.getString("created"));
+            final var versionedData = MongoHelper.extractVersionedData(document);
+            final var data = serde.deserialize(versionedData.serializedData());
 
-            Optional<Instant> expired = Optional.empty();
-            final var expiredStr = document.getString("expired");
-            if (expiredStr != null) {
-                expired = Optional.of(Instant.parse(expiredStr));
-            }
-
-            final var json = document.getString("data");
-            final var data = serde.deserialize(json);
-
-            final var locator = new Locator(id, versionId);
-            return new SimpleNode(locator, List.of(), data, created, expired);
+            return new SimpleNode(
+                    versionedData.locator(), List.of(), data, versionedData.created(), versionedData.expired());
         });
     }
 
     @Override
     public List<NanoId> allIds() {
-        return Io.withReturn(() -> {
-            final var distinctIds = collection.distinct("id", String.class);
-            final var result = new ArrayList<NanoId>();
-            for (final var id : distinctIds) {
-                result.add(new NanoId(id));
-            }
-            return result;
-        });
+        return MongoHelper.convertToNanoIdList(collection.distinct("id", String.class));
     }
 
     @Override
     public List<NanoId> allActiveIds() {
-        return Io.withReturn(() -> {
-            final var distinctIds = collection.distinct("id", not(exists("expired")), String.class);
-            final var result = new ArrayList<NanoId>();
-            for (final var id : distinctIds) {
-                result.add(new NanoId(id));
-            }
-            return result;
-        });
+        return MongoHelper.convertToNanoIdList(collection.distinct("id", not(exists("expired")), String.class));
     }
 }

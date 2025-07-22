@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
  * Default implementation of ComponentService using session-based transactions.
  */
 @Service
-@Transactional
 public final class DefaultComponentService implements ComponentService {
 
     private final GraphRepository repository;
@@ -39,6 +38,7 @@ public final class DefaultComponentService implements ComponentService {
     }
 
     @Override
+    @Transactional
     public Component add(final List<Element> elements, final Data data) {
 
         final var component = componentOperations.add(elements, data, Instant.now());
@@ -46,6 +46,7 @@ public final class DefaultComponentService implements ComponentService {
     }
 
     @Override
+    @Transactional
     public Component update(final NanoId id, final List<Element> elements, final Data data) {
 
         final var component = componentOperations.update(id, elements, data, Instant.now());
@@ -54,6 +55,7 @@ public final class DefaultComponentService implements ComponentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Component> findActiveContaining(final NanoId id) {
 
         // Find all active components and check if they contain an element with this ID
@@ -65,35 +67,25 @@ public final class DefaultComponentService implements ComponentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Component> findContaining(final NanoId id, final Instant timestamp) {
 
-        // Find all components active at the timestamp and check if they contain the element
         final var allComponents = new ArrayList<Component>();
-
-        // Get all component IDs from the in-memory operations
         for (final var component : componentOperations.allActive()) {
             allComponents.addAll(
                     componentOperations.findAllVersions(component.locator().id()));
         }
-
         return allComponents.stream()
-                .filter(component -> {
-                    // Component must be active at the timestamp
-                    if (component.created().isAfter(timestamp)) {
-                        return false;
-                    }
-                    if (component.expired().isPresent()
-                            && !component.expired().get().isAfter(timestamp)) {
-                        return false;
-                    }
-                    // Check if any element matches the ID
-                    return component.elements().stream()
-                            .anyMatch(element -> element.locator().id().equals(id));
-                })
+                .filter(component -> !component.created().isAfter(timestamp)
+                        && (component.expired().isEmpty()
+                                || component.expired().get().isAfter(timestamp))
+                        && component.elements().stream()
+                                .anyMatch(element -> element.locator().id().equals(id)))
                 .toList();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Component find(final Locator locator) {
 
         return repository
@@ -103,41 +95,50 @@ public final class DefaultComponentService implements ComponentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Component> findActive(final NanoId id) {
 
         return repository.components().findActive(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Component> findAt(final NanoId id, final Instant timestamp) {
 
         return repository.components().findAt(id, timestamp);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Component> findAllVersions(final NanoId id) {
 
         return repository.components().findAll(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<NanoId> allActive() {
 
         return repository.components().allActiveIds();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<NanoId> all() {
 
         return repository.components().allIds();
     }
 
     @Override
+    @Transactional
     public Optional<Component> expire(final NanoId id) {
 
         final var activeComponent = componentOperations.findActive(id);
         if (activeComponent.isPresent()) {
             final var expired = componentOperations.expire(id, Instant.now());
+            if (expired.expired().isEmpty()) {
+                throw new IllegalStateException("Expired component is missing an expiration timestamp");
+            }
             repository.components().expire(id, expired.expired().get());
             return Optional.of(expired);
         }
@@ -145,6 +146,7 @@ public final class DefaultComponentService implements ComponentService {
     }
 
     @Override
+    @Transactional
     public boolean delete(final NanoId id) {
 
         return repository.components().delete(id);

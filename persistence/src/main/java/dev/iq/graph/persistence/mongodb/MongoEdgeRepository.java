@@ -51,20 +51,13 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     @Override
     public Edge save(final Edge edge) {
         return Io.withReturn(() -> {
-            final var document = new Document()
-                    .append(
-                            "_id",
-                            edge.locator().id().id() + ':' + edge.locator().version())
-                    .append("id", edge.locator().id().id())
-                    .append("versionId", edge.locator().version())
+            final var document = MongoHelper.createBaseDocument(
+                    edge.locator(), edge.created(), serde.serialize(edge.data()))
                     .append("sourceId", edge.source().locator().id().id())
                     .append("sourceVersionId", edge.source().locator().version())
                     .append("targetId", edge.target().locator().id().id())
-                    .append("targetVersionId", edge.target().locator().version())
-                    .append("created", edge.created().toString())
-                    .append("data", serde.serialize(edge.data()));
-
-            edge.expired().ifPresent(expired -> document.append("expired", expired.toString()));
+                    .append("targetVersionId", edge.target().locator().version());
+            MongoHelper.addExpiryToDocument(document, edge.expired());
 
             collection.insertOne(document);
             return edge;
@@ -131,18 +124,8 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
 
     private Edge documentToEdge(final Document document) {
         return Io.withReturn(() -> {
-            final var id = new NanoId(document.getString("id"));
-            final var versionId = document.getInteger("versionId");
-            final var created = Instant.parse(document.getString("created"));
-
-            Optional<Instant> expired = Optional.empty();
-            final var expiredStr = document.getString("expired");
-            if (expiredStr != null) {
-                expired = Optional.of(Instant.parse(expiredStr));
-            }
-
-            final var json = document.getString("data");
-            final var data = serde.deserialize(json);
+            final var versionedData = MongoHelper.extractVersionedData(document);
+            final var data = serde.deserialize(versionedData.serializedData());
 
             // Retrieve source and target nodes
             final var sourceId = new NanoId(document.getString("sourceId"));
@@ -160,32 +143,18 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
                     .find(targetLocator)
                     .orElseThrow(() -> new IllegalStateException("Target node not found: " + targetLocator));
 
-            final var locator = new Locator(id, versionId);
-            return new SimpleEdge(locator, source, target, data, created, expired);
+            return new SimpleEdge(
+                    versionedData.locator(), source, target, data, versionedData.created(), versionedData.expired());
         });
     }
 
     @Override
     public List<NanoId> allIds() {
-        return Io.withReturn(() -> {
-            final var distinctIds = collection.distinct("id", String.class);
-            final var result = new ArrayList<NanoId>();
-            for (final var id : distinctIds) {
-                result.add(new NanoId(id));
-            }
-            return result;
-        });
+        return MongoHelper.convertToNanoIdList(collection.distinct("id", String.class));
     }
 
     @Override
     public List<NanoId> allActiveIds() {
-        return Io.withReturn(() -> {
-            final var distinctIds = collection.distinct("id", not(exists("expired")), String.class);
-            final var result = new ArrayList<NanoId>();
-            for (final var id : distinctIds) {
-                result.add(new NanoId(id));
-            }
-            return result;
-        });
+        return MongoHelper.convertToNanoIdList(collection.distinct("id", not(exists("expired")), String.class));
     }
 }

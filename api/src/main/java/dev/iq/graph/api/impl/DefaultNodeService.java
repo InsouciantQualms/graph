@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
  * Default implementation of NodeService using Spring transactions.
  */
 @Service
-@Transactional(readOnly = true)
 public final class DefaultNodeService implements NodeService {
 
     private final GraphRepository repository;
@@ -48,12 +47,12 @@ public final class DefaultNodeService implements NodeService {
     public Node update(final NanoId id, final Data data) {
 
         final var node = nodeOperations.update(id, data, Instant.now());
-        // Save the new version and any modified edges
         repository.nodes().save(node);
         return node;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Node> getNeighbors(final NanoId nodeId) {
 
         final var node = nodeOperations
@@ -63,6 +62,7 @@ public final class DefaultNodeService implements NodeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Node find(final Locator locator) {
 
         return repository
@@ -72,30 +72,35 @@ public final class DefaultNodeService implements NodeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Node> findActive(final NanoId id) {
 
         return repository.nodes().findActive(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Node> findAt(final NanoId id, final Instant timestamp) {
 
         return repository.nodes().findAt(id, timestamp);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Node> findAllVersions(final NanoId id) {
 
         return repository.nodes().findAll(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<NanoId> allActive() {
 
         return repository.nodes().allActiveIds();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<NanoId> all() {
 
         return repository.nodes().allIds();
@@ -108,6 +113,9 @@ public final class DefaultNodeService implements NodeService {
         final var activeNode = nodeOperations.findActive(id);
         if (activeNode.isPresent()) {
             final var expired = nodeOperations.expire(id, Instant.now());
+            if (expired.expired().isEmpty()) {
+                throw new IllegalStateException("Expired node is missing an expiration timestamp");
+            }
             repository.nodes().expire(id, expired.expired().get());
             return Optional.of(expired);
         }

@@ -8,6 +8,7 @@ package dev.iq.graph.persistence.config;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import dev.iq.graph.persistence.GraphRepository;
 import dev.iq.graph.persistence.mongodb.MongoGraphRepository;
 import dev.iq.graph.persistence.mongodb.MongoSession;
 import dev.iq.graph.persistence.mongodb.MongoTransactionManager;
@@ -28,13 +29,17 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Test configuration for persistence layer with Spring transactions.
  */
 @Configuration
-public final class TestPersistenceConfiguration {
+public class TestPersistenceConfiguration {
 
+    /**
+     * Creates TinkerGraph instance for testing.
+     */
     @Bean
     @Profile("tinkerpop")
     public Graph tinkerpopGraph() {
@@ -42,6 +47,9 @@ public final class TestPersistenceConfiguration {
         return TinkerGraph.open();
     }
 
+    /**
+     * Creates graph supplier for testing.
+     */
     @Bean
     @Profile("tinkerpop")
     public Supplier<Graph> graphSupplier(final Graph graph) {
@@ -49,6 +57,9 @@ public final class TestPersistenceConfiguration {
         return () -> graph;
     }
 
+    /**
+     * Creates TinkerPop transaction manager for testing.
+     */
     @Bean
     @Profile("tinkerpop")
     public PlatformTransactionManager tinkerpopTransactionManager(final Supplier<Graph> graphSupplier) {
@@ -56,9 +67,22 @@ public final class TestPersistenceConfiguration {
         return new TinkerpopTransactionManager(graphSupplier);
     }
 
+    /**
+     * Creates transaction template for testing.
+     */
     @Bean
     @Profile("tinkerpop")
-    public TinkerpopGraphRepository tinkerpopGraphRepository(final Graph graph) {
+    public TransactionTemplate transactionTemplate(final PlatformTransactionManager transactionManager) {
+
+        return new TransactionTemplate(transactionManager);
+    }
+
+    /**
+     * Creates TinkerPop graph repository for testing.
+     */
+    @Bean("graphRepository")
+    @Profile("tinkerpop")
+    public GraphRepository tinkerpopGraphRepository(final Graph graph) {
 
         final var sessionFactory = new TinkerpopSessionFactory();
         try (var session = (TinkerpopSession) sessionFactory.create()) {
@@ -66,6 +90,34 @@ public final class TestPersistenceConfiguration {
         }
     }
 
+    /**
+     * Creates SQLite graph repository for testing.
+     */
+    @Bean("graphRepository")
+    @Profile("sqlite")
+    public GraphRepository sqliteGraphRepository(final DataSource dataSource) {
+
+        // Initialize schema
+        final var sessionFactory = new SqliteSessionFactory(dataSource);
+        try (var session = sessionFactory.create()) {
+            return (SqliteGraphRepository) SqliteGraphRepository.create((SqliteSession) session);
+        }
+    }
+
+    /**
+     * Creates MongoDB graph repository for testing.
+     */
+    @Bean("graphRepository")
+    @Profile("mongodb")
+    public GraphRepository mongoGraphRepository(final MongoClient mongoClient) {
+
+        final var session = new MongoSession(mongoClient, "test");
+        return (MongoGraphRepository) MongoGraphRepository.create(session);
+    }
+
+    /**
+     * Creates SQLite data source for testing.
+     */
     @Bean
     @Profile("sqlite")
     public DataSource sqliteDataSource() {
@@ -77,6 +129,9 @@ public final class TestPersistenceConfiguration {
         return new com.zaxxer.hikari.HikariDataSource(hikariConfig);
     }
 
+    /**
+     * Creates JDBI instance for testing.
+     */
     @Bean
     @Profile("sqlite")
     public Jdbi jdbi(final DataSource dataSource) {
@@ -84,6 +139,9 @@ public final class TestPersistenceConfiguration {
         return Jdbi.create(dataSource);
     }
 
+    /**
+     * Creates SQLite transaction manager for testing.
+     */
     @Bean
     @Profile("sqlite")
     public PlatformTransactionManager sqliteTransactionManager(final Jdbi jdbi) {
@@ -91,17 +149,19 @@ public final class TestPersistenceConfiguration {
         return new SqliteTransactionManager(jdbi);
     }
 
+    /**
+     * Creates transaction template for testing.
+     */
     @Bean
     @Profile("sqlite")
-    public SqliteGraphRepository sqliteGraphRepository(final DataSource dataSource) {
+    public TransactionTemplate sqliteTransactionTemplate(final PlatformTransactionManager transactionManager) {
 
-        // Initialize schema
-        final var sessionFactory = new SqliteSessionFactory(dataSource);
-        try (var session = sessionFactory.create()) {
-            return (SqliteGraphRepository) SqliteGraphRepository.create((SqliteSession) session);
-        }
+        return new TransactionTemplate(transactionManager);
     }
 
+    /**
+     * Creates MongoDB client for testing.
+     */
     @Bean
     @Profile("mongodb")
     public MongoClient mongoClient() {
@@ -110,6 +170,9 @@ public final class TestPersistenceConfiguration {
         return MongoClients.create("mongodb://localhost:27017");
     }
 
+    /**
+     * Creates MongoDB transaction manager for testing.
+     */
     @Bean
     @Profile("mongodb")
     public PlatformTransactionManager mongoTransactionManager(final MongoClient mongoClient) {
@@ -117,11 +180,13 @@ public final class TestPersistenceConfiguration {
         return new MongoTransactionManager(mongoClient);
     }
 
+    /**
+     * Creates transaction template for testing.
+     */
     @Bean
     @Profile("mongodb")
-    public MongoGraphRepository mongoGraphRepository(final MongoClient mongoClient) {
+    public TransactionTemplate mongoTransactionTemplate(final PlatformTransactionManager transactionManager) {
 
-        final var session = new MongoSession(mongoClient, "test");
-        return (MongoGraphRepository) MongoGraphRepository.create(session);
+        return new TransactionTemplate(transactionManager);
     }
 }
