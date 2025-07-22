@@ -115,6 +115,9 @@ http-client.private.env.json
 
 # End excludes from IntelliJ
 
+# Ignore IntelliJ language injection project settings
+.idea/IntelliLang.xml
+
 # Ignore local AI files
 **/.claude/
 CLAUDE.MD
