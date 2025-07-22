@@ -7,7 +7,7 @@
 package dev.iq.graph.persistence.tinkerpop;
 
 import dev.iq.common.fp.Io;
-import dev.iq.common.persist.Session;
+import dev.iq.graph.persistence.Session;
 import java.util.Optional;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Transaction;

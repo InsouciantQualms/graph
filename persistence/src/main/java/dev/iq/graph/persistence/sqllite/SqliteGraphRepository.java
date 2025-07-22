@@ -17,7 +17,7 @@ public record SqliteGraphRepository(
         SqliteNodeRepository nodes, SqliteEdgeRepository edges, SqliteComponentRepository components)
         implements GraphRepository {
 
-    public static GraphRepository create(final SqliteSession session) {
+    public static GraphRepository create(final SqliteHandleProvider session) {
 
         final var nodeRepository = new SqliteNodeRepository(session);
         final var edgeRepository = new SqliteEdgeRepository(session, nodeRepository);

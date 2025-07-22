@@ -7,8 +7,8 @@
 package dev.iq.graph.persistence.mongodb;
 
 import com.mongodb.client.MongoClients;
-import dev.iq.common.persist.Session;
-import dev.iq.common.persist.SessionFactory;
+import dev.iq.graph.persistence.Session;
+import dev.iq.graph.persistence.SessionFactory;
 
 /**
  * MongoDB implementation of SessionFactory.

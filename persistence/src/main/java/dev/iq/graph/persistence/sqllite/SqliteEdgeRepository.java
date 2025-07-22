@@ -42,9 +42,9 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
     private final SqliteNodeRepository nodeRepository;
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
-    private final SqliteSession session;
+    private final SqliteHandleProvider session;
 
-    public SqliteEdgeRepository(final SqliteSession session, final SqliteNodeRepository nodeRepository) {
+    public SqliteEdgeRepository(final SqliteHandleProvider session, final SqliteNodeRepository nodeRepository) {
         this.session = session;
         this.nodeRepository = nodeRepository;
         // Schema initialization is handled by SqliteConnectionProvider

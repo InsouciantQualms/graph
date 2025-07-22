@@ -68,9 +68,7 @@ public final class DelegatedGraphListenerRepository implements GraphListenerRepo
     public void flush() {
 
         Io.withVoid(() -> {
-            for (final var operation : operations) {
-                operation.run();
-            }
+            operations.forEach(proc -> Io.withVoid(proc));
             operations.clear();
         });
     }

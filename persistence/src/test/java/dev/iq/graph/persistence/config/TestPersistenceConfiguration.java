@@ -12,9 +12,8 @@ import dev.iq.graph.persistence.GraphRepository;
 import dev.iq.graph.persistence.mongodb.MongoGraphRepository;
 import dev.iq.graph.persistence.mongodb.MongoSession;
 import dev.iq.graph.persistence.mongodb.MongoTransactionManager;
+import dev.iq.graph.persistence.sqllite.SpringTransactionalSqliteSession;
 import dev.iq.graph.persistence.sqllite.SqliteGraphRepository;
-import dev.iq.graph.persistence.sqllite.SqliteSession;
-import dev.iq.graph.persistence.sqllite.SqliteSessionFactory;
 import dev.iq.graph.persistence.sqllite.SqliteTransactionManager;
 import dev.iq.graph.persistence.tinkerpop.TinkerpopGraphRepository;
 import dev.iq.graph.persistence.tinkerpop.TinkerpopSession;
@@ -95,13 +94,117 @@ public class TestPersistenceConfiguration {
      */
     @Bean("graphRepository")
     @Profile("sqlite")
-    public GraphRepository sqliteGraphRepository(final DataSource dataSource) {
+    public GraphRepository sqliteGraphRepository(final Jdbi jdbi) {
 
         // Initialize schema
-        final var sessionFactory = new SqliteSessionFactory(dataSource);
-        try (var session = sessionFactory.create()) {
-            return (SqliteGraphRepository) SqliteGraphRepository.create((SqliteSession) session);
-        }
+        initializeSqliteSchema(jdbi);
+
+        // Create a Spring transaction-aware session
+        final var session = new SpringTransactionalSqliteSession(jdbi);
+        return (SqliteGraphRepository) SqliteGraphRepository.create(session);
+    }
+
+    private void initializeSqliteSchema(final Jdbi jdbi) {
+
+        jdbi.useHandle(handle -> {
+            // Enable foreign keys for SQLite
+            handle.execute("PRAGMA foreign_keys = ON");
+
+            // Create node table
+            handle.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS node (
+                        id TEXT NOT NULL,
+                        version_id INTEGER NOT NULL,
+                        created TEXT NOT NULL,
+                        expired TEXT,
+                        PRIMARY KEY (id, version_id)
+                    )
+                    """);
+
+            // Create node properties table
+            handle.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS node_properties (
+                        id TEXT NOT NULL,
+                        version_id INTEGER NOT NULL,
+                        property_key TEXT NOT NULL,
+                        property_value TEXT NOT NULL,
+                        PRIMARY KEY (id, version_id, property_key),
+                        FOREIGN KEY (id, version_id) REFERENCES node(id, version_id)
+                    )
+                    """);
+
+            // Create edge table
+            handle.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS edge (
+                        id TEXT NOT NULL,
+                        version_id INTEGER NOT NULL,
+                        source_id TEXT NOT NULL,
+                        source_version_id INTEGER NOT NULL,
+                        target_id TEXT NOT NULL,
+                        target_version_id INTEGER NOT NULL,
+                        created TEXT NOT NULL,
+                        expired TEXT,
+                        PRIMARY KEY (id, version_id),
+                        FOREIGN KEY (source_id, source_version_id) REFERENCES node(id, version_id),
+                        FOREIGN KEY (target_id, target_version_id) REFERENCES node(id, version_id)
+                    )
+                    """);
+
+            // Create edge properties table
+            handle.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS edge_properties (
+                        id TEXT NOT NULL,
+                        version_id INTEGER NOT NULL,
+                        property_key TEXT NOT NULL,
+                        property_value TEXT NOT NULL,
+                        PRIMARY KEY (id, version_id, property_key),
+                        FOREIGN KEY (id, version_id) REFERENCES edge(id, version_id)
+                    )
+                    """);
+
+            // Create component table
+            handle.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS component (
+                        id TEXT NOT NULL,
+                        version_id INTEGER NOT NULL,
+                        created TEXT NOT NULL,
+                        expired TEXT,
+                        PRIMARY KEY (id, version_id)
+                    )
+                    """);
+
+            // Create component properties table
+            handle.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS component_properties (
+                        id TEXT NOT NULL,
+                        version_id INTEGER NOT NULL,
+                        property_key TEXT NOT NULL,
+                        property_value TEXT NOT NULL,
+                        PRIMARY KEY (id, version_id, property_key),
+                        FOREIGN KEY (id, version_id) REFERENCES component(id, version_id)
+                    )
+                    """);
+
+            // Create component-element junction table
+            handle.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS component_element (
+                        component_id TEXT NOT NULL,
+                        component_version INTEGER NOT NULL,
+                        element_id TEXT NOT NULL,
+                        element_version INTEGER NOT NULL,
+                        element_type TEXT NOT NULL,
+                        PRIMARY KEY (component_id, component_version, element_id, element_version),
+                        FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id)
+                    )
+                    """);
+        });
     }
 
     /**

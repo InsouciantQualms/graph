@@ -38,10 +38,10 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
     private final SqliteNodeRepository nodeRepository;
     private final SqliteEdgeRepository edgeRepository;
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
-    private final SqliteSession session;
+    private final SqliteHandleProvider session;
 
     public SqliteComponentRepository(
-            final SqliteSession session,
+            final SqliteHandleProvider session,
             final SqliteNodeRepository nodeRepository,
             final SqliteEdgeRepository edgeRepository) {
         this.session = session;

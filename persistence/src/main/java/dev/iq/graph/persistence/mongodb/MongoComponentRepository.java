@@ -32,6 +32,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 import org.bson.Document;
 import org.springframework.stereotype.Repository;
 
@@ -96,11 +97,9 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
     public List<Component> findAll(final NanoId componentId) {
         final var documents = collection.find(eq("id", componentId.id())).sort(ascending("versionId"));
 
-        final var components = new ArrayList<Component>();
-        for (final var document : documents) {
-            components.add(documentToComponent(document));
-        }
-        return components;
+        return StreamSupport.stream(documents.spliterator(), false)
+                .map(this::documentToComponent)
+                .toList();
     }
 
     @Override

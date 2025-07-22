@@ -1,7 +1,7 @@
 package dev.iq.graph.api.impl;
 
-import dev.iq.common.persist.Session;
 import dev.iq.graph.api.NodeService;
+import dev.iq.graph.persistence.Session;
 import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.persistence.GraphRepository;
 import dev.iq.graph.persistence.sqllite.SqliteGraphRepository;

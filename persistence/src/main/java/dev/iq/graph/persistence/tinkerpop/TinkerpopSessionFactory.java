@@ -6,8 +6,8 @@
 
 package dev.iq.graph.persistence.tinkerpop;
 
-import dev.iq.common.persist.Session;
-import dev.iq.common.persist.SessionFactory;
+import dev.iq.graph.persistence.Session;
+import dev.iq.graph.persistence.SessionFactory;
 import java.util.Map;
 import org.apache.tinkerpop.gremlin.structure.util.GraphFactory;
 

@@ -9,7 +9,7 @@ package dev.iq.graph.persistence.mongodb;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoCluster;
 import com.mongodb.client.MongoDatabase;
-import dev.iq.common.persist.Session;
+import dev.iq.graph.persistence.Session;
 
 /**
  * MongoDB implementation of Session with transaction support.

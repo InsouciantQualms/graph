@@ -7,14 +7,14 @@
 package dev.iq.graph.persistence.sqllite;
 
 import dev.iq.common.fp.Io;
-import dev.iq.common.persist.Session;
+import dev.iq.graph.persistence.Session;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
 
 /**
  * SQLite implementation of Session with transaction support.
  */
-public final class SqliteSession implements Session {
+public final class SqliteSession implements Session, SqliteHandleProvider {
 
     private final Handle handle;
 
@@ -49,7 +49,8 @@ public final class SqliteSession implements Session {
         });
     }
 
-    Handle handle() {
+    @Override
+    public Handle handle() {
 
         return handle;
     }

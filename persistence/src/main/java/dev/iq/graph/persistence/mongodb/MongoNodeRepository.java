@@ -27,9 +27,9 @@ import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 import org.bson.Document;
 import org.springframework.stereotype.Repository;
 
@@ -49,8 +49,8 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     @Override
     public Node save(final Node node) {
         return Io.withReturn(() -> {
-            final var document = MongoHelper.createBaseDocument(
-                    node.locator(), node.created(), serde.serialize(node.data()));
+            final var document =
+                    MongoHelper.createBaseDocument(node.locator(), node.created(), serde.serialize(node.data()));
             MongoHelper.addExpiryToDocument(document, node.expired());
 
             collection.insertOne(document);
@@ -72,11 +72,9 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     public List<Node> findAll(final NanoId nodeId) {
         final var documents = collection.find(eq("id", nodeId.id())).sort(ascending("versionId"));
 
-        final var nodes = new ArrayList<Node>();
-        for (final var document : documents) {
-            nodes.add(documentToNode(document));
-        }
-        return nodes;
+        return StreamSupport.stream(documents.spliterator(), false)
+                .map(this::documentToNode)
+                .toList();
     }
 
     @Override

@@ -15,7 +15,6 @@ import dev.iq.graph.model.Element;
 import dev.iq.graph.model.jgrapht.ComponentOperations;
 import dev.iq.graph.persistence.GraphRepository;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -70,11 +69,10 @@ public final class DefaultComponentService implements ComponentService {
     @Transactional(readOnly = true)
     public List<Component> findContaining(final NanoId id, final Instant timestamp) {
 
-        final var allComponents = new ArrayList<Component>();
-        for (final var component : componentOperations.allActive()) {
-            allComponents.addAll(
-                    componentOperations.findAllVersions(component.locator().id()));
-        }
+        final var allComponents = componentOperations.allActive().stream()
+                .flatMap(component ->
+                        componentOperations.findAllVersions(component.locator().id()).stream())
+                .toList();
         return allComponents.stream()
                 .filter(component -> !component.created().isAfter(timestamp)
                         && (component.expired().isEmpty()

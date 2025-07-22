@@ -17,8 +17,8 @@ dependencies {
     implementation(libs.jgrapht.core)
 
     // Spring - minimal dependencies for @Repository and transaction support
-    implementation("org.springframework:spring-context:6.1.13")
-    implementation("org.springframework:spring-tx:6.1.13")
+    implementation("org.springframework:spring-context:6.2.9")
+    implementation("org.springframework:spring-tx:6.2.9")
     implementation("javax.inject:javax.inject:1")
 
     // Tinkerpop
@@ -46,7 +46,7 @@ dependencies {
     testImplementation(libs.testcontainers)
     
     // Spring Test dependencies
-    testImplementation("org.springframework:spring-test:6.1.13")
+    testImplementation("org.springframework:spring-test:6.2.9")
     testImplementation("org.springframework.boot:spring-boot-starter-test:3.2.5") {
         exclude(group = "org.apache.logging.log4j", module = "log4j-to-slf4j")
         exclude(group = "org.apache.logging.log4j", module = "log4j-slf4j2-impl")
@@ -63,10 +63,10 @@ configurations.all {
         force("org.junit.jupiter:junit-jupiter-api:5.10.2")
         force("org.junit:junit-bom:5.10.2")
         force("org.junit.jupiter:junit-jupiter-engine:5.10.2")
-        force("org.springframework:spring-context:6.1.13")
-        force("org.springframework:spring-tx:6.1.13")
-        force("org.springframework:spring-core:6.1.13")
-        force("org.springframework:spring-beans:6.1.13")
+        force("org.springframework:spring-context:6.2.9")
+        force("org.springframework:spring-tx:6.2.9")
+        force("org.springframework:spring-core:6.2.9")
+        force("org.springframework:spring-beans:6.2.9")
     }
     
     // Exclude log4j-to-slf4j to avoid conflict with log4j-slf4j2-impl

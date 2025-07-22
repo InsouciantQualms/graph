@@ -27,9 +27,9 @@ import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 import org.bson.Document;
 import org.springframework.stereotype.Repository;
 
@@ -52,7 +52,7 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     public Edge save(final Edge edge) {
         return Io.withReturn(() -> {
             final var document = MongoHelper.createBaseDocument(
-                    edge.locator(), edge.created(), serde.serialize(edge.data()))
+                            edge.locator(), edge.created(), serde.serialize(edge.data()))
                     .append("sourceId", edge.source().locator().id().id())
                     .append("sourceVersionId", edge.source().locator().version())
                     .append("targetId", edge.target().locator().id().id())
@@ -78,11 +78,9 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     public List<Edge> findAll(final NanoId edgeId) {
         final var documents = collection.find(eq("id", edgeId.id())).sort(ascending("versionId"));
 
-        final var edges = new ArrayList<Edge>();
-        for (final var document : documents) {
-            edges.add(documentToEdge(document));
-        }
-        return edges;
+        return StreamSupport.stream(documents.spliterator(), false)
+                .map(this::documentToEdge)
+                .toList();
     }
 
     @Override

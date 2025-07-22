@@ -34,9 +34,9 @@ import org.springframework.stereotype.Repository;
 public final class SqliteNodeRepository implements ExtendedVersionedRepository<Node> {
 
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
-    private final SqliteSession session;
+    private final SqliteHandleProvider session;
 
-    public SqliteNodeRepository(final SqliteSession session) {
+    public SqliteNodeRepository(final SqliteHandleProvider session) {
         this.session = session;
     }
 

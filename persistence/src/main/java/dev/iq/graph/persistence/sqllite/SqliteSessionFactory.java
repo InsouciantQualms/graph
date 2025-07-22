@@ -7,8 +7,8 @@
 package dev.iq.graph.persistence.sqllite;
 
 import dev.iq.common.fp.Io;
-import dev.iq.common.persist.Session;
-import dev.iq.common.persist.SessionFactory;
+import dev.iq.graph.persistence.Session;
+import dev.iq.graph.persistence.SessionFactory;
 import javax.sql.DataSource;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;

@@ -10,9 +10,9 @@ import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 import org.bson.Document;
 
 /**
@@ -74,18 +74,13 @@ final class MongoHelper {
      */
     static List<NanoId> convertToNanoIdList(final Iterable<String> stringIds) {
 
-        return Io.withReturn(() -> {
-            final var result = new ArrayList<NanoId>();
-            for (final var id : stringIds) {
-                result.add(new NanoId(id));
-            }
-            return result;
-        });
+        return Io.withReturn(() -> StreamSupport.stream(stringIds.spliterator(), false)
+                .map(NanoId::new)
+                .toList());
     }
 
     /**
      * Record containing extracted versioned document data.
      */
     record VersionedDocumentData(Locator locator, Instant created, Optional<Instant> expired, String serializedData) {}
-
 }
