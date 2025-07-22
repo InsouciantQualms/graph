@@ -16,6 +16,11 @@ dependencies {
     // JGraphT
     implementation(libs.jgrapht.core)
 
+    // Spring - minimal dependencies for @Repository and transaction support
+    implementation("org.springframework:spring-context:6.1.13")
+    implementation("org.springframework:spring-tx:6.1.13")
+    implementation("javax.inject:javax.inject:1")
+
     // Tinkerpop
     implementation(libs.gremlin.core)
     runtimeOnly(libs.gremlin.driver)
@@ -39,6 +44,13 @@ dependencies {
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers)
+    
+    // Spring Test dependencies
+    testImplementation("org.springframework:spring-test:6.1.13")
+    testImplementation("org.springframework.boot:spring-boot-starter-test:3.2.5") {
+        exclude(group = "org.apache.logging.log4j", module = "log4j-to-slf4j")
+        exclude(group = "org.apache.logging.log4j", module = "log4j-slf4j2-impl")
+    }
 }
 
 // Conflicts stem from de.flapdoodle.embed.mongo
@@ -51,7 +63,14 @@ configurations.all {
         force("org.junit.jupiter:junit-jupiter-api:5.10.2")
         force("org.junit:junit-bom:5.10.2")
         force("org.junit.jupiter:junit-jupiter-engine:5.10.2")
+        force("org.springframework:spring-context:6.1.13")
+        force("org.springframework:spring-tx:6.1.13")
+        force("org.springframework:spring-core:6.1.13")
+        force("org.springframework:spring-beans:6.1.13")
     }
+    
+    // Exclude log4j-to-slf4j to avoid conflict with log4j-slf4j2-impl
+    exclude(group = "org.apache.logging.log4j", module = "log4j-to-slf4j")
 }
 
 // Configure test timeouts to prevent hanging

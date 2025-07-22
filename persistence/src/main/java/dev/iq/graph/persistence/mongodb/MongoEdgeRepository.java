@@ -19,23 +19,25 @@ import static com.mongodb.client.model.Sorts.descending;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import dev.iq.common.fp.Io;
-import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.serde.JsonSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
+import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.bson.Document;
+import org.springframework.stereotype.Repository;
 
 /**
  * MongoDB implementation of EdgeRepository using JsonSerde for data serialization.
  */
-public final class MongoEdgeRepository implements VersionedRepository<Edge> {
+@Repository("mongoEdgeRepository")
+public final class MongoEdgeRepository implements ExtendedVersionedRepository<Edge> {
 
     private final MongoCollection<Document> collection;
     private final Serde<String> serde = new JsonSerde();
@@ -160,6 +162,30 @@ public final class MongoEdgeRepository implements VersionedRepository<Edge> {
 
             final var locator = new Locator(id, versionId);
             return new SimpleEdge(locator, source, target, data, created, expired);
+        });
+    }
+
+    @Override
+    public List<NanoId> allIds() {
+        return Io.withReturn(() -> {
+            final var distinctIds = collection.distinct("id", String.class);
+            final var result = new ArrayList<NanoId>();
+            for (final var id : distinctIds) {
+                result.add(new NanoId(id));
+            }
+            return result;
+        });
+    }
+
+    @Override
+    public List<NanoId> allActiveIds() {
+        return Io.withReturn(() -> {
+            final var distinctIds = collection.distinct("id", not(exists("expired")), String.class);
+            final var result = new ArrayList<NanoId>();
+            for (final var id : distinctIds) {
+                result.add(new NanoId(id));
+            }
+            return result;
         });
     }
 }

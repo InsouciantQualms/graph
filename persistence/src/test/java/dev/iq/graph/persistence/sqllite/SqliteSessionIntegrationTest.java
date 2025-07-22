@@ -26,7 +26,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for SqliteSession transaction handling.
+ * @deprecated This test is replaced by SpringTransactionIntegrationTest which uses Spring transactions
  */
+@Deprecated
 final class SqliteSessionIntegrationTest {
 
     private static DataSource dataSource;

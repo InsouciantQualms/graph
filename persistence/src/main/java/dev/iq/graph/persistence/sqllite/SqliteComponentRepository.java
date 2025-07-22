@@ -7,7 +7,6 @@
 package dev.iq.graph.persistence.sqllite;
 
 import dev.iq.common.fp.Io;
-import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
@@ -16,6 +15,7 @@ import dev.iq.graph.model.Element;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleComponent;
+import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -27,11 +27,13 @@ import java.util.Optional;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
+import org.springframework.stereotype.Repository;
 
 /**
  * SQLite implementation of ComponentRepository.
  */
-public final class SqliteComponentRepository implements VersionedRepository<Component> {
+@Repository("sqliteComponentRepository")
+public final class SqliteComponentRepository implements ExtendedVersionedRepository<Component> {
 
     private final SqliteNodeRepository nodeRepository;
     private final SqliteEdgeRepository edgeRepository;
@@ -191,6 +193,26 @@ public final class SqliteComponentRepository implements VersionedRepository<Comp
                             .execute()
                     > 0;
         });
+    }
+
+    @Override
+    public List<NanoId> allIds() {
+        final var sql = "SELECT DISTINCT id FROM component";
+
+        return Io.withReturn(() -> getHandle()
+                .createQuery(sql)
+                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .list());
+    }
+
+    @Override
+    public List<NanoId> allActiveIds() {
+        final var sql = "SELECT DISTINCT id FROM component WHERE expired IS NULL";
+
+        return Io.withReturn(() -> getHandle()
+                .createQuery(sql)
+                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .list());
     }
 
     private class ComponentMapper implements RowMapper<Component> {

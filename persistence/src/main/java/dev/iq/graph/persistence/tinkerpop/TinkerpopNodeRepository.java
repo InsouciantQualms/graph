@@ -9,13 +9,13 @@ package dev.iq.graph.persistence.tinkerpop;
 import static org.apache.tinkerpop.gremlin.process.traversal.P.gt;
 import static org.apache.tinkerpop.gremlin.process.traversal.P.lte;
 
-import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
+import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -28,11 +28,13 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.stereotype.Repository;
 
 /**
  * Tinkerpop implementation of NodeRepository.
  */
-public final class TinkerpopNodeRepository implements VersionedRepository<Node> {
+@Repository("tinkerpopNodeRepository")
+public final class TinkerpopNodeRepository implements ExtendedVersionedRepository<Node> {
 
     private final Graph graph;
     private final GraphTraversalSource traversal;
@@ -126,6 +128,20 @@ public final class TinkerpopNodeRepository implements VersionedRepository<Node> 
             return true;
         }
         return false;
+    }
+
+    @Override
+    public List<NanoId> allIds() {
+        return traversal.V().hasLabel("node").values("id").dedup().toList().stream()
+                .map(id -> new NanoId((String) id))
+                .toList();
+    }
+
+    @Override
+    public List<NanoId> allActiveIds() {
+        return traversal.V().hasLabel("node").not(__.has("expired")).values("id").dedup().toList().stream()
+                .map(id -> new NanoId((String) id))
+                .toList();
     }
 
     private Node vertexToNode(final Vertex vertex) {

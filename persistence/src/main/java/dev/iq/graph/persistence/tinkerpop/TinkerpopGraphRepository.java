@@ -7,10 +7,12 @@
 package dev.iq.graph.persistence.tinkerpop;
 
 import dev.iq.graph.persistence.GraphRepository;
+import org.springframework.stereotype.Repository;
 
 /**
  * Graph listener repository using an in memory Tinkerpop implementation.
  */
+@Repository("tinkerpopGraphRepository")
 public record TinkerpopGraphRepository(
         TinkerpopNodeRepository nodes, TinkerpopEdgeRepository edges, TinkerpopComponentRepository components)
         implements GraphRepository {

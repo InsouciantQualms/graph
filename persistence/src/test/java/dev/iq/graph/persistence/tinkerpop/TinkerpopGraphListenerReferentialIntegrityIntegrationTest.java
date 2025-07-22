@@ -8,6 +8,7 @@ package dev.iq.graph.persistence.tinkerpop;
 
 import dev.iq.graph.persistence.AbstractGraphListenerReferentialIntegrityIntegrationTest;
 import dev.iq.graph.persistence.GraphRepository;
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import org.junit.jupiter.api.DisplayName;
 
 /**
@@ -21,9 +22,10 @@ final class TinkerpopGraphListenerReferentialIntegrityIntegrationTest
     @Override
     protected GraphRepository createGraphRepository() {
 
-        final var factory = new TinkerpopSessionFactory();
-        try (var session = (TinkerpopSession) factory.create()) {
-            return TinkerpopGraphRepository.create(session);
-        }
+        final var graph = TinkerGraph.open();
+        final var nodeRepository = new TinkerpopNodeRepository(graph);
+        final var edgeRepository = new TinkerpopEdgeRepository(graph, nodeRepository);
+        final var componentRepository = new TinkerpopComponentRepository(graph, nodeRepository, edgeRepository);
+        return new TinkerpopGraphRepository(nodeRepository, edgeRepository, componentRepository);
     }
 }

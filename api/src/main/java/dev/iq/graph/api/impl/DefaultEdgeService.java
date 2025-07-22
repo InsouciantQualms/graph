@@ -6,8 +6,6 @@
 
 package dev.iq.graph.api.impl;
 
-import dev.iq.common.persist.SessionExecutor;
-import dev.iq.common.persist.SessionFactory;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.api.EdgeService;
@@ -19,23 +17,21 @@ import dev.iq.graph.persistence.GraphRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Default implementation of EdgeService using session-based transactions.
  */
+@Service
+@Transactional
 public final class DefaultEdgeService implements EdgeService {
 
-    private final SessionFactory sessionFactory;
     private final GraphRepository repository;
     private final EdgeOperations edgeOperations;
 
-    public DefaultEdgeService(
-            final SessionFactory sessionFactory,
-            final GraphRepository repository,
-            final EdgeOperations edgeOperations) {
+    public DefaultEdgeService(final GraphRepository repository, final EdgeOperations edgeOperations) {
 
-        this.sessionFactory = sessionFactory;
         this.repository = repository;
         this.edgeOperations = edgeOperations;
     }
@@ -43,115 +39,90 @@ public final class DefaultEdgeService implements EdgeService {
     @Override
     public Edge addEdge(final Node source, final Node target, final Data data) {
 
-        return SessionExecutor.execute(sessionFactory, () -> {
-            final var edge = edgeOperations.add(source, target, data, Instant.now());
-            return repository.edges().save(edge);
-        });
+        final var edge = edgeOperations.add(source, target, data, Instant.now());
+        return repository.edges().save(edge);
     }
 
     @Override
     public Edge updateEdge(final NanoId id, final Data data) {
 
-        return SessionExecutor.execute(sessionFactory, () -> {
-            final var edge = edgeOperations.update(id, data, Instant.now());
-            repository.edges().save(edge);
-            return edge;
-        });
+        final var edge = edgeOperations.update(id, data, Instant.now());
+        repository.edges().save(edge);
+        return edge;
     }
 
     @Override
     public List<Edge> getEdgesFrom(final NanoId nodeId) {
 
-        try (var session = sessionFactory.create()) {
-            // Need NodeOperations to find the node in the graph
-            // This indicates we need better integration between services and operations
-            // For now, return empty list as operations are not properly integrated
-            return List.of();
-        }
+        // Need NodeOperations to find the node in the graph
+        // This indicates we need better integration between services and operations
+        // For now, return empty list as operations are not properly integrated
+        return List.of();
     }
 
     @Override
     public List<Edge> getEdgesTo(final NanoId nodeId) {
 
-        try (var session = sessionFactory.create()) {
-            // Need NodeOperations to find the node in the graph
-            // This indicates we need better integration between services and operations
-            // For now, return empty list as operations are not properly integrated
-            return List.of();
-        }
+        // Need NodeOperations to find the node in the graph
+        // This indicates we need better integration between services and operations
+        // For now, return empty list as operations are not properly integrated
+        return List.of();
     }
 
     @Override
     public Edge find(final Locator locator) {
 
-        try (var session = sessionFactory.create()) {
-            return repository
-                    .edges()
-                    .find(locator)
-                    .orElseThrow(() -> new IllegalArgumentException("Edge not found: " + locator));
-        }
+        return repository
+                .edges()
+                .find(locator)
+                .orElseThrow(() -> new IllegalArgumentException("Edge not found: " + locator));
     }
 
     @Override
     public Optional<Edge> findActive(final NanoId id) {
 
-        try (var session = sessionFactory.create()) {
-            return repository.edges().findActive(id);
-        }
+        return repository.edges().findActive(id);
     }
 
     @Override
     public Optional<Edge> findAt(final NanoId id, final Instant timestamp) {
 
-        try (var session = sessionFactory.create()) {
-            return repository.edges().findAt(id, timestamp);
-        }
+        return repository.edges().findAt(id, timestamp);
     }
 
     @Override
     public List<Edge> findAllVersions(final NanoId id) {
 
-        try (var session = sessionFactory.create()) {
-            return repository.edges().findAll(id);
-        }
+        return repository.edges().findAll(id);
     }
 
     @Override
     public List<NanoId> allActive() {
 
-        try (var session = sessionFactory.create()) {
-            // This would need proper implementation with repository support
-            return all().stream().filter(id -> findActive(id).isPresent()).collect(Collectors.toList());
-        }
+        return repository.edges().allActiveIds();
     }
 
     @Override
     public List<NanoId> all() {
 
-        try (var session = sessionFactory.create()) {
-            // TODO: This requires repository enhancement to get all edge IDs
-            throw new UnsupportedOperationException(
-                    "Not yet implemented - requires repository enhancement to get all edge IDs");
-        }
+        return repository.edges().allIds();
     }
 
     @Override
     public Optional<Edge> expire(final NanoId id) {
 
-        return SessionExecutor.execute(sessionFactory, () -> {
-            final var activeEdge = edgeOperations.findActive(id);
-            if (activeEdge.isPresent()) {
-                final var expired = edgeOperations.expire(id, Instant.now());
-                repository.edges().expire(id, expired.expired().get());
-                return Optional.of(expired);
-            }
-            return Optional.empty();
-        });
+        final var activeEdge = edgeOperations.findActive(id);
+        if (activeEdge.isPresent()) {
+            final var expired = edgeOperations.expire(id, Instant.now());
+            repository.edges().expire(id, expired.expired().get());
+            return Optional.of(expired);
+        }
+        return Optional.empty();
     }
 
     @Override
     public boolean delete(final NanoId id) {
 
-        return SessionExecutor.execute(sessionFactory, () -> repository.edges().delete(id));
+        return repository.edges().delete(id);
     }
 }

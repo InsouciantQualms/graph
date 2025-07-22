@@ -7,10 +7,12 @@
 package dev.iq.graph.persistence.mongodb;
 
 import dev.iq.graph.persistence.GraphRepository;
+import org.springframework.stereotype.Repository;
 
 /**
  * MongoDB implementation of GraphRepository compatible with DelegatedGraphListenerRepository.
  */
+@Repository("mongoGraphRepository")
 public record MongoGraphRepository(
         MongoNodeRepository nodes, MongoEdgeRepository edges, MongoComponentRepository components)
         implements GraphRepository {

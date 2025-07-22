@@ -7,7 +7,6 @@
 package dev.iq.graph.persistence.sqllite;
 
 import dev.iq.common.fp.Io;
-import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Data;
@@ -15,6 +14,7 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
+import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -25,11 +25,13 @@ import java.util.Optional;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
+import org.springframework.stereotype.Repository;
 
 /**
  * SQLite implementation of NodeRepository.
  */
-public final class SqliteNodeRepository implements VersionedRepository<Node> {
+@Repository("sqliteNodeRepository")
+public final class SqliteNodeRepository implements ExtendedVersionedRepository<Node> {
 
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
     private final SqliteSession session;
@@ -141,6 +143,26 @@ public final class SqliteNodeRepository implements VersionedRepository<Node> {
                         .bind("id", elementId.id())
                         .execute()
                 > 0);
+    }
+
+    @Override
+    public List<NanoId> allIds() {
+        final var sql = "SELECT DISTINCT id FROM node";
+
+        return Io.withReturn(() -> getHandle()
+                .createQuery(sql)
+                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .list());
+    }
+
+    @Override
+    public List<NanoId> allActiveIds() {
+        final var sql = "SELECT DISTINCT id FROM node WHERE expired IS NULL";
+
+        return Io.withReturn(() -> getHandle()
+                .createQuery(sql)
+                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .list());
     }
 
     private class NodeMapper implements RowMapper<Node> {

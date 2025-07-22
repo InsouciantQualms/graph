@@ -6,7 +6,6 @@
 package dev.iq.graph.persistence;
 
 import dev.iq.common.annotation.Stable;
-import dev.iq.common.persist.VersionedRepository;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
@@ -18,9 +17,9 @@ import dev.iq.graph.model.Node;
 @Stable
 public interface GraphRepository {
 
-    VersionedRepository<Node> nodes();
+    ExtendedVersionedRepository<Node> nodes();
 
-    VersionedRepository<Edge> edges();
+    ExtendedVersionedRepository<Edge> edges();
 
-    VersionedRepository<Component> components();
+    ExtendedVersionedRepository<Component> components();
 }

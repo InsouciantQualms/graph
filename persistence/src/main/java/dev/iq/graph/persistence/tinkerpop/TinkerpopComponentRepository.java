@@ -7,7 +7,6 @@
 package dev.iq.graph.persistence.tinkerpop;
 
 import dev.iq.common.fp.Io;
-import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
@@ -15,6 +14,7 @@ import dev.iq.graph.model.Element;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleComponent;
+import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,11 +29,13 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.springframework.stereotype.Repository;
 
 /**
  * Tinkerpop implementation of ComponentRepository.
  */
-public final class TinkerpopComponentRepository implements VersionedRepository<Component> {
+@Repository("tinkerpopComponentRepository")
+public final class TinkerpopComponentRepository implements ExtendedVersionedRepository<Component> {
 
     private final Graph graph;
     private final GraphTraversalSource traversal;
@@ -174,6 +176,21 @@ public final class TinkerpopComponentRepository implements VersionedRepository<C
             }
             return false;
         });
+    }
+
+    @Override
+    public List<NanoId> allIds() {
+        return Io.withReturn(() -> traversal.V().hasLabel("component").values("id").dedup().toList().stream()
+                .map(id -> new NanoId((String) id))
+                .toList());
+    }
+
+    @Override
+    public List<NanoId> allActiveIds() {
+        return Io.withReturn(
+                () -> traversal.V().hasLabel("component").not(__.has("expired")).values("id").dedup().toList().stream()
+                        .map(id -> new NanoId((String) id))
+                        .toList());
     }
 
     private Component vertexToComponent(final Vertex vertex) {

@@ -6,13 +6,11 @@
 
 package dev.iq.graph.persistence.sqllite;
 
-import dev.iq.common.persist.Session;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import dev.iq.graph.persistence.AbstractGraphListenerReferentialIntegrityIntegrationTest;
 import dev.iq.graph.persistence.GraphRepository;
 import javax.sql.DataSource;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 
 /**
@@ -23,34 +21,27 @@ import org.junit.jupiter.api.DisplayName;
 final class SqliteGraphListenerReferentialIntegrityIntegrationTest
         extends AbstractGraphListenerReferentialIntegrityIntegrationTest {
 
-    private static SqliteSessionFactory sessionFactory;
-    private Session currentSession;
+    private DataSource dataSource;
 
-    @BeforeAll
-    static void setUpClass() {
-        final DataSource dataSource = SqlliteTestConnectionHelper.getSharedDataSource();
-        sessionFactory = new SqliteSessionFactory(dataSource);
-    }
-
-    @AfterAll
-    static void tearDownClass() {
-        SqlliteTestConnectionHelper.closeSharedDataSource();
-    }
-
-    @AfterEach
-    void after() {
-        if (currentSession != null) {
-            currentSession.rollback();
-            currentSession.close();
-            currentSession = null;
-        }
+    private DataSource createInMemoryDataSource() {
+        final var config = new HikariConfig();
+        config.setJdbcUrl("jdbc:sqlite::memory:");
+        config.setDriverClassName("org.sqlite.JDBC");
+        config.setMaximumPoolSize(1); // Use single connection to avoid locking issues
+        config.setMinimumIdle(1);
+        return new HikariDataSource(config);
     }
 
     @Override
     protected GraphRepository createGraphRepository() {
+        // Initialize dataSource if not already done
+        if (dataSource == null) {
+            dataSource = createInMemoryDataSource();
+        }
 
-        // Create a new session for this test
-        currentSession = sessionFactory.create();
-        return SqliteGraphRepository.create((SqliteSession) currentSession);
+        // Create a new repository with its own handle managed by the session
+        final var sessionFactory = new SqliteSessionFactory(dataSource);
+        final var session = sessionFactory.create();
+        return SqliteGraphRepository.create((SqliteSession) session);
     }
 }
