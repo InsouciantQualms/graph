@@ -22,6 +22,7 @@ dependencyResolutionManagement {
 
 includeBuild("../build-logic")
 includeBuild("../common")
+include("access")
 include("model")
 include("persistence")
 include("api")
