@@ -21,6 +21,7 @@ dependencyResolutionManagement {
 }
 
 includeBuild("../build-logic")
+includeBuild("../ai")
 includeBuild("../common")
 include("access")
 include("model")
