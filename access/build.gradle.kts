@@ -3,5 +3,6 @@ plugins {
 }
 
 dependencies {
-    // Add your dependencies here
+    implementation(project(":model"))
+    implementation("com.cedarpolicy:cedar-java:3.2.0")
 }
