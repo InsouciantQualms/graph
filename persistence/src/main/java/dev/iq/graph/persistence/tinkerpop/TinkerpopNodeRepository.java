@@ -15,8 +15,10 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,6 +52,7 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
         final var vertex = graph.addVertex("node");
         vertex.property("id", node.locator().id().id());
         vertex.property("versionId", node.locator().version());
+        vertex.property("type", node.type().code());
         vertex.property("created", node.created().toString());
         node.expired().ifPresent(expired -> vertex.property("expired", expired.toString()));
 
@@ -147,6 +150,7 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
     private Node vertexToNode(final Vertex vertex) {
         final var id = new NanoId(vertex.value("id"));
         final int versionId = vertex.value("versionId");
+        final var type = new SimpleType(vertex.value("type"));
         final var created = Instant.parse(vertex.value("created"));
 
         Optional<Instant> expired = Optional.empty();
@@ -155,12 +159,13 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
         }
 
         final var properties = vertex.keys().stream()
-                .filter(key -> !List.of("id", "versionId", "created", "expired").contains(key))
+                .filter(key -> !List.of("id", "versionId", "type", "created", "expired")
+                        .contains(key))
                 .collect(Collectors.toMap(Function.identity(), vertex::<Object>value));
 
         final var data = serde.deserialize(properties);
         final var locator = new Locator(id, versionId);
 
-        return new SimpleNode(locator, List.of(), data, created, expired);
+        return new SimpleNode(locator, type, List.of(), data, created, expired, new HashSet<>());
     }
 }

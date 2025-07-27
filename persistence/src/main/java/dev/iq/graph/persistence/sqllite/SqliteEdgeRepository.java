@@ -14,11 +14,13 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,7 +37,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
     private static final String EDGE_BASE_QUERY =
             """
-            SELECT DISTINCT e.id, e.version_id, e.source_id, e.source_version_id,
+            SELECT DISTINCT e.id, e.version_id, e.type, e.source_id, e.source_version_id,
                             e.target_id, e.target_version_id, e.created, e.expired
             FROM edge e
             """;
@@ -59,9 +61,9 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
     public Edge save(final Edge edge) {
         final var sql =
                 """
-                INSERT INTO edge (id, version_id, source_id, source_version_id,
+                INSERT INTO edge (id, version_id, type, source_id, source_version_id,
                                   target_id, target_version_id, created, expired)
-                VALUES (:id, :version_id, :source_id, :source_version_id,
+                VALUES (:id, :version_id, :type, :source_id, :source_version_id,
                         :target_id, :target_version_id, :created, :expired)
                 """;
 
@@ -70,6 +72,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
                     .createUpdate(sql)
                     .bind("id", edge.locator().id().id())
                     .bind("version_id", edge.locator().version())
+                    .bind("type", edge.type().code())
                     .bind("source_id", edge.source().locator().id().id())
                     .bind("source_version_id", edge.source().locator().version())
                     .bind("target_id", edge.target().locator().id().id())
@@ -198,6 +201,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
             final var id = new NanoId(rs.getString("id"));
             final var versionId = rs.getInt("version_id");
+            final var type = new SimpleType(rs.getString("type"));
             final var created = Instant.parse(rs.getString("created"));
 
             Optional<Instant> expired = Optional.empty();
@@ -222,7 +226,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
                     .orElseThrow(() -> new RuntimeException("missing target " + targetId));
 
             final var locator = new Locator(id, versionId);
-            return new SimpleEdge(locator, sourceNode, targetNode, data, created, expired);
+            return new SimpleEdge(locator, type, sourceNode, targetNode, data, created, expired, new HashSet<>());
         }
     }
 

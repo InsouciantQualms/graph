@@ -100,7 +100,9 @@ public class SpringTransactionIntegrationTest {
     }
 
     @Test
-    @Disabled("SQLite in-memory DB has transaction isolation limitations with connection pooling")
+    @Disabled("SQLite in-memory DB with shared cache mode does not provide proper transaction isolation. "
+            + "The shared cache allows all connections to see uncommitted changes, breaking ACID isolation. "
+            + "This would work with a file-based SQLite DB or other databases like PostgreSQL.")
     public void testTransactionIsolation() {
 
         final var nodeId = NanoId.generate();

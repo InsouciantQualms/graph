@@ -37,7 +37,7 @@ public final class PropertiesSerde implements Serde<Map<String, Object>> {
 
         return Try.withReturn(() -> {
             final var properties = new HashMap<String, Object>();
-            properties.put(DATA_TYPE, data.type().getName());
+            properties.put(DATA_TYPE, data.javaClass().getName());
             final var jsonString = objectMapper.writeValueAsString(data.value());
             final var flattenedMap = JsonFlattener.flattenAsMap(jsonString);
             flattenedMap.forEach((key, value) -> properties.put(DATA_PREFIX + key, value));

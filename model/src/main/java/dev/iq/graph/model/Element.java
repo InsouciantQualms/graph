@@ -13,6 +13,8 @@ import java.util.Set;
 @Stable
 public interface Element extends Versioned {
 
+    Type type();
+
     Data data();
 
     Set<NanoId> components();

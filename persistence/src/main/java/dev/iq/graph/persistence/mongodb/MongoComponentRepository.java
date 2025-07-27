@@ -62,7 +62,7 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
     public Component save(final Component component) {
         return Io.withReturn(() -> {
             final var document = MongoHelper.createBaseDocument(
-                    component.locator(), component.created(), serde.serialize(component.data()));
+                    component.locator(), "component", component.created(), serde.serialize(component.data()));
             MongoHelper.addExpiryToDocument(document, component.expired());
 
             collection.insertOne(document);

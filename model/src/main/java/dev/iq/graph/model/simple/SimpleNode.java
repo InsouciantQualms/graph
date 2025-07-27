@@ -11,6 +11,7 @@ import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Type;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.Set;
 
 public record SimpleNode(
         Locator locator,
+        Type type,
         List<Edge> edges,
         Data data,
         Instant created,
@@ -27,7 +29,7 @@ public record SimpleNode(
         implements Node {
 
     /**
-     * Constructor that initializes components to empty set.
+     * Constructor that initializes components to empty set and type to SimpleType("node").
      */
     public SimpleNode(
             final Locator locator,
@@ -36,6 +38,6 @@ public record SimpleNode(
             final Instant created,
             final Optional<Instant> expired) {
 
-        this(locator, edges, data, created, expired, new HashSet<>());
+        this(locator, new SimpleType("node"), edges, data, created, expired, new HashSet<>());
     }
 }

@@ -91,7 +91,7 @@ final class MongoNodeRepositoryTest {
         final var foundNode = repository.find(locator);
         assertTrue(foundNode.isPresent());
         assertEquals(locator, foundNode.get().locator());
-        assertSame(data.type(), foundNode.get().data().type());
+        assertSame(data.javaClass(), foundNode.get().data().javaClass());
         assertEquals(data.value(), foundNode.get().data().value());
     }
 

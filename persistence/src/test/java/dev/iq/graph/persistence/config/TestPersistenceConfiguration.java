@@ -116,6 +116,7 @@ public class TestPersistenceConfiguration {
                     CREATE TABLE IF NOT EXISTS node (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,
+                        type TEXT NOT NULL,
                         created TEXT NOT NULL,
                         expired TEXT,
                         PRIMARY KEY (id, version_id)
@@ -141,6 +142,7 @@ public class TestPersistenceConfiguration {
                     CREATE TABLE IF NOT EXISTS edge (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,
+                        type TEXT NOT NULL,
                         source_id TEXT NOT NULL,
                         source_version_id INTEGER NOT NULL,
                         target_id TEXT NOT NULL,

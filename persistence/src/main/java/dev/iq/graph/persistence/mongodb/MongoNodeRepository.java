@@ -25,8 +25,10 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.serde.JsonSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -49,8 +51,8 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     @Override
     public Node save(final Node node) {
         return Io.withReturn(() -> {
-            final var document =
-                    MongoHelper.createBaseDocument(node.locator(), node.created(), serde.serialize(node.data()));
+            final var document = MongoHelper.createBaseDocument(
+                    node.locator(), node.type().code(), node.created(), serde.serialize(node.data()));
             MongoHelper.addExpiryToDocument(document, node.expired());
 
             collection.insertOne(document);
@@ -118,9 +120,16 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
         return Io.withReturn(() -> {
             final var versionedData = MongoHelper.extractVersionedData(document);
             final var data = serde.deserialize(versionedData.serializedData());
+            final var type = new SimpleType(versionedData.type());
 
             return new SimpleNode(
-                    versionedData.locator(), List.of(), data, versionedData.created(), versionedData.expired());
+                    versionedData.locator(),
+                    type,
+                    List.of(),
+                    data,
+                    versionedData.created(),
+                    versionedData.expired(),
+                    new HashSet<>());
         });
     }
 

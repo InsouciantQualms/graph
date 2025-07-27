@@ -14,11 +14,13 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,8 +51,8 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
     public Node save(final Node node) {
         final var sql =
                 """
-                INSERT INTO node (id, version_id, created, expired)
-                VALUES (:id, :version_id, :created, :expired)
+                INSERT INTO node (id, version_id, type, created, expired)
+                VALUES (:id, :version_id, :type, :created, :expired)
                 """;
 
         Io.withVoid(() -> {
@@ -58,6 +60,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
                     .createUpdate(sql)
                     .bind("id", node.locator().id().id())
                     .bind("version_id", node.locator().version())
+                    .bind("type", node.type().code())
                     .bind("created", node.created().toString())
                     .bind("expired", node.expired().map(Object::toString).orElse(null))
                     .execute();
@@ -172,6 +175,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
 
             final var id = new NanoId(rs.getString("id"));
             final var versionId = rs.getInt("version_id");
+            final var type = new SimpleType(rs.getString("type"));
             final var created = Instant.parse(rs.getString("created"));
 
             Optional<Instant> expired = Optional.empty();
@@ -183,7 +187,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
             final var data = loadProperties(id, versionId);
             final var locator = new Locator(id, versionId);
 
-            return new SimpleNode(locator, List.of(), data, created, expired);
+            return new SimpleNode(locator, type, List.of(), data, created, expired, new HashSet<>());
         }
     }
 

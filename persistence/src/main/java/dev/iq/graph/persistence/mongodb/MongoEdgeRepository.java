@@ -25,8 +25,10 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.serde.JsonSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -52,7 +54,7 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     public Edge save(final Edge edge) {
         return Io.withReturn(() -> {
             final var document = MongoHelper.createBaseDocument(
-                            edge.locator(), edge.created(), serde.serialize(edge.data()))
+                            edge.locator(), edge.type().code(), edge.created(), serde.serialize(edge.data()))
                     .append("sourceId", edge.source().locator().id().id())
                     .append("sourceVersionId", edge.source().locator().version())
                     .append("targetId", edge.target().locator().id().id())
@@ -141,8 +143,16 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
                     .find(targetLocator)
                     .orElseThrow(() -> new IllegalStateException("Target node not found: " + targetLocator));
 
+            final var type = new SimpleType(versionedData.type());
             return new SimpleEdge(
-                    versionedData.locator(), source, target, data, versionedData.created(), versionedData.expired());
+                    versionedData.locator(),
+                    type,
+                    source,
+                    target,
+                    data,
+                    versionedData.created(),
+                    versionedData.expired(),
+                    new HashSet<>());
         });
     }
 

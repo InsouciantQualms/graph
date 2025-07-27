@@ -16,8 +16,10 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +56,7 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
         final var tinkerpopEdge = sourceVertex.addEdge("edge", targetVertex);
         tinkerpopEdge.property("id", edge.locator().id().id());
         tinkerpopEdge.property("versionId", edge.locator().version());
+        tinkerpopEdge.property("type", edge.type().code());
         tinkerpopEdge.property("sourceId", edge.source().locator().id().id());
         tinkerpopEdge.property("sourceVersionId", edge.source().locator().version());
         tinkerpopEdge.property("targetId", edge.target().locator().id().id());
@@ -154,6 +157,7 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
     private Edge edgeToEdge(final org.apache.tinkerpop.gremlin.structure.Edge tinkerpopEdge) {
         final var id = new NanoId(tinkerpopEdge.value("id"));
         final int versionId = tinkerpopEdge.value("versionId");
+        final var type = new SimpleType(tinkerpopEdge.value("type"));
         final var created = Instant.parse(tinkerpopEdge.value("created"));
 
         Optional<Instant> expired = Optional.empty();
@@ -165,6 +169,7 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
                 .filter(key -> !List.of(
                                 "id",
                                 "versionId",
+                                "type",
                                 "sourceId",
                                 "sourceVersionId",
                                 "targetId",
@@ -188,6 +193,6 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
         final var target =
                 nodeRepository.find(new Locator(targetId, targetVersionId)).orElseThrow();
 
-        return new SimpleEdge(locator, source, target, data, created, expired);
+        return new SimpleEdge(locator, type, source, target, data, created, expired, new HashSet<>());
     }
 }

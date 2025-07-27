@@ -1,12 +1,14 @@
 package dev.iq.graph.access;
 
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class AccessTest {
+import org.junit.jupiter.api.Test;
+
+final class AccessTest {
+
     @Test
     void testGreet() {
-        Access app = new Access();
+        final var app = new Access();
         assertEquals("Hello, Test!", app.greet("Test"));
     }
 }

@@ -60,12 +60,12 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
         // Verify nodes can be retrieved through the underlying repository
         final var retrievedStringNode = nodes.findActive(stringNode.locator().id());
         assertTrue(retrievedStringNode.isPresent());
-        assertEquals(String.class, retrievedStringNode.get().data().type());
+        assertEquals(String.class, retrievedStringNode.get().data().javaClass());
         assertEquals("test string", retrievedStringNode.get().data().value());
 
         final var retrievedIntegerNode = nodes.findActive(integerNode.locator().id());
         assertTrue(retrievedIntegerNode.isPresent());
-        assertEquals(Integer.class, retrievedIntegerNode.get().data().type());
+        assertEquals(Integer.class, retrievedIntegerNode.get().data().javaClass());
         assertEquals(42, retrievedIntegerNode.get().data().value());
     }
 

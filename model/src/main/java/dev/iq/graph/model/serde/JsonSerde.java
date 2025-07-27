@@ -29,7 +29,7 @@ public final class JsonSerde implements Serde<String> {
     public String serialize(final Data target) {
         return Try.withReturn(() -> {
             final var wrapper = objectMapper.createObjectNode();
-            wrapper.put(TYPE_FIELD, target.type().getName());
+            wrapper.put(TYPE_FIELD, target.javaClass().getName());
             wrapper.set(VALUE_FIELD, objectMapper.valueToTree(target.value()));
             return objectMapper.writeValueAsString(wrapper);
         });

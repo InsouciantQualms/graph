@@ -50,6 +50,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test:3.2.5") {
         exclude(group = "org.apache.logging.log4j", module = "log4j-to-slf4j")
         exclude(group = "org.apache.logging.log4j", module = "log4j-slf4j2-impl")
+        exclude(group = "org.mockito", module = "mockito-core")
+        exclude(group = "org.mockito", module = "mockito-junit-jupiter")
     }
 }
 

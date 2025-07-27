@@ -28,12 +28,14 @@ final class MongoHelper {
     /**
      * Creates a base document with common fields for versioned entities.
      */
-    static Document createBaseDocument(final Locator locator, final Instant created, final String serializedData) {
+    static Document createBaseDocument(
+            final Locator locator, final String type, final Instant created, final String serializedData) {
 
         return new Document()
                 .append("_id", locator.id().id() + ':' + locator.version())
                 .append("id", locator.id().id())
                 .append("versionId", locator.version())
+                .append("type", type)
                 .append("created", created.toString())
                 .append("data", serializedData);
     }
@@ -54,6 +56,7 @@ final class MongoHelper {
         return Io.withReturn(() -> {
             final var id = new NanoId(document.getString("id"));
             final var versionId = document.getInteger("versionId");
+            final var type = document.getString("type");
             final var created = Instant.parse(document.getString("created"));
 
             Optional<Instant> expired = Optional.empty();
@@ -65,7 +68,7 @@ final class MongoHelper {
             final var json = document.getString("data");
             final var locator = new Locator(id, versionId);
 
-            return new VersionedDocumentData(locator, created, expired, json);
+            return new VersionedDocumentData(locator, type, created, expired, json);
         });
     }
 
@@ -82,5 +85,6 @@ final class MongoHelper {
     /**
      * Record containing extracted versioned document data.
      */
-    record VersionedDocumentData(Locator locator, Instant created, Optional<Instant> expired, String serializedData) {}
+    record VersionedDocumentData(
+            Locator locator, String type, Instant created, Optional<Instant> expired, String serializedData) {}
 }

@@ -45,7 +45,7 @@ final class PropertiesSerdeTest {
 
         // Test properties deserialization
         final var deserializedData = serde.deserialize(properties);
-        assertSame(String.class, deserializedData.type());
+        assertSame(String.class, deserializedData.javaClass());
         assertEquals("test string", deserializedData.value());
     }
 
@@ -61,7 +61,7 @@ final class PropertiesSerdeTest {
 
         // Test properties deserialization
         final var deserializedData = serde.deserialize(properties);
-        assertSame(Integer.class, deserializedData.type());
+        assertSame(Integer.class, deserializedData.javaClass());
         assertEquals(42, deserializedData.value());
     }
 
@@ -78,7 +78,7 @@ final class PropertiesSerdeTest {
 
         // Test properties deserialization
         final var deserializedData = serde.deserialize(properties);
-        assertSame(TestPojo.class, deserializedData.type());
+        assertSame(TestPojo.class, deserializedData.javaClass());
 
         final var deserializedObject = (TestPojo) deserializedData.value();
         assertEquals("test name", deserializedObject.name());
@@ -99,7 +99,7 @@ final class PropertiesSerdeTest {
         final var deserializedData = serde.deserialize(properties);
 
         // Verify data integrity
-        assertSame(originalData.type(), deserializedData.type());
+        assertSame(originalData.javaClass(), deserializedData.javaClass());
         final var deserializedObject = (TestPojo) deserializedData.value();
         assertEquals("roundtrip", deserializedObject.name());
         assertEquals(999, deserializedObject.value());

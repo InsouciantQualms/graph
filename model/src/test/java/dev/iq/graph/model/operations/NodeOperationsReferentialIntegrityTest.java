@@ -172,7 +172,7 @@ public class NodeOperationsReferentialIntegrityTest {
     private record TestData(Object value) implements Data {
 
         @Override
-        public Class<?> type() {
+        public Class<?> javaClass() {
             return value.getClass();
         }
     }

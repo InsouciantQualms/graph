@@ -11,4 +11,4 @@ import dev.iq.graph.model.Data;
 /**
  * Simple implementation of Data interface.
  */
-public record SimpleData(Class<?> type, Object value) implements Data {}
+public record SimpleData(Class<?> javaClass, Object value) implements Data {}

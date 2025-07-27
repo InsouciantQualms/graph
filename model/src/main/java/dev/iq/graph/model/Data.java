@@ -14,7 +14,7 @@ public interface Data {
     /**
      * Returns the class type of the contained value.
      */
-    Class<?> type();
+    Class<?> javaClass();
 
     /**
      * Returns the actual data value.
