@@ -8,8 +8,6 @@ package dev.iq.graph.persistence.mongodb;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
-import de.flapdoodle.embed.mongo.distribution.Version;
-import de.flapdoodle.embed.mongo.transitions.Mongod;
 import de.flapdoodle.embed.mongo.transitions.RunningMongodProcess;
 import de.flapdoodle.reverse.TransitionWalker;
 import dev.iq.graph.persistence.AbstractGraphListenerReferentialIntegrityIntegrationTest;
@@ -30,8 +28,7 @@ final class MongoGraphListenerReferentialIntegrityIntegrationTest
 
     @BeforeAll
     static void setUpClass() {
-
-        mongodProcess = Mongod.instance().start(Version.Main.V7_0);
+        mongodProcess = MongoTestConfig.startMongoDbOrSkip();
         final var serverAddress = mongodProcess.current().getServerAddress();
         final var uri = "mongodb://" + serverAddress.getHost() + ':' + serverAddress.getPort();
         mongoClient = MongoClients.create(uri);
@@ -48,7 +45,6 @@ final class MongoGraphListenerReferentialIntegrityIntegrationTest
 
     @AfterAll
     static void tearDownClass() {
-
         if (mongoClient != null) {
             mongoClient.close();
         }

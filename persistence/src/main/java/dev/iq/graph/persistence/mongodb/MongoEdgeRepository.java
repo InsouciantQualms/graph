@@ -28,6 +28,7 @@ import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -96,7 +97,7 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
 
     @Override
     public Optional<Edge> findAt(final NanoId edgeId, final Instant timestamp) {
-        final var timestampStr = timestamp.toString();
+        final var timestampStr = timestamp.truncatedTo(ChronoUnit.MILLIS).toString();
         final var document = collection
                 .find(and(
                         eq("id", edgeId.id()),
@@ -118,7 +119,11 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     public boolean expire(final NanoId elementId, final Instant expiredAt) {
         final var result = collection.updateMany(
                 and(eq("id", elementId.id()), not(exists("expired"))),
-                new Document("$set", new Document("expired", expiredAt.toString())));
+                new Document(
+                        "$set",
+                        new Document(
+                                "expired",
+                                expiredAt.truncatedTo(ChronoUnit.MILLIS).toString())));
         return result.getModifiedCount() > 0;
     }
 

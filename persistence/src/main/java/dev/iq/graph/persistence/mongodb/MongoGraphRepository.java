@@ -14,16 +14,21 @@ import org.springframework.stereotype.Repository;
  */
 @Repository("mongoGraphRepository")
 public record MongoGraphRepository(
-        MongoNodeRepository nodes, MongoEdgeRepository edges, MongoComponentRepository components)
+        MongoNodeRepository nodes,
+        MongoEdgeRepository edges,
+        MongoComponentRepository components,
+        MongoGraphOperations graphOperations)
         implements GraphRepository {
 
     public static MongoGraphRepository create(final MongoSession session) {
 
         final var nodeRepository = new MongoNodeRepository(session.database());
         final var edgeRepository = new MongoEdgeRepository(session.database(), nodeRepository);
+        final var graphOperations = new MongoGraphOperations(session.database(), nodeRepository, edgeRepository);
         return new MongoGraphRepository(
                 nodeRepository,
                 edgeRepository,
-                new MongoComponentRepository(session.database(), nodeRepository, edgeRepository));
+                new MongoComponentRepository(session.database(), nodeRepository, edgeRepository),
+                graphOperations);
     }
 }

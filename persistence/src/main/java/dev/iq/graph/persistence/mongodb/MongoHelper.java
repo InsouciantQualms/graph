@@ -10,6 +10,7 @@ import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -26,6 +27,15 @@ final class MongoHelper {
     private MongoHelper() {}
 
     /**
+     * Formats an Instant to ISO-8601 string with millisecond precision.
+     * MongoDB schema expects timestamps with up to 3 decimal places.
+     */
+    private static String formatTimestamp(final Instant instant) {
+        // Truncate to milliseconds to match MongoDB schema validation
+        return instant.truncatedTo(ChronoUnit.MILLIS).toString();
+    }
+
+    /**
      * Creates a base document with common fields for versioned entities.
      */
     static Document createBaseDocument(
@@ -36,7 +46,7 @@ final class MongoHelper {
                 .append("id", locator.id().id())
                 .append("versionId", locator.version())
                 .append("type", type)
-                .append("created", created.toString())
+                .append("created", formatTimestamp(created))
                 .append("data", serializedData);
     }
 
@@ -45,7 +55,7 @@ final class MongoHelper {
      */
     static void addExpiryToDocument(final Document document, final Optional<Instant> expired) {
 
-        expired.ifPresent(expiredTime -> document.append("expired", expiredTime.toString()));
+        expired.ifPresent(expiredTime -> document.append("expired", formatTimestamp(expiredTime)));
     }
 
     /**

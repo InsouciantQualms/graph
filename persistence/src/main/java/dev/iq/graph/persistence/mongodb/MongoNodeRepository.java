@@ -28,6 +28,7 @@ import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -90,7 +91,7 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
 
     @Override
     public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
-        final var timestampStr = timestamp.toString();
+        final var timestampStr = timestamp.truncatedTo(ChronoUnit.MILLIS).toString();
         final var document = collection
                 .find(and(
                         eq("id", nodeId.id()),
@@ -112,7 +113,11 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     public boolean expire(final NanoId elementId, final Instant expiredAt) {
         final var result = collection.updateMany(
                 and(eq("id", elementId.id()), not(exists("expired"))),
-                new Document("$set", new Document("expired", expiredAt.toString())));
+                new Document(
+                        "$set",
+                        new Document(
+                                "expired",
+                                expiredAt.truncatedTo(ChronoUnit.MILLIS).toString())));
         return result.getModifiedCount() > 0;
     }
 

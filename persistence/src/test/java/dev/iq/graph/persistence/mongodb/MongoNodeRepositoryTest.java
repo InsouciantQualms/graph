@@ -14,8 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
-import de.flapdoodle.embed.mongo.distribution.Version;
-import de.flapdoodle.embed.mongo.transitions.Mongod;
 import de.flapdoodle.embed.mongo.transitions.RunningMongodProcess;
 import de.flapdoodle.reverse.TransitionWalker;
 import dev.iq.common.version.Locator;
@@ -44,30 +42,19 @@ final class MongoNodeRepositoryTest {
 
     @BeforeAll
     static void setUpClass() {
-        mongodProcess = Mongod.instance().start(Version.Main.V7_0);
+        mongodProcess = MongoTestConfig.startMongoDbOrSkip();
         final var serverAddress = mongodProcess.current().getServerAddress();
-
         mongoClient = MongoClients.create("mongodb://" + serverAddress.getHost() + ':' + serverAddress.getPort());
         database = mongoClient.getDatabase("test_graph");
     }
 
     @AfterAll
     static void tearDownClass() {
-        try {
-            if (mongoClient != null) {
-                mongoClient.close();
-            }
-        } finally {
-            if (mongodProcess != null) {
-                mongodProcess.close();
-            }
+        if (mongoClient != null) {
+            mongoClient.close();
         }
-
-        // Give time for processes to shut down
-        try {
-            Thread.sleep(1000);
-        } catch (final InterruptedException e) {
-            Thread.currentThread().interrupt();
+        if (mongodProcess != null) {
+            mongodProcess.close();
         }
     }
 

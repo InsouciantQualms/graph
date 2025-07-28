@@ -23,7 +23,8 @@ dependencies {
     implementation("dev.iq.common:core")
     implementation(project(":persistence"))
     api(project(":model"))
-    
+    implementation(project(":access"))
+
     // Spring TX for transaction management
     implementation("org.springframework:spring-context:6.1.13")
     implementation("org.springframework:spring-tx:6.1.13")
@@ -33,8 +34,8 @@ dependencies {
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers)
-    
-    // Spring Test dependencies  
+
+    // Spring Test dependencies
     testImplementation("org.springframework:spring-test:6.1.13")
     testImplementation("org.springframework.boot:spring-boot-starter-test:3.2.5")
 }
