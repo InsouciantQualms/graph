@@ -13,6 +13,7 @@ import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Path;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.model.jgrapht.GraphOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
@@ -42,7 +43,7 @@ public class GraphOperationsTest {
     final void before() {
 
         // Create shared graph and operations
-        final var base = new DirectedMultigraph<Node, Edge>(null, null, false);
+        final var base = new DirectedMultigraph<Reference<Node>, Reference<Edge>>(null, null, false);
         final var graph = new DefaultListenableGraph<>(base);
 
         // Create operations that share the same graph
@@ -50,18 +51,18 @@ public class GraphOperationsTest {
         final var nodeOps = new NodeOperations(graph, edgeOps);
 
         // Create GraphOperations with an empty listener
-        graphOps = new GraphOperations(new GraphListener<>() {
+        graphOps = new GraphOperations(new GraphListener<Reference<Node>, Reference<Edge>>() {
             @Override
-            public void vertexAdded(final GraphVertexChangeEvent<Node> e) {}
+            public void vertexAdded(final GraphVertexChangeEvent<Reference<Node>> e) {}
 
             @Override
-            public void vertexRemoved(final GraphVertexChangeEvent<Node> e) {}
+            public void vertexRemoved(final GraphVertexChangeEvent<Reference<Node>> e) {}
 
             @Override
-            public void edgeAdded(final GraphEdgeChangeEvent<Node, Edge> e) {}
+            public void edgeAdded(final GraphEdgeChangeEvent<Reference<Node>, Reference<Edge>> e) {}
 
             @Override
-            public void edgeRemoved(final GraphEdgeChangeEvent<Node, Edge> e) {}
+            public void edgeRemoved(final GraphEdgeChangeEvent<Reference<Node>, Reference<Edge>> e) {}
         });
 
         // Create test nodes using NodeOperations so they get added to a graph
@@ -85,7 +86,7 @@ public class GraphOperationsTest {
         // Test that shortestPath method returns a Path
         // Since nodes aren't in GraphOps' internal graph, it may throw exception or return empty
         try {
-            final var path = graphOps.shortestPath(nodeA, nodeB);
+            final var path = graphOps.shortestPath(new Reference.Loaded<>(nodeA), new Reference.Loaded<>(nodeB));
             // If no exception, should return Path instance
             assertNotNull(path);
             assertInstanceOf(Path.class, path);
@@ -101,7 +102,7 @@ public class GraphOperationsTest {
         // Test that allPaths method returns a List<Path>
         // Since nodes aren't in GraphOps' internal graph, it may throw exception or return empty
         try {
-            final var paths = graphOps.allPaths(nodeA, nodeC);
+            final var paths = graphOps.allPaths(new Reference.Loaded<>(nodeA), new Reference.Loaded<>(nodeC));
             // If no exception, should return List<Path> instance
             assertNotNull(paths);
             assertInstanceOf(List.class, paths);

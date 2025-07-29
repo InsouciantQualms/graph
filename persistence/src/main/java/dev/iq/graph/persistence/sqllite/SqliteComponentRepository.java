@@ -12,6 +12,7 @@ import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Element;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleComponent;
@@ -302,7 +303,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
         });
     }
 
-    private List<Element> loadComponentElements(final NanoId componentId, final int componentVersion) {
+    private List<Reference<Element>> loadComponentElements(final NanoId componentId, final int componentVersion) {
         final var sql =
                 """
                 SELECT element_id, element_version, element_type
@@ -311,7 +312,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
                 """;
 
         return Io.withReturn(() -> {
-            final var elements = new ArrayList<Element>();
+            final var elements = new ArrayList<Reference<Element>>();
             getHandle()
                     .createQuery(sql)
                     .bind("component_id", componentId.id())
@@ -324,11 +325,11 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
                         if ("SimpleNode".equals(elementType)) {
                             nodeRepository
                                     .find(new Locator(elementId, elementVersion))
-                                    .ifPresent(elements::add);
+                                    .ifPresent(node -> elements.add(new Reference.Loaded<>(node)));
                         } else if ("SimpleEdge".equals(elementType)) {
                             edgeRepository
                                     .find(new Locator(elementId, elementVersion))
-                                    .ifPresent(elements::add);
+                                    .ifPresent(edge -> elements.add(new Reference.Loaded<>(edge)));
                         }
                         return null;
                     })

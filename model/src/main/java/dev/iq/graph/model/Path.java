@@ -13,15 +13,20 @@ import java.util.Objects;
 /**
  * Represents a simple path between elements.  The first and last elements of the
  * path will always be a Node instance.  The path can contain zero or more elements.
+ * All elements in the path are fully loaded, but their internal references may be unloaded.
  */
-public record Path(List<Element> elements) {
+public record Path(List<Reference<Element>> elements) {
 
-    public Path(final List<Element> elements) {
+    public Path(final List<Reference<Element>> elements) {
 
         Objects.requireNonNull(elements);
         if (!elements.isEmpty()) {
-            Invariant.require(elements.getFirst() instanceof Node, "first element of a non‐empty path must be a Node");
-            Invariant.require(elements.getLast() instanceof Node, "last element of a non‐empty path must be a Node");
+            Invariant.require(
+                    elements.getFirst() instanceof Reference.Loaded<Element> loaded && loaded.value() instanceof Node,
+                    "first element of a non‐empty path must be a loaded Node");
+            Invariant.require(
+                    elements.getLast() instanceof Reference.Loaded<Element> loaded && loaded.value() instanceof Node,
+                    "last element of a non‐empty path must be a loaded Node");
         }
         this.elements = List.copyOf(elements);
     }

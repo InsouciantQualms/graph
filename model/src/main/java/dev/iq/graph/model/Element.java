@@ -6,7 +6,6 @@
 package dev.iq.graph.model;
 
 import dev.iq.common.annotation.Stable;
-import dev.iq.common.version.NanoId;
 import dev.iq.common.version.Versioned;
 import java.util.Set;
 
@@ -17,5 +16,5 @@ public interface Element extends Versioned {
 
     Data data();
 
-    Set<NanoId> components();
+    Set<Reference<Component>> components();
 }

@@ -9,6 +9,7 @@ package dev.iq.graph.api.impl;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.api.GraphService;
 import dev.iq.graph.model.Path;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.jgrapht.GraphOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
 import dev.iq.graph.persistence.GraphRepository;
@@ -47,7 +48,7 @@ public final class DefaultGraphService implements GraphService {
                 .findActive(targetNodeId)
                 .orElseThrow(() -> new IllegalArgumentException("Target node not found: " + targetNodeId));
 
-        return graphOperations.pathExists(sourceNode, targetNode);
+        return graphOperations.pathExists(new Reference.Loaded<>(sourceNode), new Reference.Loaded<>(targetNode));
     }
 
     @Override
@@ -55,7 +56,7 @@ public final class DefaultGraphService implements GraphService {
     public List<Path> getActiveConnected() {
 
         // Get all active nodes
-        final var activeNodes = nodeOperations.allActive();
+        final var activeNodes = nodeOperations.activeNodes();
 
         // Find all connected paths among active nodes
         final var connectedPaths = new java.util.ArrayList<Path>();
@@ -65,8 +66,10 @@ public final class DefaultGraphService implements GraphService {
                 final var sourceNode = activeNodes.get(i);
                 final var targetNode = activeNodes.get(j);
 
-                if (graphOperations.pathExists(sourceNode, targetNode)) {
-                    final var paths = graphOperations.allPaths(sourceNode, targetNode);
+                if (graphOperations.pathExists(
+                        new Reference.Loaded<>(sourceNode), new Reference.Loaded<>(targetNode))) {
+                    final var paths = graphOperations.allPaths(
+                            new Reference.Loaded<>(sourceNode), new Reference.Loaded<>(targetNode));
                     connectedPaths.addAll(paths);
                 }
             }
@@ -86,6 +89,6 @@ public final class DefaultGraphService implements GraphService {
                 .findActive(targetNodeId)
                 .orElseThrow(() -> new IllegalArgumentException("Target node not found: " + targetNodeId));
 
-        return graphOperations.shortestPath(sourceNode, targetNode);
+        return graphOperations.shortestPath(new Reference.Loaded<>(sourceNode), new Reference.Loaded<>(targetNode));
     }
 }

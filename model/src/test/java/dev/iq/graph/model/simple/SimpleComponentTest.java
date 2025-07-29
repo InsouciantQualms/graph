@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Element;
+import dev.iq.graph.model.Reference;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +32,7 @@ class SimpleComponentTest {
         final var data = new SimpleData(String.class, "Test Component");
         final var created = Instant.now();
         final var expired = Optional.<Instant>empty();
-        final List<Element> elements = List.of();
+        final List<Reference<Element>> elements = List.of();
 
         final var component = new SimpleComponent(locator, elements, data, created, expired);
 
@@ -50,7 +51,7 @@ class SimpleComponentTest {
         final var created = Instant.now();
         final var expiredTime = created.plusSeconds(3600);
         final var expired = Optional.of(expiredTime);
-        final List<Element> elements = List.of();
+        final List<Reference<Element>> elements = List.of();
 
         final var component = new SimpleComponent(locator, elements, data, created, expired);
 
@@ -68,13 +69,14 @@ class SimpleComponentTest {
         final var componentId = new NanoId("component-id");
         final var componentLocator = new Locator(componentId, 1);
         final var componentData = new SimpleData(String.class, "Component Data");
-        final List<Element> elements = List.of(node);
+        final List<Reference<Element>> elements = List.of(new Reference.Loaded<>(node));
 
         final var component =
                 new SimpleComponent(componentLocator, elements, componentData, Instant.now(), Optional.empty());
 
         assertEquals(1, component.elements().size());
-        assertEquals(node, component.elements().getFirst());
+        assertTrue(component.elements().getFirst() instanceof Reference.Loaded<Element> loaded
+                && loaded.value().equals(node));
     }
 
     @Test
@@ -83,7 +85,7 @@ class SimpleComponentTest {
         final var locator = new Locator(id, 1);
         final var data = new SimpleData(String.class, "Test Component");
         final var created = Instant.now();
-        final List<Element> elements = List.of();
+        final List<Reference<Element>> elements = List.of();
 
         final var component1 = new SimpleComponent(locator, elements, data, created, Optional.empty());
         final var component2 = new SimpleComponent(locator, elements, data, created, Optional.empty());
@@ -100,7 +102,7 @@ class SimpleComponentTest {
         final var locator2 = new Locator(id2, 1);
         final var data = new SimpleData(String.class, "Test Component");
         final var created = Instant.now();
-        final List<Element> elements = List.of();
+        final List<Reference<Element>> elements = List.of();
 
         final var component1 = new SimpleComponent(locator1, elements, data, created, Optional.empty());
         final var component2 = new SimpleComponent(locator2, elements, data, created, Optional.empty());
@@ -114,7 +116,7 @@ class SimpleComponentTest {
         final var locator = new Locator(id, 1);
         final var data = new SimpleData(String.class, "Test Component");
         final var created = Instant.now();
-        final List<Element> elements = List.of();
+        final List<Reference<Element>> elements = List.of();
 
         final var component = new SimpleComponent(locator, elements, data, created, Optional.empty());
         final var toString = component.toString();

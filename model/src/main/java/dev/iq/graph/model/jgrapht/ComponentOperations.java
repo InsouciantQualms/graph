@@ -14,6 +14,7 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Operations;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.simple.SimpleComponent;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import org.jgrapht.Graph;
@@ -40,11 +42,11 @@ import org.jgrapht.Graph;
  */
 public final class ComponentOperations implements Operations<Component> {
 
-    private final Graph<Node, Edge> graph;
+    private final Graph<Reference<Node>, Reference<Edge>> graph;
     private final Map<NanoId, List<Component>> componentVersions;
     private final Map<Element, Set<NanoId>> elementToComponents;
 
-    public ComponentOperations(final Graph<Node, Edge> graph) {
+    public ComponentOperations(final Graph<Reference<Node>, Reference<Edge>> graph) {
 
         this.graph = graph;
         componentVersions = new HashMap<>();
@@ -64,9 +66,11 @@ public final class ComponentOperations implements Operations<Component> {
                 .computeIfAbsent(element, k -> new HashSet<>())
                 .add(locator.id()));
 
-        // Create component with the original elements
-        final var component =
-                new SimpleComponent(locator, new ArrayList<>(elements), data, timestamp, Optional.empty());
+        // Create component with the original elements as loaded references
+        final List<Reference<Element>> elementRefs = elements.stream()
+                .map(e -> (Reference<Element>) new Reference.Loaded<>(e))
+                .toList();
+        final var component = new SimpleComponent(locator, elementRefs, data, timestamp, Optional.empty());
 
         // Store component version
         componentVersions.computeIfAbsent(locator.id(), k -> new ArrayList<>()).add(component);
@@ -101,9 +105,11 @@ public final class ComponentOperations implements Operations<Component> {
                 .computeIfAbsent(element, k -> new HashSet<>())
                 .add(id));
 
-        // Create component with the original elements
-        final var newComponent =
-                new SimpleComponent(incremented, new ArrayList<>(elements), data, timestamp, Optional.empty());
+        // Create component with the original elements as loaded references
+        final List<Reference<Element>> newElementRefs = elements.stream()
+                .map(e -> (Reference<Element>) new Reference.Loaded<>(e))
+                .toList();
+        final var newComponent = new SimpleComponent(incremented, newElementRefs, data, timestamp, Optional.empty());
 
         // Store new version
         componentVersions.get(id).add(newComponent);
@@ -139,19 +145,19 @@ public final class ComponentOperations implements Operations<Component> {
     }
 
     @Override
-    public List<Component> findAllVersions(final NanoId id) {
+    public List<Component> findVersions(final NanoId id) {
 
         final var versions = componentVersions.get(id);
         return (versions != null) ? new ArrayList<>(versions) : List.of();
     }
 
     @Override
-    public List<Component> allActive() {
-
+    public Component find(final Locator locator) {
         return componentVersions.values().stream()
                 .flatMap(List::stream)
-                .filter(c -> c.expired().isEmpty())
-                .toList();
+                .filter(component -> component.locator().equals(locator))
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException("Component not found: " + locator));
     }
 
     @Override

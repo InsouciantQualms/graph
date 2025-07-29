@@ -7,10 +7,11 @@
 package dev.iq.graph.model.simple;
 
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.Type;
 import java.time.Instant;
 import java.util.HashSet;
@@ -20,12 +21,12 @@ import java.util.Set;
 public record SimpleEdge(
         Locator locator,
         Type type,
-        Node source,
-        Node target,
+        Reference<Node> source,
+        Reference<Node> target,
         Data data,
         Instant created,
         Optional<Instant> expired,
-        Set<NanoId> components)
+        Set<Reference<Component>> components)
         implements Edge {
 
     /**
@@ -33,8 +34,8 @@ public record SimpleEdge(
      */
     public SimpleEdge(
             final Locator locator,
-            final Node source,
-            final Node target,
+            final Reference<Node> source,
+            final Reference<Node> target,
             final Data data,
             final Instant created,
             final Optional<Instant> expired) {

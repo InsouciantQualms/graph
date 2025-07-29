@@ -18,7 +18,7 @@ public interface Component extends Versioned {
     /**
      * Returns the list of elements contained in this component.
      */
-    List<Element> elements();
+    List<Reference<Element>> elements();
 
     /**
      * Returns the data associated with this component.

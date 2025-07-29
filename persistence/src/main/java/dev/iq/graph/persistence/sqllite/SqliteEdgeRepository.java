@@ -9,8 +9,10 @@ package dev.iq.graph.persistence.sqllite;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
@@ -225,8 +227,32 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
                     .find(new Locator(targetId, targetVersionId))
                     .orElseThrow(() -> new RuntimeException("missing target " + targetId));
 
+            // Find components containing this edge
+            final var componentRefs = new HashSet<Reference<Component>>();
+            final var componentSql = "SELECT DISTINCT component_id, component_version FROM component_element WHERE element_id = :edgeId AND element_version = :versionId AND element_type = 'SimpleEdge'";
+            getHandle()
+                    .createQuery(componentSql)
+                    .bind("edgeId", id.id())
+                    .bind("versionId", versionId)
+                    .map((compRs, compCtx) -> {
+                        final var componentId = new NanoId(compRs.getString("component_id"));
+                        final var componentVersion = compRs.getInt("component_version");
+                        final var componentLocator = new Locator(componentId, componentVersion);
+                        componentRefs.add(new Reference.Unloaded<>(componentLocator, Component.class));
+                        return null;
+                    })
+                    .list();
+
             final var locator = new Locator(id, versionId);
-            return new SimpleEdge(locator, type, sourceNode, targetNode, data, created, expired, new HashSet<>());
+            return new SimpleEdge(
+                    locator,
+                    type,
+                    new Reference.Loaded<>(sourceNode),
+                    new Reference.Loaded<>(targetNode),
+                    data,
+                    created,
+                    expired,
+                    componentRefs);
         }
     }
 

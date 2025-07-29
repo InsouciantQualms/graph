@@ -17,10 +17,10 @@ public interface Edge extends Element {
     /**
      * Returns the source node of this edge.
      */
-    Node source();
+    Reference<Node> source();
 
     /**
      * Returns the target node of this edge.
      */
-    Node target();
+    Reference<Node> target();
 }

@@ -11,6 +11,7 @@ import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Element;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleComponent;
@@ -215,8 +216,8 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
         return new SimpleComponent(locator, elements, data, created, expired);
     }
 
-    private List<Element> loadComponentElements(final Vertex componentVertex) {
-        final var elements = new ArrayList<Element>();
+    private List<Reference<Element>> loadComponentElements(final Vertex componentVertex) {
+        final var elements = new ArrayList<Reference<Element>>();
 
         traversal
                 .V(componentVertex)
@@ -235,12 +236,12 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
                         nodeRepository
                                 .find(new Locator(
                                         new NanoId(elementVertex.value("id")), elementVertex.<Integer>value("version")))
-                                .ifPresent(elements::add);
+                                .ifPresent(node -> elements.add(new Reference.Loaded<>(node)));
                     } else if ("SimpleEdge".equals(elementType)) {
                         edgeRepository
                                 .find(new Locator(
                                         new NanoId(elementVertex.value("id")), elementVertex.<Integer>value("version")))
-                                .ifPresent(elements::add);
+                                .ifPresent(edgeElement -> elements.add(new Reference.Loaded<>(edgeElement)));
                     }
                 });
 

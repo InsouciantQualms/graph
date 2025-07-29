@@ -57,29 +57,44 @@ public final class DefaultComponentService implements ComponentService {
     @Transactional(readOnly = true)
     public List<Component> findActiveContaining(final NanoId id) {
 
-        // Find all active components and check if they contain an element with this ID
-        return componentOperations.allActive().stream()
-                .filter(component -> component.elements().stream()
-                        .anyMatch(element -> element.locator().id().equals(id)
-                                && element.expired().isEmpty()))
-                .toList();
+        // Get all active component IDs from repository and filter
+        final var activeComponentIds = repository.components().allActiveIds();
+        final var activeComponents = new java.util.ArrayList<Component>();
+
+        for (final var componentId : activeComponentIds) {
+            componentOperations
+                    .findActive(componentId)
+                    .filter(component -> component.elements().stream()
+                            .anyMatch(elementRef -> elementRef.locator().id().equals(id)))
+                    .ifPresent(activeComponents::add);
+        }
+
+        return activeComponents;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Component> findContaining(final NanoId id, final Instant timestamp) {
 
-        final var allComponents = componentOperations.allActive().stream()
-                .flatMap(component ->
-                        componentOperations.findAllVersions(component.locator().id()).stream())
-                .toList();
-        return allComponents.stream()
-                .filter(component -> !component.created().isAfter(timestamp)
+        // Get all component IDs and check all versions
+        final var allComponentIds = repository.components().allIds();
+        final var matchingComponents = new java.util.ArrayList<Component>();
+
+        for (final var componentId : allComponentIds) {
+            final var versions = componentOperations.findVersions(componentId);
+            for (final var component : versions) {
+                if (!component.created().isAfter(timestamp)
                         && (component.expired().isEmpty()
                                 || component.expired().get().isAfter(timestamp))
                         && component.elements().stream()
-                                .anyMatch(element -> element.locator().id().equals(id)))
-                .toList();
+                                .anyMatch(
+                                        elementRef -> elementRef.locator().id().equals(id))) {
+                    matchingComponents.add(component);
+                }
+            }
+        }
+
+        return matchingComponents;
     }
 
     @Override

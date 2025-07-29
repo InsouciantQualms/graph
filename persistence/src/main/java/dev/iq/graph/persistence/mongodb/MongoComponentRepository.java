@@ -24,6 +24,7 @@ import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Element;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.serde.JsonSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleComponent;
@@ -69,13 +70,24 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
             collection.insertOne(document);
 
             // Save component elements relationships
-            for (final var element : component.elements()) {
+            for (final var elementRef : component.elements()) {
+                final var elementLocator = elementRef.locator();
+
+                // Determine element type by checking if it's a loaded reference
+                String elementType = "unknown";
+                if (elementRef instanceof Reference.Loaded<?> loaded) {
+                    elementType = (loaded.value() instanceof Node) ? "node" : "edge";
+                } else if (elementRef instanceof Reference.Unloaded<?> unloaded) {
+                    // For unloaded references, we'll need to check the type
+                    elementType = unloaded.type().equals(Node.class) ? "node" : "edge";
+                }
+
                 final var elementDoc = new Document()
                         .append("componentId", component.locator().id().id())
                         .append("componentVersionId", component.locator().version())
-                        .append("elementId", element.locator().id().id())
-                        .append("elementVersionId", element.locator().version())
-                        .append("elementType", (element instanceof Node) ? "node" : "edge");
+                        .append("elementId", elementLocator.id().id())
+                        .append("elementVersionId", elementLocator.version())
+                        .append("elementType", elementType);
 
                 elementsCollection.insertOne(elementDoc);
             }
@@ -149,9 +161,8 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
         return Io.withReturn(() -> {
             final var versionedData = MongoHelper.extractVersionedData(document);
             final var data = serde.deserialize(versionedData.serializedData());
-
-            // Load component elements
-            final var elements = new ArrayList<Element>();
+            
+            final var elements = new ArrayList<Reference<Element>>();
             final var elementDocs = elementsCollection.find(and(
                     eq("componentId", versionedData.locator().id().id()),
                     eq("componentVersionId", versionedData.locator().version())));
@@ -163,9 +174,13 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
                 final var elementType = elementDoc.getString("elementType");
 
                 if ("node".equals(elementType)) {
-                    nodeRepository.find(elementLocator).ifPresent(elements::add);
+                    nodeRepository
+                            .find(elementLocator)
+                            .ifPresent(node -> elements.add(new Reference.Loaded<Element>(node)));
                 } else if ("edge".equals(elementType)) {
-                    edgeRepository.find(elementLocator).ifPresent(elements::add);
+                    edgeRepository
+                            .find(elementLocator)
+                            .ifPresent(edge -> elements.add(new Reference.Loaded<Element>(edge)));
                 }
             }
 

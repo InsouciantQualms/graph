@@ -9,6 +9,7 @@ package dev.iq.graph.model.jgrapht;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Path;
+import dev.iq.graph.model.Reference;
 import java.util.List;
 import org.jgrapht.Graph;
 import org.jgrapht.ListenableGraph;
@@ -25,15 +26,15 @@ import org.jgrapht.graph.DirectedMultigraph;
 public final class GraphOperations {
 
     /** JGraphT delegated in memory graph. */
-    private final Graph<Node, Edge> graph;
+    private final Graph<Reference<Node>, Reference<Edge>> graph;
 
     /**
      * Creates graph operations that will forward any events on to the specified listener.
      */
-    public GraphOperations(final GraphListener<Node, Edge> listener) {
+    public GraphOperations(final GraphListener<Reference<Node>, Reference<Edge>> listener) {
 
-        final Graph<Node, Edge> base = new DirectedMultigraph<>(null, null, false);
-        final ListenableGraph<Node, Edge> wrapper = new DefaultListenableGraph<>(base);
+        final Graph<Reference<Node>, Reference<Edge>> base = new DirectedMultigraph<>(null, null, false);
+        final ListenableGraph<Reference<Node>, Reference<Edge>> wrapper = new DefaultListenableGraph<>(base);
         wrapper.addGraphListener(listener);
         graph = wrapper;
     }
@@ -41,7 +42,7 @@ public final class GraphOperations {
     /**
      * Finds shortest path between two nodes.
      */
-    public Path shortestPath(final Node source, final Node target) {
+    public Path shortestPath(final Reference<Node> source, final Reference<Node> target) {
 
         final var pathAlgorithm = new DijkstraShortestPath<>(graph);
         final var jgraphtPath = pathAlgorithm.getPath(source, target);
@@ -54,13 +55,13 @@ public final class GraphOperations {
     /**
      * Checks if path exists between two nodes.
      */
-    public boolean pathExists(final Node source, final Node target) {
+    public boolean pathExists(final Reference<Node> source, final Reference<Node> target) {
 
         final var inspector = new ConnectivityInspector<>(graph);
         return inspector.pathExists(source, target);
     }
 
-    public List<Path> allPaths(final Node source, final Node target) {
+    public List<Path> allPaths(final Reference<Node> source, final Reference<Node> target) {
 
         final var allPathsAlgorithm = new AllDirectedPaths<>(graph);
         final var maxPathLength = graph.vertexSet().size();

@@ -15,9 +15,12 @@ import dev.iq.common.version.Versioned;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import org.jgrapht.graph.DefaultListenableGraph;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +39,7 @@ public class ExpiredNodeEdgeValidationTest {
     @BeforeEach
     final void before() {
 
-        final var base = new DirectedMultigraph<Node, Edge>(null, null, false);
+        final var base = new DirectedMultigraph<Reference<Node>, Reference<Edge>>(null, null, false);
         final var graph = new DefaultListenableGraph<>(base);
 
         edgeOps = new EdgeOperations(graph);
@@ -179,9 +182,7 @@ public class ExpiredNodeEdgeValidationTest {
         assertEquals(timestamp4, expiredNodeB.expired().get());
 
         // Verify the manually expired edge timestamp is unchanged
-        final var currentExpiredEdgeAB = edgeOps
-                .findAllVersions(edgeAB.locator().id())
-                .stream()
+        final var currentExpiredEdgeAB = edgeOps.findVersions(edgeAB.locator().id()).stream()
                 .filter(e -> e.expired().isPresent())
                 .findFirst();
         assertTrue(currentExpiredEdgeAB.isPresent());
@@ -215,21 +216,25 @@ public class ExpiredNodeEdgeValidationTest {
         nodeOps.expire(nodeB.locator().id(), timestamp3);
 
         // Verify no active edges connect to the expired node B
-        final var allActiveEdges = edgeOps.allActive();
+        final var allActiveEdges = getAllActiveEdges();
         for (final var edge : allActiveEdges) {
-            assertNotEquals(
-                    nodeB.locator().id(),
-                    edge.source().locator().id(),
-                    "Active edge should not have expired node as source");
-            assertNotEquals(
-                    nodeB.locator().id(),
-                    edge.target().locator().id(),
-                    "Active edge should not have expired node as target");
+            if (edge.source() instanceof Reference.Loaded<Node> source) {
+                assertNotEquals(
+                        nodeB.locator().id(),
+                        source.value().locator().id(),
+                        "Active edge should not have expired node as source");
+            }
+            if (edge.target() instanceof Reference.Loaded<Node> target) {
+                assertNotEquals(
+                        nodeB.locator().id(),
+                        target.value().locator().id(),
+                        "Active edge should not have expired node as target");
+            }
         }
 
         // Verify there are still some active edges in the graph (between non-expired nodes)
         final var remainingEdge = edgeOps.add(nodeA, nodeC, new TestData("EdgeAC"), timestamp3);
-        assertTrue(edgeOps.allActive().contains(remainingEdge));
+        assertTrue(getAllActiveEdges().contains(remainingEdge));
     }
 
     /**
@@ -237,7 +242,7 @@ public class ExpiredNodeEdgeValidationTest {
      */
     private void assertEdgeExpired(final Versioned originalEdge, final Instant expectedExpiredTime) {
         // Verify that at least one version of the edge exists
-        final var allVersions = edgeOps.findAllVersions(originalEdge.locator().id());
+        final var allVersions = edgeOps.findVersions(originalEdge.locator().id());
         assertFalse(
                 allVersions.isEmpty(),
                 () -> "Edge should exist in version history: "
@@ -261,6 +266,14 @@ public class ExpiredNodeEdgeValidationTest {
             assertFalse(
                     originalStillActive, () -> "Original edge should not still be active: " + originalEdge.locator());
         }
+    }
+
+    private List<Edge> getAllActiveEdges() {
+        final var allEdges = new ArrayList<Edge>();
+        for (var node : nodeOps.activeNodes()) {
+            allEdges.addAll(edgeOps.getEdgesFor(node));
+        }
+        return allEdges.stream().distinct().toList();
     }
 
     /**

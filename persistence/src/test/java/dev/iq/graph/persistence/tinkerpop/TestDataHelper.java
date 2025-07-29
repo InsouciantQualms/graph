@@ -11,6 +11,7 @@ import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
@@ -27,14 +28,14 @@ public final class TestDataHelper {
     public static Node createNode(final NanoId id, final int version, final Data data, final Instant created) {
 
         final var locator = new Locator(id, version);
-        return new SimpleNode(locator, List.of(), data, created, Optional.empty());
+        return new SimpleNode(locator, List.<Reference<Edge>>of(), data, created, Optional.empty());
     }
 
     public static Node createExpiredNode(
             final NanoId id, final int version, final Data data, final Instant created, final Instant expired) {
 
         final var locator = new Locator(id, version);
-        return new SimpleNode(locator, List.of(), data, created, Optional.of(expired));
+        return new SimpleNode(locator, List.<Reference<Edge>>of(), data, created, Optional.of(expired));
     }
 
     public static Edge createEdge(
@@ -46,7 +47,13 @@ public final class TestDataHelper {
             final Instant created) {
 
         final var locator = new Locator(id, version);
-        return new SimpleEdge(locator, source, target, data, created, Optional.empty());
+        return new SimpleEdge(
+                locator,
+                new Reference.Loaded<>(source),
+                new Reference.Loaded<>(target),
+                data,
+                created,
+                Optional.empty());
     }
 
     @SuppressWarnings("MethodWithTooManyParameters")
@@ -60,6 +67,12 @@ public final class TestDataHelper {
             final Instant expired) {
 
         final var locator = new Locator(id, version);
-        return new SimpleEdge(locator, source, target, data, created, Optional.of(expired));
+        return new SimpleEdge(
+                locator,
+                new Reference.Loaded<>(source),
+                new Reference.Loaded<>(target),
+                data,
+                created,
+                Optional.of(expired));
     }
 }

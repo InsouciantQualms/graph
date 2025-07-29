@@ -12,6 +12,7 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Path;
+import dev.iq.graph.model.Reference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -46,18 +47,30 @@ public final class OperationsHelper {
     /**
      * Converts a JGraphT GraphPath to our Path model.
      */
-    public static Path toPath(final GraphPath<Node, Edge> jgraphtPath) {
+    public static Path toPath(final GraphPath<Reference<Node>, Reference<Edge>> jgraphtPath) {
 
         final var vertices = jgraphtPath.getVertexList();
         final var edges = jgraphtPath.getEdgeList();
         if (vertices.size() != (edges.size() + 1)) {
             throw new IllegalArgumentException("Vertex count must be one greater than edge count");
         }
-        final List<Element> elements = new ArrayList<>();
+        final List<Reference<Element>> elements = new ArrayList<>();
         for (var i = 0; i < vertices.size(); i++) {
-            elements.add(vertices.get(i));
+            // Vertices are Reference<Node>, need to convert to Reference<Element>
+            final Reference<Node> nodeRef = vertices.get(i);
+            if (nodeRef instanceof Reference.Loaded<Node> loaded) {
+                elements.add(new Reference.Loaded<>(loaded.value()));
+            } else if (nodeRef instanceof Reference.Unloaded<Node> unloaded) {
+                elements.add(new Reference.Unloaded<>(unloaded.locator(), Element.class));
+            }
             if (i < edges.size()) {
-                elements.add(edges.get(i));
+                // Edges are Reference<Edge>, need to convert to Reference<Element>
+                final Reference<Edge> edgeRef = edges.get(i);
+                if (edgeRef instanceof Reference.Loaded<Edge> loaded) {
+                    elements.add(new Reference.Loaded<>(loaded.value()));
+                } else if (edgeRef instanceof Reference.Unloaded<Edge> unloaded) {
+                    elements.add(new Reference.Unloaded<>(unloaded.locator(), Element.class));
+                }
             }
         }
         return new Path(elements);
@@ -70,15 +83,16 @@ public final class OperationsHelper {
 
         final var visitedNodes = new HashSet<Node>();
         return path.elements().stream()
-                .filter(element -> element instanceof Node)
-                .map(element -> (Node) element)
+                .filter(ref -> ref instanceof Reference.Loaded<Element> loaded && loaded.value() instanceof Node)
+                .map(ref -> (Node) ((Reference.Loaded<Element>) ref).value())
                 .anyMatch(node -> !visitedNodes.add(node));
     }
 
     /**
      * Validates component elements according to component constraints.
      */
-    public static void validateComponentElements(final Collection<Element> elements, final Graph<Node, Edge> graph) {
+    public static void validateComponentElements(
+            final Collection<Element> elements, final Graph<Reference<Node>, Reference<Edge>> graph) {
 
         if (elements.isEmpty()) {
             throw new IllegalArgumentException("Component must contain at least one element");
@@ -109,14 +123,22 @@ public final class OperationsHelper {
      * Validates that all elements in a component are connected.
      */
     private static void validateConnectivity(
-            final Set<Node> nodes, final Set<Edge> edges, final Graph<Node, Edge> graph) {
+            final Set<Node> nodes, final Set<Edge> edges, final Graph<Reference<Node>, Reference<Edge>> graph) {
 
         if ((nodes.size() == 1) && edges.isEmpty()) {
             return;
         }
 
+        // Convert nodes and edges to their references for the subgraph
+        final Set<Reference<Node>> nodeRefs = nodes.stream()
+                .map(node -> (Reference<Node>) new Reference.Loaded<>(node))
+                .collect(HashSet::new, Set::add, Set::addAll);
+        final Set<Reference<Edge>> edgeRefs = edges.stream()
+                .map(edge -> (Reference<Edge>) new Reference.Loaded<>(edge))
+                .collect(HashSet::new, Set::add, Set::addAll);
+
         // Create a subgraph containing only the component's nodes and edges
-        final var subgraph = new AsSubgraph<>(graph, nodes, edges);
+        final var subgraph = new AsSubgraph<>(graph, nodeRefs, edgeRefs);
 
         // Use ConnectivityInspector to check if all nodes are connected
         final var inspector = new ConnectivityInspector<>(subgraph);
@@ -128,10 +150,19 @@ public final class OperationsHelper {
     /**
      * Validates that a component contains no cycles.
      */
-    private static void validateNoCycles(final Set<Node> nodes, final Set<Edge> edges, final Graph<Node, Edge> graph) {
+    private static void validateNoCycles(
+            final Set<Node> nodes, final Set<Edge> edges, final Graph<Reference<Node>, Reference<Edge>> graph) {
+
+        // Convert nodes and edges to their references for the subgraph
+        final Set<Reference<Node>> nodeRefs = nodes.stream()
+                .map(node -> (Reference<Node>) new Reference.Loaded<>(node))
+                .collect(HashSet::new, Set::add, Set::addAll);
+        final Set<Reference<Edge>> edgeRefs = edges.stream()
+                .map(edge -> (Reference<Edge>) new Reference.Loaded<>(edge))
+                .collect(HashSet::new, Set::add, Set::addAll);
 
         // Create a subgraph containing only the component's nodes and edges
-        final var subgraph = new AsSubgraph<>(graph, nodes, edges);
+        final var subgraph = new AsSubgraph<>(graph, nodeRefs, edgeRefs);
 
         // Use JGraphT's CycleDetector to check for cycles
         final var cycleDetector = new CycleDetector<>(subgraph);
@@ -147,10 +178,17 @@ public final class OperationsHelper {
 
         edges.forEach(edge -> {
             // Use the edge's source and target directly instead of querying the graph
-            final var source = edge.source();
-            final var target = edge.target();
+            final var sourceRef = edge.source();
+            final var targetRef = edge.target();
 
-            if (!nodes.contains(source) || !nodes.contains(target)) {
+            // Extract the actual nodes from the references
+            final Node sourceNode = sourceRef instanceof Reference.Loaded<Node> loaded ? loaded.value() : null;
+            final Node targetNode = targetRef instanceof Reference.Loaded<Node> loaded ? loaded.value() : null;
+
+            if (sourceNode == null
+                    || targetNode == null
+                    || !nodes.contains(sourceNode)
+                    || !nodes.contains(targetNode)) {
                 throw new IllegalArgumentException("All edges in a component must connect nodes within the component");
             }
         });

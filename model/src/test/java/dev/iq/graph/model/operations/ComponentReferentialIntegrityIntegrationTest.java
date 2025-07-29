@@ -12,11 +12,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.jgrapht.ComponentOperations;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
 import dev.iq.graph.model.simple.SimpleData;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DirectedMultigraph;
@@ -36,7 +38,7 @@ class ComponentReferentialIntegrityIntegrationTest {
     @BeforeEach
     final void before() {
 
-        final Graph<Node, Edge> graph = new DirectedMultigraph<>(null, null, false);
+        final Graph<Reference<Node>, Reference<Edge>> graph = new DirectedMultigraph<>(null, null, false);
         edgeOps = new EdgeOperations(graph);
         nodeOps = new NodeOperations(graph, edgeOps);
         componentOps = new ComponentOperations(graph);
@@ -59,7 +61,7 @@ class ComponentReferentialIntegrityIntegrationTest {
                 nodeOps.update(node2.locator().id(), new SimpleData(String.class, "Node2v2"), timestamp.plusSeconds(2));
 
         // Get current edge (should have been recreated with new node versions)
-        final var currentEdges = edgeOps.allActive();
+        final var currentEdges = getAllActiveEdges();
         assertEquals(1, currentEdges.size());
         final var currentEdge = currentEdges.getFirst();
 
@@ -75,9 +77,15 @@ class ComponentReferentialIntegrityIntegrationTest {
         assertEquals(3, componentV2.elements().size());
 
         // Verify the elements in the component are the latest versions
-        assertTrue(componentV2.elements().stream().anyMatch(e -> e.equals(node1v2)));
-        assertTrue(componentV2.elements().stream().anyMatch(e -> e.equals(node2v2)));
-        assertTrue(componentV2.elements().stream().anyMatch(e -> e.equals(currentEdge)));
+        assertTrue(componentV2.elements().stream()
+                .anyMatch(e -> e instanceof Reference.Loaded<?> loaded
+                        && loaded.value().equals(node1v2)));
+        assertTrue(componentV2.elements().stream()
+                .anyMatch(e -> e instanceof Reference.Loaded<?> loaded
+                        && loaded.value().equals(node2v2)));
+        assertTrue(componentV2.elements().stream()
+                .anyMatch(e -> e instanceof Reference.Loaded<?> loaded
+                        && loaded.value().equals(currentEdge)));
     }
 
     @Test
@@ -106,7 +114,7 @@ class ComponentReferentialIntegrityIntegrationTest {
                 timestamp.plusSeconds(4));
 
         // Verify all versions exist
-        final var allVersions = componentOps.findAllVersions(component.locator().id());
+        final var allVersions = componentOps.findVersions(component.locator().id());
         assertEquals(3, allVersions.size());
 
         // Verify version progression
@@ -181,7 +189,7 @@ class ComponentReferentialIntegrityIntegrationTest {
         assertTrue(activeComponent.isEmpty());
 
         // Verify all versions still exist in history
-        final var allVersions = componentOps.findAllVersions(component.locator().id());
+        final var allVersions = componentOps.findVersions(component.locator().id());
         assertEquals(2, allVersions.size());
         assertTrue(allVersions.get(0).expired().isPresent());
         assertTrue(allVersions.get(1).expired().isPresent());
@@ -258,5 +266,13 @@ class ComponentReferentialIntegrityIntegrationTest {
         assertEquals(2, componentOps.findComponentsContaining(node2).size());
         assertEquals(2, componentOps.findComponentsContaining(node3).size());
         assertEquals(2, componentOps.findComponentsContaining(node4).size());
+    }
+
+    private List<Edge> getAllActiveEdges() {
+        final var allEdges = new ArrayList<Edge>();
+        for (var node : nodeOps.activeNodes()) {
+            allEdges.addAll(edgeOps.getEdgesFor(node));
+        }
+        return allEdges.stream().distinct().toList();
     }
 }

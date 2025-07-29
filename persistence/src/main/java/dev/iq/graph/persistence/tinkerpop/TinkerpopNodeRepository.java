@@ -11,13 +11,17 @@ import static org.apache.tinkerpop.gremlin.process.traversal.P.lte;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.Component;
+import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -166,6 +170,52 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
         final var data = serde.deserialize(properties);
         final var locator = new Locator(id, versionId);
 
-        return new SimpleNode(locator, type, List.of(), data, created, expired, new HashSet<>());
+        // Find edges where this node is the source or target
+        final var edgeRefs = new HashSet<Reference<Edge>>();
+        
+        // Find outgoing edges (where this node is the source)
+        traversal.E()
+                .hasLabel("edge")
+                .has("sourceId", id.id())
+                .has("sourceVersionId", versionId)
+                .not(__.has("expired"))
+                .toList()
+                .forEach(edge -> {
+                    final var edgeId = new NanoId(edge.value("id"));
+                    final var edgeVersion = (int) edge.value("versionId");
+                    final var edgeLocator = new Locator(edgeId, edgeVersion);
+                    edgeRefs.add(new Reference.Unloaded<>(edgeLocator, Edge.class));
+                });
+        
+        // Find incoming edges (where this node is the target)
+        traversal.E()
+                .hasLabel("edge")
+                .has("targetId", id.id())
+                .has("targetVersionId", versionId)
+                .not(__.has("expired"))
+                .toList()
+                .forEach(edge -> {
+                    final var edgeId = new NanoId(edge.value("id"));
+                    final var edgeVersion = (int) edge.value("versionId");
+                    final var edgeLocator = new Locator(edgeId, edgeVersion);
+                    edgeRefs.add(new Reference.Unloaded<>(edgeLocator, Edge.class));
+                });
+        
+        // Find components containing this node
+        final var componentRefs = new HashSet<Reference<Component>>();
+        traversal.E()
+                .hasLabel("component-element")
+                .has("elementId", id.id())
+                .has("elementVersionId", versionId)
+                .has("elementType", "SimpleNode")
+                .toList()
+                .forEach(componentEdge -> {
+                    final var componentId = new NanoId(componentEdge.value("componentId"));
+                    final var componentVersion = (int) componentEdge.value("componentVersionId");
+                    final var componentLocator = new Locator(componentId, componentVersion);
+                    componentRefs.add(new Reference.Unloaded<>(componentLocator, Component.class));
+                });
+        
+        return new SimpleNode(locator, type, new ArrayList<>(edgeRefs), data, created, expired, componentRefs);
     }
 }

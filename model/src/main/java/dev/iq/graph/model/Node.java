@@ -18,5 +18,5 @@ public interface Node extends Element {
     /**
      * Returns all the edges incoming to and outgoing from the node.
      */
-    List<Edge> edges();
+    List<Reference<Edge>> edges();
 }

@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.jgrapht.ComponentOperations;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
@@ -37,7 +38,7 @@ class ComponentOperationsTest {
 
     @BeforeEach
     final void before() {
-        final Graph<Node, Edge> graph = new DirectedMultigraph<>(null, null, false);
+        final Graph<Reference<Node>, Reference<Edge>> graph = new DirectedMultigraph<>(null, null, false);
         edgeOps = new EdgeOperations(graph);
         nodeOps = new NodeOperations(graph, edgeOps);
         componentOps = new ComponentOperations(graph);
@@ -76,7 +77,8 @@ class ComponentOperationsTest {
 
         assertNotNull(component);
         assertEquals(1, component.elements().size());
-        assertEquals(node, component.elements().getFirst());
+        assertTrue(component.elements().getFirst() instanceof Reference.Loaded<Element> loaded
+                && loaded.value().equals(node));
     }
 
     @Test
@@ -195,7 +197,7 @@ class ComponentOperationsTest {
     }
 
     @Test
-    final void testFindAllVersions() {
+    final void testFindVersions() {
         // Create initial component
         final var node1 = nodeOps.add(new SimpleData(String.class, "Node1"), timestamp);
         final var component1 = componentOps.add(List.of(node1), new SimpleData(String.class, "Component1"), timestamp);
@@ -210,7 +212,7 @@ class ComponentOperationsTest {
                 timestamp.plusSeconds(2));
 
         // Find all versions
-        final var versions = componentOps.findAllVersions(component1.locator().id());
+        final var versions = componentOps.findVersions(component1.locator().id());
 
         assertEquals(2, versions.size());
         assertEquals(1, versions.get(0).locator().version());

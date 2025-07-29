@@ -13,12 +13,15 @@ import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Operations;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -29,32 +32,38 @@ import org.jgrapht.Graph;
  */
 public final class NodeOperations implements Operations<Node> {
 
-    private final Graph<Node, Edge> graph;
+    private final Graph<Reference<Node>, Reference<Edge>> graph;
 
     private final EdgeOperations edgeDelegate;
 
-    public NodeOperations(final Graph<Node, Edge> graph, final EdgeOperations edgeDelegate) {
+    public NodeOperations(final Graph<Reference<Node>, Reference<Edge>> graph, final EdgeOperations edgeDelegate) {
 
         this.graph = graph;
         this.edgeDelegate = edgeDelegate;
     }
 
     public boolean contains(final Node node) {
-
-        return graph.containsVertex(node);
+        final Reference<Node> ref = new Reference.Loaded<>(node);
+        return graph.containsVertex(ref);
     }
 
     public Set<Node> vertexSet() {
-
-        return graph.vertexSet();
+        final Set<Node> nodes = new HashSet<>();
+        for (Reference<Node> ref : graph.vertexSet()) {
+            if (ref instanceof Reference.Loaded<Node> loaded) {
+                nodes.add(loaded.value());
+            }
+        }
+        return nodes;
     }
 
     public Node add(final Data data, final Instant timestamp) {
 
         final var locator = Locator.generate();
-        // TODO Should I call EdgeOperations#findEdgesAt here.  If yes, how to avoid fetching whole graph?
+        // Create node with empty edge references (unloaded)
         final var node = new SimpleNode(locator, new ArrayList<>(), data, timestamp, Optional.empty());
-        graph.addVertex(node);
+        final Reference<Node> nodeRef = new Reference.Loaded<>(node);
+        graph.addVertex(nodeRef);
         return node;
     }
 
@@ -71,7 +80,8 @@ public final class NodeOperations implements Operations<Node> {
         // Create new version
         final var incremented = expired.locator().increment();
         final var newNode = new SimpleNode(incremented, new ArrayList<>(), data, timestamp, Optional.empty());
-        graph.addVertex(newNode);
+        final Reference<Node> newNodeRef = new Reference.Loaded<>(newNode);
+        graph.addVertex(newNodeRef);
 
         // Recreate edges to the new node
         recreateEdgesForNode(newNode, edgeRecreationInfo, timestamp);
@@ -81,22 +91,49 @@ public final class NodeOperations implements Operations<Node> {
 
     @Override
     public Optional<Node> findActive(final NanoId id) {
-        return Versions.findActive(id, graph.vertexSet());
+        // Extract nodes from loaded references
+        final List<Node> nodes = new ArrayList<>();
+        for (Reference<Node> ref : graph.vertexSet()) {
+            if (ref instanceof Reference.Loaded<Node> loaded) {
+                nodes.add(loaded.value());
+            }
+        }
+        return Versions.findActive(id, nodes);
     }
 
     @Override
     public Optional<Node> findAt(final NanoId id, final Instant timestamp) {
-        return Versions.findAt(id, timestamp, graph.vertexSet());
+        // Extract nodes from loaded references
+        final List<Node> nodes = new ArrayList<>();
+        for (Reference<Node> ref : graph.vertexSet()) {
+            if (ref instanceof Reference.Loaded<Node> loaded) {
+                nodes.add(loaded.value());
+            }
+        }
+        return Versions.findAt(id, timestamp, nodes);
     }
 
     @Override
-    public List<Node> findAllVersions(final NanoId id) {
-        return Versions.findAllVersions(id, graph.vertexSet());
+    public List<Node> findVersions(final NanoId id) {
+        // Extract nodes from loaded references
+        final List<Node> nodes = new ArrayList<>();
+        for (Reference<Node> ref : graph.vertexSet()) {
+            if (ref instanceof Reference.Loaded<Node> loaded) {
+                nodes.add(loaded.value());
+            }
+        }
+        return Versions.findAllVersions(id, nodes);
     }
 
     @Override
-    public List<Node> allActive() {
-        return Versions.allActive(graph.vertexSet());
+    public Node find(final Locator locator) {
+        for (Reference<Node> ref : graph.vertexSet()) {
+            if (ref instanceof Reference.Loaded<Node> loaded
+                    && loaded.value().locator().equals(locator)) {
+                return loaded.value();
+            }
+        }
+        throw new NoSuchElementException("Node not found: " + locator);
     }
 
     public Optional<Node> findNodeAt(final NanoId id, final Instant timestamp) {
@@ -104,21 +141,34 @@ public final class NodeOperations implements Operations<Node> {
     }
 
     public List<Node> activeNodes() {
-        return allActive();
+        final List<Node> nodes = new ArrayList<>();
+        for (Reference<Node> ref : graph.vertexSet()) {
+            if (ref instanceof Reference.Loaded<Node> loaded) {
+                nodes.add(loaded.value());
+            }
+        }
+        return Versions.allActive(nodes);
     }
 
     /**
      * Gets all neighbor nodes connected to the specified node via active edges.
      */
     public List<Node> getNeighbors(final Node node) {
+        final Reference<Node> nodeRef = new Reference.Loaded<>(node);
 
-        final var outgoingNeighbors = graph.outgoingEdgesOf(node).stream()
-                .filter(edge -> edge.expired().isEmpty())
-                .map(Edge::target);
+        final var outgoingNeighbors = graph.outgoingEdgesOf(nodeRef).stream()
+                .filter(edgeRef -> edgeRef instanceof Reference.Loaded<Edge> loaded
+                        && loaded.value().expired().isEmpty())
+                .map(edgeRef -> ((Reference.Loaded<Edge>) edgeRef).value().target())
+                .filter(targetRef -> targetRef instanceof Reference.Loaded<Node>)
+                .map(targetRef -> ((Reference.Loaded<Node>) targetRef).value());
 
-        final var incomingNeighbors = graph.incomingEdgesOf(node).stream()
-                .filter(edge -> edge.expired().isEmpty())
-                .map(Edge::source);
+        final var incomingNeighbors = graph.incomingEdgesOf(nodeRef).stream()
+                .filter(edgeRef -> edgeRef instanceof Reference.Loaded<Edge> loaded
+                        && loaded.value().expired().isEmpty())
+                .map(edgeRef -> ((Reference.Loaded<Edge>) edgeRef).value().source())
+                .filter(sourceRef -> sourceRef instanceof Reference.Loaded<Node>)
+                .map(sourceRef -> ((Reference.Loaded<Node>) sourceRef).value());
 
         return Stream.concat(outgoingNeighbors, incomingNeighbors).toList();
     }
@@ -127,23 +177,41 @@ public final class NodeOperations implements Operations<Node> {
     public Node expire(final NanoId id, final Instant timestamp) {
 
         final var node = OperationsHelper.validateForExpiry(findActive(id), id, "Node");
+        final Reference<Node> nodeRef = new Reference.Loaded<>(node);
 
         // Collect all connected edges
-        final var allConnectedEdges = collectAllConnectedEdges(node);
+        final var allConnectedEdges = collectAllConnectedEdges(nodeRef);
 
         // Expire active edges
         expireActiveEdges(allConnectedEdges, timestamp);
 
-        // Create expired node
-        final var expiredNode =
-                new SimpleNode(node.locator(), node.edges(), node.data(), node.created(), Optional.of(timestamp));
+        // Create expired node with unloaded edge references
+        final List<Reference<Edge>> unloadedEdgeRefs = node.edges().stream()
+                .map(edgeRef -> {
+                    if (edgeRef instanceof Reference.Loaded<Edge> loaded) {
+                        return (Reference<Edge>)
+                                new Reference.Unloaded<>(loaded.value().locator(), Edge.class);
+                    }
+                    return edgeRef;
+                })
+                .toList();
+
+        final var expiredNode = new SimpleNode(
+                node.locator(),
+                node.type(),
+                unloadedEdgeRefs,
+                node.data(),
+                node.created(),
+                Optional.of(timestamp),
+                node.components());
 
         // Remove old node and add expired version
-        graph.removeVertex(node); // This removes all connected edges
-        graph.addVertex(expiredNode);
+        graph.removeVertex(nodeRef); // This removes all connected edges
+        final Reference<Node> expiredNodeRef = new Reference.Loaded<>(expiredNode);
+        graph.addVertex(expiredNodeRef);
 
         // Recreate all edges with updated endpoints
-        recreateEdgesAfterNodeExpiry(expiredNode, node, allConnectedEdges, timestamp);
+        recreateEdgesAfterNodeExpiry(expiredNodeRef, nodeRef, allConnectedEdges, timestamp);
 
         return expiredNode;
     }
@@ -152,14 +220,23 @@ public final class NodeOperations implements Operations<Node> {
      * Collects information about active edges connected to a node.
      */
     private List<EdgeRecreationInfo> collectActiveEdgeInfo(final Node node) {
+        final Reference<Node> nodeRef = new Reference.Loaded<>(node);
 
-        final var incomingEdgeInfo = graph.incomingEdgesOf(node).stream()
-                .filter(edge -> edge.expired().isEmpty())
-                .map(edge -> new EdgeRecreationInfo(edge.source(), node, edge.data(), true));
+        final var incomingEdgeInfo = graph.incomingEdgesOf(nodeRef).stream()
+                .filter(edgeRef -> edgeRef instanceof Reference.Loaded<Edge> loaded
+                        && loaded.value().expired().isEmpty())
+                .map(edgeRef -> {
+                    Edge edge = ((Reference.Loaded<Edge>) edgeRef).value();
+                    return new EdgeRecreationInfo(edge.source(), nodeRef, edge.data(), true);
+                });
 
-        final var outgoingEdgeInfo = graph.outgoingEdgesOf(node).stream()
-                .filter(edge -> edge.expired().isEmpty())
-                .map(edge -> new EdgeRecreationInfo(node, edge.target(), edge.data(), false));
+        final var outgoingEdgeInfo = graph.outgoingEdgesOf(nodeRef).stream()
+                .filter(edgeRef -> edgeRef instanceof Reference.Loaded<Edge> loaded
+                        && loaded.value().expired().isEmpty())
+                .map(edgeRef -> {
+                    Edge edge = ((Reference.Loaded<Edge>) edgeRef).value();
+                    return new EdgeRecreationInfo(nodeRef, edge.target(), edge.data(), false);
+                });
 
         return Stream.concat(incomingEdgeInfo, outgoingEdgeInfo).toList();
     }
@@ -167,22 +244,26 @@ public final class NodeOperations implements Operations<Node> {
     /**
      * Collects all edges connected to a node.
      */
-    private List<Edge> collectAllConnectedEdges(final Node node) {
+    private List<Reference<Edge>> collectAllConnectedEdges(final Reference<Node> nodeRef) {
 
-        final var allConnectedEdges = new ArrayList<Edge>();
-        allConnectedEdges.addAll(graph.incomingEdgesOf(node));
-        allConnectedEdges.addAll(graph.outgoingEdgesOf(node));
+        final var allConnectedEdges = new ArrayList<Reference<Edge>>();
+        allConnectedEdges.addAll(graph.incomingEdgesOf(nodeRef));
+        allConnectedEdges.addAll(graph.outgoingEdgesOf(nodeRef));
         return allConnectedEdges;
     }
 
     /**
      * Expires all active edges in the given collection.
      */
-    private void expireActiveEdges(final Collection<Edge> edges, final Instant timestamp) {
+    private void expireActiveEdges(final Collection<Reference<Edge>> edges, final Instant timestamp) {
 
         edges.stream()
-                .filter(edge -> edge.expired().isEmpty())
-                .forEach(edge -> edgeDelegate.expire(edge.locator().id(), timestamp));
+                .filter(edgeRef -> edgeRef instanceof Reference.Loaded<Edge> loaded
+                        && loaded.value().expired().isEmpty())
+                .forEach(edgeRef -> {
+                    Edge edge = ((Reference.Loaded<Edge>) edgeRef).value();
+                    edgeDelegate.expire(edge.locator().id(), timestamp);
+                });
     }
 
     /**
@@ -193,9 +274,15 @@ public final class NodeOperations implements Operations<Node> {
 
         edgeInfo.forEach(info -> {
             if (info.incoming()) {
-                edgeDelegate.add(info.source(), newNode, info.data(), timestamp);
+                // Extract source node from reference
+                if (info.source() instanceof Reference.Loaded<Node> loaded) {
+                    edgeDelegate.add(loaded.value(), newNode, info.data(), timestamp);
+                }
             } else {
-                edgeDelegate.add(newNode, info.target(), info.data(), timestamp);
+                // Extract target node from reference
+                if (info.target() instanceof Reference.Loaded<Node> loaded) {
+                    edgeDelegate.add(newNode, loaded.value(), info.data(), timestamp);
+                }
             }
         });
     }
@@ -204,27 +291,41 @@ public final class NodeOperations implements Operations<Node> {
      * Recreates edges after a node has been expired.
      */
     private void recreateEdgesAfterNodeExpiry(
-            final Node expiredNode,
-            final Node originalNode,
-            final Iterable<Edge> allConnectedEdges,
+            final Reference<Node> expiredNodeRef,
+            final Reference<Node> originalNodeRef,
+            final Iterable<Reference<Edge>> allConnectedEdges,
             final Instant timestamp) {
 
-        allConnectedEdges.forEach(edge -> {
-            // Update the source/target to point to the expired node if it was the original node
-            final var source = edge.source().equals(originalNode) ? expiredNode : edge.source();
-            final var target = edge.target().equals(originalNode) ? expiredNode : edge.target();
+        allConnectedEdges.forEach(edgeRef -> {
+            if (edgeRef instanceof Reference.Loaded<Edge> loaded) {
+                Edge edge = loaded.value();
 
-            // If this edge was active, expire it; if it was already expired, keep its expiry time
-            final var expiredTime = edge.expired().isPresent() ? edge.expired().get() : timestamp;
+                // Update the source/target to point to the expired node if it was the original node
+                final var source = edge.source().equals(originalNodeRef) ? expiredNodeRef : edge.source();
+                final var target = edge.target().equals(originalNodeRef) ? expiredNodeRef : edge.target();
 
-            final var recreatedEdge = new SimpleEdge(
-                    edge.locator(), source, target, edge.data(), edge.created(), Optional.of(expiredTime));
-            graph.addEdge(source, target, recreatedEdge);
+                // If this edge was active, expire it; if it was already expired, keep its expiry time
+                final var expiredTime =
+                        edge.expired().isPresent() ? edge.expired().get() : timestamp;
+
+                final var recreatedEdge = new SimpleEdge(
+                        edge.locator(),
+                        edge.type(),
+                        source,
+                        target,
+                        edge.data(),
+                        edge.created(),
+                        Optional.of(expiredTime),
+                        edge.components());
+
+                final Reference<Edge> recreatedEdgeRef = new Reference.Loaded<>(recreatedEdge);
+                graph.addEdge(source, target, recreatedEdgeRef);
+            }
         });
     }
 
     /**
      * Helper record to store edge information for recreation.
      */
-    private record EdgeRecreationInfo(Node source, Node target, Data data, boolean incoming) {}
+    private record EdgeRecreationInfo(Reference<Node> source, Reference<Node> target, Data data, boolean incoming) {}
 }

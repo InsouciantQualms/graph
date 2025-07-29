@@ -18,6 +18,8 @@ import de.flapdoodle.embed.mongo.transitions.RunningMongodProcess;
 import de.flapdoodle.reverse.TransitionWalker;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.Edge;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
@@ -70,7 +72,7 @@ final class MongoNodeRepositoryTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
-        final var node = new SimpleNode(locator, List.of(), data, created, Optional.empty());
+        final var node = new SimpleNode(locator, List.<Reference<Edge>>of(), data, created, Optional.empty());
 
         final var savedNode = repository.save(node);
         assertEquals(node, savedNode);
@@ -90,8 +92,10 @@ final class MongoNodeRepositoryTest {
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
 
-        final var node1 = new SimpleNode(locator1, List.of(), data, created, Optional.of(created.plusSeconds(10)));
-        final var node2 = new SimpleNode(locator2, List.of(), data, created.plusSeconds(5), Optional.empty());
+        final var node1 = new SimpleNode(
+                locator1, List.<Reference<Edge>>of(), data, created, Optional.of(created.plusSeconds(10)));
+        final var node2 =
+                new SimpleNode(locator2, List.<Reference<Edge>>of(), data, created.plusSeconds(5), Optional.empty());
 
         repository.save(node1);
         repository.save(node2);
@@ -107,8 +111,10 @@ final class MongoNodeRepositoryTest {
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
 
-        final var node1 = new SimpleNode(new Locator(nodeId, 1), List.of(), data, created, Optional.empty());
-        final var node2 = new SimpleNode(new Locator(nodeId, 2), List.of(), data, created, Optional.empty());
+        final var node1 =
+                new SimpleNode(new Locator(nodeId, 1), List.<Reference<Edge>>of(), data, created, Optional.empty());
+        final var node2 =
+                new SimpleNode(new Locator(nodeId, 2), List.<Reference<Edge>>of(), data, created, Optional.empty());
 
         repository.save(node1);
         repository.save(node2);
@@ -125,7 +131,7 @@ final class MongoNodeRepositoryTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
-        final var node = new SimpleNode(locator, List.of(), data, created, Optional.empty());
+        final var node = new SimpleNode(locator, List.<Reference<Edge>>of(), data, created, Optional.empty());
 
         repository.save(node);
 
@@ -142,7 +148,7 @@ final class MongoNodeRepositoryTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
-        final var node = new SimpleNode(locator, List.of(), data, created, Optional.empty());
+        final var node = new SimpleNode(locator, List.<Reference<Edge>>of(), data, created, Optional.empty());
 
         repository.save(node);
         assertTrue(repository.delete(nodeId));

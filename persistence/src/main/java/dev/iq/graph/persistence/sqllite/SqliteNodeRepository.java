@@ -9,8 +9,11 @@ package dev.iq.graph.persistence.sqllite;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
+import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Reference;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleNode;
@@ -19,6 +22,7 @@ import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -187,7 +191,56 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
             final var data = loadProperties(id, versionId);
             final var locator = new Locator(id, versionId);
 
-            return new SimpleNode(locator, type, List.of(), data, created, expired, new HashSet<>());
+            // Find edges where this node is the source or target
+            final var edgeRefs = new HashSet<Reference<Edge>>();
+            
+            // Find outgoing edges (where this node is the source)
+            final var outgoingSql = "SELECT DISTINCT id, version_id FROM edge WHERE source_id = :nodeId AND source_version_id = :versionId AND expired IS NULL";
+            getHandle()
+                    .createQuery(outgoingSql)
+                    .bind("nodeId", id.id())
+                    .bind("versionId", versionId)
+                    .map((edgeRs, edgeCtx) -> {
+                        final var edgeId = new NanoId(edgeRs.getString("id"));
+                        final var edgeVersion = edgeRs.getInt("version_id");
+                        final var edgeLocator = new Locator(edgeId, edgeVersion);
+                        edgeRefs.add(new Reference.Unloaded<>(edgeLocator, Edge.class));
+                        return null;
+                    })
+                    .list();
+            
+            // Find incoming edges (where this node is the target)
+            final var incomingSql = "SELECT DISTINCT id, version_id FROM edge WHERE target_id = :nodeId AND target_version_id = :versionId AND expired IS NULL";
+            getHandle()
+                    .createQuery(incomingSql)
+                    .bind("nodeId", id.id())
+                    .bind("versionId", versionId)
+                    .map((edgeRs, edgeCtx) -> {
+                        final var edgeId = new NanoId(edgeRs.getString("id"));
+                        final var edgeVersion = edgeRs.getInt("version_id");
+                        final var edgeLocator = new Locator(edgeId, edgeVersion);
+                        edgeRefs.add(new Reference.Unloaded<>(edgeLocator, Edge.class));
+                        return null;
+                    })
+                    .list();
+            
+            // Find components containing this node
+            final var componentRefs = new HashSet<Reference<Component>>();
+            final var componentSql = "SELECT DISTINCT component_id, component_version FROM component_element WHERE element_id = :nodeId AND element_version = :versionId AND element_type = 'SimpleNode'";
+            getHandle()
+                    .createQuery(componentSql)
+                    .bind("nodeId", id.id())
+                    .bind("versionId", versionId)
+                    .map((compRs, compCtx) -> {
+                        final var componentId = new NanoId(compRs.getString("component_id"));
+                        final var componentVersion = compRs.getInt("component_version");
+                        final var componentLocator = new Locator(componentId, componentVersion);
+                        componentRefs.add(new Reference.Unloaded<>(componentLocator, Component.class));
+                        return null;
+                    })
+                    .list();
+            
+            return new SimpleNode(locator, type, new ArrayList<>(edgeRefs), data, created, expired, componentRefs);
         }
     }
 
