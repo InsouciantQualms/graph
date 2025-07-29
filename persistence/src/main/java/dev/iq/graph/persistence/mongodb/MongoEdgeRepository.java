@@ -149,7 +149,7 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
 
             final var sourceLocator = new Locator(sourceId, sourceVersionId);
             final var targetLocator = new Locator(targetId, targetVersionId);
-            
+
             final var sourceNode = nodeRepository
                     .find(sourceLocator)
                     .orElseThrow(() -> new IllegalStateException("Source node not found: " + sourceLocator));

@@ -211,7 +211,8 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
 
         // Find components containing this edge
         final var componentRefs = new HashSet<Reference<Component>>();
-        traversal.E()
+        traversal
+                .E()
                 .hasLabel("component-element")
                 .has("elementId", id.id())
                 .has("elementVersionId", versionId)

@@ -193,9 +193,10 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
 
             // Find edges where this node is the source or target
             final var edgeRefs = new HashSet<Reference<Edge>>();
-            
+
             // Find outgoing edges (where this node is the source)
-            final var outgoingSql = "SELECT DISTINCT id, version_id FROM edge WHERE source_id = :nodeId AND source_version_id = :versionId AND expired IS NULL";
+            final var outgoingSql =
+                    "SELECT DISTINCT id, version_id FROM edge WHERE source_id = :nodeId AND source_version_id = :versionId AND expired IS NULL";
             getHandle()
                     .createQuery(outgoingSql)
                     .bind("nodeId", id.id())
@@ -208,9 +209,10 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
                         return null;
                     })
                     .list();
-            
+
             // Find incoming edges (where this node is the target)
-            final var incomingSql = "SELECT DISTINCT id, version_id FROM edge WHERE target_id = :nodeId AND target_version_id = :versionId AND expired IS NULL";
+            final var incomingSql =
+                    "SELECT DISTINCT id, version_id FROM edge WHERE target_id = :nodeId AND target_version_id = :versionId AND expired IS NULL";
             getHandle()
                     .createQuery(incomingSql)
                     .bind("nodeId", id.id())
@@ -223,10 +225,11 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
                         return null;
                     })
                     .list();
-            
+
             // Find components containing this node
             final var componentRefs = new HashSet<Reference<Component>>();
-            final var componentSql = "SELECT DISTINCT component_id, component_version FROM component_element WHERE element_id = :nodeId AND element_version = :versionId AND element_type = 'SimpleNode'";
+            final var componentSql =
+                    "SELECT DISTINCT component_id, component_version FROM component_element WHERE element_id = :nodeId AND element_version = :versionId AND element_type = 'SimpleNode'";
             getHandle()
                     .createQuery(componentSql)
                     .bind("nodeId", id.id())
@@ -239,7 +242,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
                         return null;
                     })
                     .list();
-            
+
             return new SimpleNode(locator, type, new ArrayList<>(edgeRefs), data, created, expired, componentRefs);
         }
     }

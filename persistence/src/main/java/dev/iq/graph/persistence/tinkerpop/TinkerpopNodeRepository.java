@@ -172,9 +172,10 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
 
         // Find edges where this node is the source or target
         final var edgeRefs = new HashSet<Reference<Edge>>();
-        
+
         // Find outgoing edges (where this node is the source)
-        traversal.E()
+        traversal
+                .E()
                 .hasLabel("edge")
                 .has("sourceId", id.id())
                 .has("sourceVersionId", versionId)
@@ -186,9 +187,10 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
                     final var edgeLocator = new Locator(edgeId, edgeVersion);
                     edgeRefs.add(new Reference.Unloaded<>(edgeLocator, Edge.class));
                 });
-        
+
         // Find incoming edges (where this node is the target)
-        traversal.E()
+        traversal
+                .E()
                 .hasLabel("edge")
                 .has("targetId", id.id())
                 .has("targetVersionId", versionId)
@@ -200,10 +202,11 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
                     final var edgeLocator = new Locator(edgeId, edgeVersion);
                     edgeRefs.add(new Reference.Unloaded<>(edgeLocator, Edge.class));
                 });
-        
+
         // Find components containing this node
         final var componentRefs = new HashSet<Reference<Component>>();
-        traversal.E()
+        traversal
+                .E()
                 .hasLabel("component-element")
                 .has("elementId", id.id())
                 .has("elementVersionId", versionId)
@@ -215,7 +218,7 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
                     final var componentLocator = new Locator(componentId, componentVersion);
                     componentRefs.add(new Reference.Unloaded<>(componentLocator, Component.class));
                 });
-        
+
         return new SimpleNode(locator, type, new ArrayList<>(edgeRefs), data, created, expired, componentRefs);
     }
 }

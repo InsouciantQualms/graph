@@ -161,7 +161,7 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
         return Io.withReturn(() -> {
             final var versionedData = MongoHelper.extractVersionedData(document);
             final var data = serde.deserialize(versionedData.serializedData());
-            
+
             final var elements = new ArrayList<Reference<Element>>();
             final var elementDocs = elementsCollection.find(and(
                     eq("componentId", versionedData.locator().id().id()),

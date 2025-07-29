@@ -229,7 +229,8 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
             // Find components containing this edge
             final var componentRefs = new HashSet<Reference<Component>>();
-            final var componentSql = "SELECT DISTINCT component_id, component_version FROM component_element WHERE element_id = :edgeId AND element_version = :versionId AND element_type = 'SimpleEdge'";
+            final var componentSql =
+                    "SELECT DISTINCT component_id, component_version FROM component_element WHERE element_id = :edgeId AND element_version = :versionId AND element_type = 'SimpleEdge'";
             getHandle()
                     .createQuery(componentSql)
                     .bind("edgeId", id.id())
