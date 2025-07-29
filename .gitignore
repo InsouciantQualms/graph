@@ -120,4 +120,5 @@ http-client.private.env.json
 
 # Ignore local AI files
 **/.claude/
-CLAUDE.MD
+CLAUDE.md
+TODO.md

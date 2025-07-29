@@ -90,14 +90,10 @@ class MongoGraphOperationsIntegrationTest {
         final var reachable = graphOps.findReachableNodes(nodeA.locator().id(), 2);
 
         assertEquals(3, reachable.size()); // A, B, C (not D due to depth limit)
-        assertTrue(
-                reachable.stream().anyMatch(n -> "A".equals(((String) n.data().value()))));
-        assertTrue(
-                reachable.stream().anyMatch(n -> "B".equals(((String) n.data().value()))));
-        assertTrue(
-                reachable.stream().anyMatch(n -> "C".equals(((String) n.data().value()))));
-        assertFalse(
-                reachable.stream().anyMatch(n -> "D".equals(((String) n.data().value()))));
+        assertTrue(reachable.stream().anyMatch(n -> "A".equals(n.data().value())));
+        assertTrue(reachable.stream().anyMatch(n -> "B".equals(n.data().value())));
+        assertTrue(reachable.stream().anyMatch(n -> "C".equals(n.data().value())));
+        assertFalse(reachable.stream().anyMatch(n -> "D".equals(n.data().value())));
     }
 
     @Test
@@ -141,16 +137,13 @@ class MongoGraphOperationsIntegrationTest {
         // B should have A and C as neighbors
         final var neighborsOfB = graphOps.findNeighbors(nodeB.locator().id());
         assertEquals(2, neighborsOfB.size());
-        assertTrue(neighborsOfB.stream()
-                .anyMatch(n -> "A".equals(((String) n.data().value()))));
-        assertTrue(neighborsOfB.stream()
-                .anyMatch(n -> "C".equals(((String) n.data().value()))));
+        assertTrue(neighborsOfB.stream().anyMatch(n -> "A".equals(n.data().value())));
+        assertTrue(neighborsOfB.stream().anyMatch(n -> "C".equals(n.data().value())));
 
         // A should have only B as neighbor
         final var neighborsOfA = graphOps.findNeighbors(nodeA.locator().id());
         assertEquals(1, neighborsOfA.size());
-        assertTrue(neighborsOfA.stream()
-                .anyMatch(n -> "B".equals(((String) n.data().value()))));
+        assertTrue(neighborsOfA.stream().anyMatch(n -> "B".equals(n.data().value())));
     }
 
     @Test
@@ -214,12 +207,9 @@ class MongoGraphOperationsIntegrationTest {
         // Node A should only reach B, not C
         final var reachable = graphOps.findReachableNodes(nodeA.locator().id(), 10);
         assertEquals(2, reachable.size()); // A and B only
-        assertTrue(
-                reachable.stream().anyMatch(n -> "A".equals(((String) n.data().value()))));
-        assertTrue(
-                reachable.stream().anyMatch(n -> "B".equals(((String) n.data().value()))));
-        assertFalse(
-                reachable.stream().anyMatch(n -> "C".equals(((String) n.data().value()))));
+        assertTrue(reachable.stream().anyMatch(n -> "A".equals(n.data().value())));
+        assertTrue(reachable.stream().anyMatch(n -> "B".equals(n.data().value())));
+        assertFalse(reachable.stream().anyMatch(n -> "C".equals(n.data().value())));
 
         // Path should not exist through expired edge
         assertFalse(graphOps.pathExists(nodeA.locator().id(), nodeC.locator().id()));
