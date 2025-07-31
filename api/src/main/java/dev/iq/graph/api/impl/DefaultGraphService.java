@@ -25,6 +25,8 @@ public final class DefaultGraphService implements GraphService {
     private final GraphRepository repository;
     private final GraphOperations graphOperations;
     private final NodeOperations nodeOperations;
+    // FIXME: PathOperations should be injected once SimpleMutableGraph is implemented
+    // private final PathOperations pathOperations;
 
     public DefaultGraphService(
             final GraphRepository repository,
@@ -47,7 +49,9 @@ public final class DefaultGraphService implements GraphService {
                 .findActive(targetNodeId)
                 .orElseThrow(() -> new IllegalArgumentException("Target node not found: " + targetNodeId));
 
-        return graphOperations.pathExists(sourceNode, targetNode);
+        // FIXME: Use pathOperations once it's properly injected
+        throw new UnsupportedOperationException("PathOperations not yet integrated");
+        // return pathOperations.pathExists(sourceNode, targetNode);
     }
 
     @Override
@@ -65,8 +69,11 @@ public final class DefaultGraphService implements GraphService {
                 final var sourceNode = activeNodes.get(i);
                 final var targetNode = activeNodes.get(j);
 
-                if (graphOperations.pathExists(sourceNode, targetNode)) {
-                    final var paths = graphOperations.allPaths(sourceNode, targetNode);
+                // FIXME: Use pathOperations once it's properly injected
+                // if (pathOperations.pathExists(sourceNode, targetNode)) {
+                //     final var paths = pathOperations.allPaths(sourceNode, targetNode);
+                if (false) {
+                    final var paths = java.util.List.<Path>of();
                     connectedPaths.addAll(paths);
                 }
             }
@@ -86,6 +93,8 @@ public final class DefaultGraphService implements GraphService {
                 .findActive(targetNodeId)
                 .orElseThrow(() -> new IllegalArgumentException("Target node not found: " + targetNodeId));
 
-        return graphOperations.shortestPath(sourceNode, targetNode);
+        // FIXME: Use pathOperations once it's properly injected
+        throw new UnsupportedOperationException("PathOperations not yet integrated");
+        // return pathOperations.shortestPath(sourceNode, targetNode);
     }
 }

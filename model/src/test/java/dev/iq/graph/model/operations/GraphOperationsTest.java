@@ -6,18 +6,13 @@
 
 package dev.iq.graph.model.operations;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
-import dev.iq.graph.model.Path;
 import dev.iq.graph.model.jgrapht.EdgeOperations;
 import dev.iq.graph.model.jgrapht.GraphOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
 import java.time.Instant;
-import java.util.List;
 import org.jgrapht.event.GraphEdgeChangeEvent;
 import org.jgrapht.event.GraphListener;
 import org.jgrapht.event.GraphVertexChangeEvent;
@@ -25,7 +20,6 @@ import org.jgrapht.graph.DefaultListenableGraph;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 
 /**
  * Tests for GraphOperations class to verify shortestPath returns Path and allPaths returns List of Path.
@@ -79,37 +73,8 @@ public class GraphOperationsTest {
         // GraphOperations to accept an existing graph.
     }
 
-    @Test
-    @DisplayName("shortestPath returns Path instance")
-    final void testShortestPathReturnsPath() {
-        // Test that shortestPath method returns a Path
-        // Since nodes aren't in GraphOps' internal graph, it may throw exception or return empty
-        try {
-            final var path = graphOps.shortestPath(nodeA, nodeB);
-            // If no exception, should return Path instance
-            assertNotNull(path);
-            assertInstanceOf(Path.class, path);
-        } catch (final IllegalArgumentException e) {
-            // This is also acceptable behavior when nodes don't exist in graph
-            // The important thing is that the method signature returns Path
-        }
-    }
-
-    @Test
-    @DisplayName("allPaths returns List<Path>")
-    final void testAllPathsReturnsList() {
-        // Test that allPaths method returns a List<Path>
-        // Since nodes aren't in GraphOps' internal graph, it may throw exception or return empty
-        try {
-            final var paths = graphOps.allPaths(nodeA, nodeC);
-            // If no exception, should return List<Path> instance
-            assertNotNull(paths);
-            assertInstanceOf(List.class, paths);
-        } catch (final IllegalArgumentException e) {
-            // This is also acceptable behavior when nodes don't exist in graph
-            // The important thing is that the method signature returns List<Path>
-        }
-    }
+    // Path-related tests have been moved to PathOperationsTest
+    // since shortestPath and allPaths methods were moved to PathOperations class
 
     /**
      * Simple Data implementation for testing.
