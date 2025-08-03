@@ -17,7 +17,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
@@ -109,14 +108,14 @@ public final class OperationsHelper {
      * Validates that all elements in a component are connected.
      */
     private static void validateConnectivity(
-            final Set<Node> nodes, final Set<Edge> edges, final Graph<Node, Edge> graph) {
+            final Collection<Node> nodes, final Collection<Edge> edges, final Graph<Node, Edge> graph) {
 
         if ((nodes.size() == 1) && edges.isEmpty()) {
             return;
         }
 
         // Create a subgraph containing only the component's nodes and edges
-        final var subgraph = new AsSubgraph<>(graph, nodes, edges);
+        final var subgraph = new AsSubgraph<Node, Edge>(graph, new HashSet<>(nodes), new HashSet<>(edges));
 
         // Use ConnectivityInspector to check if all nodes are connected
         final var inspector = new ConnectivityInspector<>(subgraph);
@@ -128,10 +127,11 @@ public final class OperationsHelper {
     /**
      * Validates that a component contains no cycles.
      */
-    private static void validateNoCycles(final Set<Node> nodes, final Set<Edge> edges, final Graph<Node, Edge> graph) {
+    private static void validateNoCycles(
+            final Collection<Node> nodes, final Collection<Edge> edges, final Graph<Node, Edge> graph) {
 
         // Create a subgraph containing only the component's nodes and edges
-        final var subgraph = new AsSubgraph<>(graph, nodes, edges);
+        final var subgraph = new AsSubgraph<Node, Edge>(graph, new HashSet<>(nodes), new HashSet<>(edges));
 
         // Use JGraphT's CycleDetector to check for cycles
         final var cycleDetector = new CycleDetector<>(subgraph);

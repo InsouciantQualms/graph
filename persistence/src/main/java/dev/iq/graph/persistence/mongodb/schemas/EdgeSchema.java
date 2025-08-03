@@ -10,8 +10,12 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
+import com.mongodb.client.model.ValidationAction;
+import com.mongodb.client.model.ValidationLevel;
 import com.mongodb.client.model.ValidationOptions;
+import java.util.Arrays;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 
 /**
  * MongoDB JSON Schema for Edge collection.
@@ -22,13 +26,13 @@ public final class EdgeSchema {
 
     public static final String COLLECTION_NAME = "edges";
 
-    public static final Document SCHEMA = new Document(
+    public static final Bson SCHEMA = new Document(
             "$jsonSchema",
             new Document()
                     .append("bsonType", "object")
                     .append(
                             "required",
-                            java.util.Arrays.asList(
+                            Arrays.asList(
                                     "_id",
                                     "id",
                                     "versionId",
@@ -115,14 +119,14 @@ public final class EdgeSchema {
                     .append("additionalProperties", false));
 
     public static void createCollection(final MongoDatabase database) {
-        if (!collectionExists(database, COLLECTION_NAME)) {
+        if (!collectionExists(database)) {
             database.createCollection(
                     COLLECTION_NAME,
                     new CreateCollectionOptions()
                             .validationOptions(new ValidationOptions()
                                     .validator(SCHEMA)
-                                    .validationLevel(com.mongodb.client.model.ValidationLevel.STRICT)
-                                    .validationAction(com.mongodb.client.model.ValidationAction.ERROR)));
+                                    .validationLevel(ValidationLevel.STRICT)
+                                    .validationAction(ValidationAction.ERROR)));
 
             // Create indexes for graph operations
             final var collection = database.getCollection(COLLECTION_NAME);
@@ -137,9 +141,9 @@ public final class EdgeSchema {
         }
     }
 
-    private static boolean collectionExists(final MongoDatabase database, final String collectionName) {
-        for (final String name : database.listCollectionNames()) {
-            if (name.equals(collectionName)) {
+    private static boolean collectionExists(final MongoDatabase database) {
+        for (final var name : database.listCollectionNames()) {
+            if (name.equals(EdgeSchema.COLLECTION_NAME)) {
                 return true;
             }
         }

@@ -16,6 +16,7 @@ import de.flapdoodle.embed.mongo.transitions.RunningMongodProcess;
 import de.flapdoodle.reverse.TransitionWalker;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Data;
+import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.persistence.mongodb.schemas.ComponentSchema;
@@ -37,7 +38,7 @@ class MongoGraphOperationsIntegrationTest {
     private MongoGraphOperations graphOps;
 
     @BeforeEach
-    void before() {
+    final void before() {
         // Start embedded MongoDB if not already started
         if (mongodProcess == null) {
             mongodProcess = MongoTestConfig.startMongoDbOrSkip();
@@ -57,7 +58,7 @@ class MongoGraphOperationsIntegrationTest {
     }
 
     @AfterEach
-    void after() {
+    final void after() {
         if (session != null) {
             session.database().drop();
             session.close();
@@ -75,7 +76,7 @@ class MongoGraphOperationsIntegrationTest {
     }
 
     @Test
-    void testFindReachableNodes() {
+    final void testFindReachableNodes() {
         // Create a simple graph: A -> B -> C -> D
         final var nodeA = createAndSaveNode("A");
         final var nodeB = createAndSaveNode("B");
@@ -90,18 +91,14 @@ class MongoGraphOperationsIntegrationTest {
         final var reachable = graphOps.findReachableNodes(nodeA.locator().id(), 2);
 
         assertEquals(3, reachable.size()); // A, B, C (not D due to depth limit)
-        assertTrue(
-                reachable.stream().anyMatch(n -> "A".equals(((String) n.data().value()))));
-        assertTrue(
-                reachable.stream().anyMatch(n -> "B".equals(((String) n.data().value()))));
-        assertTrue(
-                reachable.stream().anyMatch(n -> "C".equals(((String) n.data().value()))));
-        assertFalse(
-                reachable.stream().anyMatch(n -> "D".equals(((String) n.data().value()))));
+        assertTrue(reachable.stream().anyMatch(n -> "A".equals(n.data().value())));
+        assertTrue(reachable.stream().anyMatch(n -> "B".equals(n.data().value())));
+        assertTrue(reachable.stream().anyMatch(n -> "C".equals(n.data().value())));
+        assertFalse(reachable.stream().anyMatch(n -> "D".equals(n.data().value())));
     }
 
     @Test
-    void testFindIncomingAndOutgoingEdges() {
+    final void testFindIncomingAndOutgoingEdges() {
         // Create a star pattern: A <- B -> C
         final var nodeA = createAndSaveNode("A");
         final var nodeB = createAndSaveNode("B");
@@ -113,7 +110,7 @@ class MongoGraphOperationsIntegrationTest {
         // Test incoming edges
         final var incomingToA = graphOps.findIncomingEdges(nodeA.locator().id());
         assertEquals(1, incomingToA.size());
-        assertEquals(edgeBA.locator().id(), incomingToA.get(0).locator().id());
+        assertEquals(edgeBA.locator().id(), incomingToA.getFirst().locator().id());
 
         final var incomingToB = graphOps.findIncomingEdges(nodeB.locator().id());
         assertEquals(0, incomingToB.size());
@@ -128,7 +125,7 @@ class MongoGraphOperationsIntegrationTest {
     }
 
     @Test
-    void testFindNeighbors() {
+    final void testFindNeighbors() {
         // Create a bidirectional connection: A <-> B -> C
         final var nodeA = createAndSaveNode("A");
         final var nodeB = createAndSaveNode("B");
@@ -141,20 +138,17 @@ class MongoGraphOperationsIntegrationTest {
         // B should have A and C as neighbors
         final var neighborsOfB = graphOps.findNeighbors(nodeB.locator().id());
         assertEquals(2, neighborsOfB.size());
-        assertTrue(neighborsOfB.stream()
-                .anyMatch(n -> "A".equals(((String) n.data().value()))));
-        assertTrue(neighborsOfB.stream()
-                .anyMatch(n -> "C".equals(((String) n.data().value()))));
+        assertTrue(neighborsOfB.stream().anyMatch(n -> "A".equals(n.data().value())));
+        assertTrue(neighborsOfB.stream().anyMatch(n -> "C".equals(n.data().value())));
 
         // A should have only B as neighbor
         final var neighborsOfA = graphOps.findNeighbors(nodeA.locator().id());
         assertEquals(1, neighborsOfA.size());
-        assertTrue(neighborsOfA.stream()
-                .anyMatch(n -> "B".equals(((String) n.data().value()))));
+        assertTrue(neighborsOfA.stream().anyMatch(n -> "B".equals(n.data().value())));
     }
 
     @Test
-    void testFindNodesWithinDistance() {
+    final void testFindNodesWithinDistance() {
         // Create a chain: A -> B -> C -> D -> E
         final var nodeA = createAndSaveNode("A");
         final var nodeB = createAndSaveNode("B");
@@ -178,7 +172,7 @@ class MongoGraphOperationsIntegrationTest {
     }
 
     @Test
-    void testPathExists() {
+    final void testPathExists() {
         // Create a diamond pattern: A -> B -> D, A -> C -> D
         final var nodeA = createAndSaveNode("A");
         final var nodeB = createAndSaveNode("B");
@@ -199,7 +193,7 @@ class MongoGraphOperationsIntegrationTest {
     }
 
     @Test
-    void testExpiredElementsExcluded() {
+    final void testExpiredElementsExcluded() {
         // Create nodes with one expired
         final var nodeA = createAndSaveNode("A");
         final var nodeB = createAndSaveNode("B");
@@ -214,12 +208,9 @@ class MongoGraphOperationsIntegrationTest {
         // Node A should only reach B, not C
         final var reachable = graphOps.findReachableNodes(nodeA.locator().id(), 10);
         assertEquals(2, reachable.size()); // A and B only
-        assertTrue(
-                reachable.stream().anyMatch(n -> "A".equals(((String) n.data().value()))));
-        assertTrue(
-                reachable.stream().anyMatch(n -> "B".equals(((String) n.data().value()))));
-        assertFalse(
-                reachable.stream().anyMatch(n -> "C".equals(((String) n.data().value()))));
+        assertTrue(reachable.stream().anyMatch(n -> "A".equals(n.data().value())));
+        assertTrue(reachable.stream().anyMatch(n -> "B".equals(n.data().value())));
+        assertFalse(reachable.stream().anyMatch(n -> "C".equals(n.data().value())));
 
         // Path should not exist through expired edge
         assertFalse(graphOps.pathExists(nodeA.locator().id(), nodeC.locator().id()));
@@ -231,13 +222,15 @@ class MongoGraphOperationsIntegrationTest {
         return (SimpleNode) repository.nodes().save(node);
     }
 
-    private SimpleEdge createAndSaveEdge(final SimpleNode source, final SimpleNode target, final String type) {
+    private SimpleEdge createAndSaveEdge(final Node source, final Node target, final String type) {
         final var id = NanoId.generate();
         final var edge = TestDataHelper.createEdge(id, 1, source, target, new TestData(type), Instant.now());
         return (SimpleEdge) repository.edges().save(edge);
     }
 
-    // Test data class
+    /**
+     * Test data class.
+     */
     private record TestData(String name) implements Data {
         @Override
         public Class<?> javaClass() {

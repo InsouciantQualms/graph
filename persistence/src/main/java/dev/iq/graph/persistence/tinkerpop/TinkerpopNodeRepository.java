@@ -81,14 +81,20 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
     }
 
     @Override
-    public Optional<Node> find(final Locator locator) {
+    public List<Node> findVersions(final NanoId nodeId) {
+        return findAll(nodeId);
+    }
+
+    @Override
+    public Node find(final Locator locator) {
         final var vertex = traversal
                 .V()
                 .hasLabel("node")
                 .has("id", locator.id().id())
                 .has("versionId", locator.version())
                 .tryNext();
-        return vertex.map(this::vertexToNode);
+        return vertex.map(this::vertexToNode)
+                .orElseThrow(() -> new IllegalArgumentException("Node not found for locator: " + locator));
     }
 
     @Override

@@ -8,6 +8,7 @@ package dev.iq.graph.persistence.tinkerpop;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.common.version.Locator;
@@ -143,8 +144,8 @@ final class TinkerpopNodeRepositoryTest {
 
         final var result = repository.find(locator);
 
-        assertTrue(result.isPresent());
-        assertEquals(locator, result.get().locator());
+        assertNotNull(result);
+        assertEquals(locator, result.locator());
     }
 
     @Test
@@ -216,8 +217,8 @@ final class TinkerpopNodeRepositoryTest {
 
         // Verify node is expired
         final var foundNode = repository.find(new Locator(nodeId, 1));
-        assertTrue(foundNode.isPresent());
-        assertTrue(foundNode.get().expired().isPresent());
+        assertNotNull(foundNode);
+        assertTrue(foundNode.expired().isPresent());
     }
 
     private static SimpleNode createTestNode() {

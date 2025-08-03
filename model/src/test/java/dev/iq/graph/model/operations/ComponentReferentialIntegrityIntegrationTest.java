@@ -106,7 +106,7 @@ class ComponentReferentialIntegrityIntegrationTest {
                 timestamp.plusSeconds(4));
 
         // Verify all versions exist
-        final var allVersions = componentOps.findAllVersions(component.locator().id());
+        final var allVersions = componentOps.findVersions(component.locator().id());
         assertEquals(3, allVersions.size());
 
         // Verify version progression
@@ -181,7 +181,7 @@ class ComponentReferentialIntegrityIntegrationTest {
         assertTrue(activeComponent.isEmpty());
 
         // Verify all versions still exist in history
-        final var allVersions = componentOps.findAllVersions(component.locator().id());
+        final var allVersions = componentOps.findVersions(component.locator().id());
         assertEquals(2, allVersions.size());
         assertTrue(allVersions.get(0).expired().isPresent());
         assertTrue(allVersions.get(1).expired().isPresent());

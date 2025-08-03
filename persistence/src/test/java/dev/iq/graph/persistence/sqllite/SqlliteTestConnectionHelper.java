@@ -15,9 +15,10 @@ import javax.sql.DataSource;
 /**
  * Helper class for managing shared in-memory SQLite database connections for testing.
  */
+@SuppressWarnings({"FieldAccessedSynchronizedAndUnsynchronized", "SynchronizationOnStaticField"})
 final class SqlliteTestConnectionHelper {
 
-    private static HikariDataSource dataSource;
+    private static HikariDataSource dataSource = null;
     private static boolean schemaInitialized = false;
     private static final Object LOCK = new Object();
 
@@ -53,16 +54,6 @@ final class SqlliteTestConnectionHelper {
                 dataSource = null;
                 schemaInitialized = false;
             }
-        }
-    }
-
-    /**
-     * Resets the schema initialization flag for testing.
-     */
-    static void resetSchemaInitialized() {
-
-        synchronized (LOCK) {
-            schemaInitialized = false;
         }
     }
 

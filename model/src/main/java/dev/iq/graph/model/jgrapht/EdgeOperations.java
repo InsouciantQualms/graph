@@ -72,12 +72,20 @@ public final class EdgeOperations implements Operations<Edge> {
     }
 
     @Override
-    public List<Edge> findAllVersions(final NanoId id) {
+    public Edge find(final Locator locator) {
+
+        return graph.edgeSet().stream()
+                .filter(e -> e.locator().equals(locator))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Edge not found for locator: " + locator));
+    }
+
+    @Override
+    public List<Edge> findVersions(final NanoId id) {
 
         return Versions.findAllVersions(id, graph.edgeSet());
     }
 
-    @Override
     public List<Edge> allActive() {
 
         return Versions.allActive(graph.edgeSet());

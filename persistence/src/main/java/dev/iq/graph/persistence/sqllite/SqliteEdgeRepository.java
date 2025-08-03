@@ -119,7 +119,12 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
     }
 
     @Override
-    public Optional<Edge> find(final Locator locator) {
+    public List<Edge> findVersions(final NanoId edgeId) {
+        return findAll(edgeId);
+    }
+
+    @Override
+    public Edge find(final Locator locator) {
         final var sql = EDGE_BASE_QUERY
                 + """
                 WHERE e.id = :id AND e.version_id = :version_id
@@ -130,7 +135,8 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
                 .bind("id", locator.id().id())
                 .bind("version_id", locator.version())
                 .map(new EdgeMapper())
-                .findOne());
+                .findOne()
+                .orElseThrow(() -> new IllegalArgumentException("Edge not found for locator: " + locator)));
     }
 
     @Override
@@ -218,12 +224,8 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
             final var targetId = new NanoId(rs.getString("target_id"));
             final var targetVersionId = rs.getInt("target_version_id");
 
-            final var sourceNode = nodeRepository
-                    .find(new Locator(sourceId, sourceVersionId))
-                    .orElseThrow(() -> new RuntimeException("missing source " + sourceId));
-            final var targetNode = nodeRepository
-                    .find(new Locator(targetId, targetVersionId))
-                    .orElseThrow(() -> new RuntimeException("missing target " + targetId));
+            final var sourceNode = nodeRepository.find(new Locator(sourceId, sourceVersionId));
+            final var targetNode = nodeRepository.find(new Locator(targetId, targetVersionId));
 
             final var locator = new Locator(id, versionId);
             return new SimpleEdge(locator, type, sourceNode, targetNode, data, created, expired, new HashSet<>());

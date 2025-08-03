@@ -7,6 +7,8 @@
 package dev.iq.graph.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.common.version.NanoId;
@@ -60,12 +62,12 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
         // Verify nodes can be retrieved through the underlying repository
         final var retrievedStringNode = nodes.findActive(stringNode.locator().id());
         assertTrue(retrievedStringNode.isPresent());
-        assertEquals(String.class, retrievedStringNode.get().data().javaClass());
+        assertSame(String.class, retrievedStringNode.get().data().javaClass());
         assertEquals("test string", retrievedStringNode.get().data().value());
 
         final var retrievedIntegerNode = nodes.findActive(integerNode.locator().id());
         assertTrue(retrievedIntegerNode.isPresent());
-        assertEquals(Integer.class, retrievedIntegerNode.get().data().javaClass());
+        assertSame(Integer.class, retrievedIntegerNode.get().data().javaClass());
         assertEquals(42, retrievedIntegerNode.get().data().value());
     }
 
@@ -158,8 +160,8 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
 
         // Verify node still exists but is expired
         final var retrievedNode = nodes.find(node.locator());
-        assertTrue(retrievedNode.isPresent());
-        assertTrue(retrievedNode.get().expired().isPresent());
+        assertNotNull(retrievedNode);
+        assertTrue(retrievedNode.expired().isPresent());
     }
 
     @Test
@@ -195,8 +197,8 @@ public abstract class AbstractGraphListenerReferentialIntegrityIntegrationTest {
 
         // Verify edge still exists but is expired
         final var retrievedEdge = edges.find(edge.locator());
-        assertTrue(retrievedEdge.isPresent());
-        assertTrue(retrievedEdge.get().expired().isPresent());
+        assertNotNull(retrievedEdge);
+        assertTrue(retrievedEdge.expired().isPresent());
     }
 
     @Test

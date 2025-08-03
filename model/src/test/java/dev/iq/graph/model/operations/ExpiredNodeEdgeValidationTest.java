@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.iq.common.version.Versioned;
+import dev.iq.common.version.Locateable;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
@@ -179,9 +179,7 @@ public class ExpiredNodeEdgeValidationTest {
         assertEquals(timestamp4, expiredNodeB.expired().get());
 
         // Verify the manually expired edge timestamp is unchanged
-        final var currentExpiredEdgeAB = edgeOps
-                .findAllVersions(edgeAB.locator().id())
-                .stream()
+        final var currentExpiredEdgeAB = edgeOps.findVersions(edgeAB.locator().id()).stream()
                 .filter(e -> e.expired().isPresent())
                 .findFirst();
         assertTrue(currentExpiredEdgeAB.isPresent());
@@ -235,9 +233,9 @@ public class ExpiredNodeEdgeValidationTest {
     /**
      * Helper method to assert that an edge is expired.
      */
-    private void assertEdgeExpired(final Versioned originalEdge, final Instant expectedExpiredTime) {
+    private void assertEdgeExpired(final Locateable originalEdge, final Instant expectedExpiredTime) {
         // Verify that at least one version of the edge exists
-        final var allVersions = edgeOps.findAllVersions(originalEdge.locator().id());
+        final var allVersions = edgeOps.findVersions(originalEdge.locator().id());
         assertFalse(
                 allVersions.isEmpty(),
                 () -> "Edge should exist in version history: "

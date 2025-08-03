@@ -90,11 +90,18 @@ public final class NodeOperations implements Operations<Node> {
     }
 
     @Override
-    public List<Node> findAllVersions(final NanoId id) {
-        return Versions.findAllVersions(id, graph.vertexSet());
+    public Node find(final Locator locator) {
+        return graph.vertexSet().stream()
+                .filter(n -> n.locator().equals(locator))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Node not found for locator: " + locator));
     }
 
     @Override
+    public List<Node> findVersions(final NanoId id) {
+        return Versions.findAllVersions(id, graph.vertexSet());
+    }
+
     public List<Node> allActive() {
         return Versions.allActive(graph.vertexSet());
     }

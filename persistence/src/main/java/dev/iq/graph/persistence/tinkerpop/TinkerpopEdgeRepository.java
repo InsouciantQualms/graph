@@ -85,13 +85,19 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
     }
 
     @Override
-    public Optional<Edge> find(final Locator locator) {
+    public List<Edge> findVersions(final NanoId edgeId) {
+        return findAll(edgeId);
+    }
+
+    @Override
+    public Edge find(final Locator locator) {
         final var edgeOpt = traversal
                 .E()
                 .has("id", locator.id().id())
                 .has("versionId", locator.version())
                 .tryNext();
-        return edgeOpt.map(this::edgeToEdge);
+        return edgeOpt.map(this::edgeToEdge)
+                .orElseThrow(() -> new IllegalArgumentException("Edge not found for locator: " + locator));
     }
 
     @Override
@@ -188,10 +194,8 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
         final var targetId = new NanoId(tinkerpopEdge.value("targetId"));
         final var targetVersionId = (Integer) tinkerpopEdge.value("targetVersionId");
 
-        final var source =
-                nodeRepository.find(new Locator(sourceId, sourceVersionId)).orElseThrow();
-        final var target =
-                nodeRepository.find(new Locator(targetId, targetVersionId)).orElseThrow();
+        final var source = nodeRepository.find(new Locator(sourceId, sourceVersionId));
+        final var target = nodeRepository.find(new Locator(targetId, targetVersionId));
 
         return new SimpleEdge(locator, type, source, target, data, created, expired, new HashSet<>());
     }

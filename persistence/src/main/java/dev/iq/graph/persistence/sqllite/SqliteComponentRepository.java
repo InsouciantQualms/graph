@@ -120,7 +120,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
     }
 
     @Override
-    public Optional<Component> find(final Locator locator) {
+    public Component find(final Locator locator) {
         final var sql =
                 """
                 SELECT id, version_id, created, expired
@@ -133,7 +133,8 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
                 .bind("id", locator.id().id())
                 .bind("version_id", locator.version())
                 .map(new ComponentMapper())
-                .findOne());
+                .findOne()
+                .orElseThrow(() -> new IllegalArgumentException("Component not found for locator: " + locator)));
     }
 
     @Override
@@ -151,6 +152,11 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
                 .bind("id", id.id())
                 .map(new ComponentMapper())
                 .list());
+    }
+
+    @Override
+    public List<Component> findVersions(final NanoId id) {
+        return findAll(id);
     }
 
     @Override
@@ -322,13 +328,17 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
                         final var elementType = rs.getString("element_type");
 
                         if ("SimpleNode".equals(elementType)) {
-                            nodeRepository
-                                    .find(new Locator(elementId, elementVersion))
-                                    .ifPresent(elements::add);
+                            try {
+                                elements.add(nodeRepository.find(new Locator(elementId, elementVersion)));
+                            } catch (IllegalArgumentException ignored) {
+                                // Element not found, skip it
+                            }
                         } else if ("SimpleEdge".equals(elementType)) {
-                            edgeRepository
-                                    .find(new Locator(elementId, elementVersion))
-                                    .ifPresent(elements::add);
+                            try {
+                                elements.add(edgeRepository.find(new Locator(elementId, elementVersion)));
+                            } catch (IllegalArgumentException ignored) {
+                                // Element not found, skip it
+                            }
                         }
                         return null;
                     })

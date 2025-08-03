@@ -17,6 +17,7 @@ import dev.iq.graph.model.Operations;
 import dev.iq.graph.model.simple.SimpleComponent;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,7 +55,7 @@ public final class ComponentOperations implements Operations<Component> {
     /**
      * Adds a new component with the specified elements and data.
      */
-    public Component add(final List<Element> elements, final Data data, final Instant timestamp) {
+    public Component add(final Collection<Element> elements, final Data data, final Instant timestamp) {
 
         OperationsHelper.validateComponentElements(elements, graph);
         final var locator = Locator.generate();
@@ -77,7 +78,8 @@ public final class ComponentOperations implements Operations<Component> {
     /**
      * Updates an existing component with new elements and data.
      */
-    public Component update(final NanoId id, final List<Element> elements, final Data data, final Instant timestamp) {
+    public Component update(
+            final NanoId id, final Collection<Element> elements, final Data data, final Instant timestamp) {
 
         OperationsHelper.validateComponentElements(elements, graph);
         final var existingComponent = OperationsHelper.validateForExpiry(findActive(id), id, "Component");
@@ -139,13 +141,26 @@ public final class ComponentOperations implements Operations<Component> {
     }
 
     @Override
-    public List<Component> findAllVersions(final NanoId id) {
+    public Component find(final Locator locator) {
+
+        final var versions = componentVersions.get(locator.id());
+        if (versions == null) {
+            throw new IllegalArgumentException("Component not found for locator: " + locator);
+        }
+
+        return versions.stream()
+                .filter(c -> c.locator().equals(locator))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Component not found for locator: " + locator));
+    }
+
+    @Override
+    public List<Component> findVersions(final NanoId id) {
 
         final var versions = componentVersions.get(id);
         return (versions != null) ? new ArrayList<>(versions) : List.of();
     }
 
-    @Override
     public List<Component> allActive() {
 
         return componentVersions.values().stream()

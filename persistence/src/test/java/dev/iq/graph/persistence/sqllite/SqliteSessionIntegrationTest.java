@@ -7,9 +7,8 @@
 package dev.iq.graph.persistence.sqllite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
@@ -59,17 +58,17 @@ final class SqliteSessionIntegrationTest {
 
         // Save node in session and commit manually
         try (var session = sessionFactory.create()) {
-            final var repository = SqliteGraphRepository.create((SqliteSession) session);
+            final var repository = SqliteGraphRepository.create((SqliteHandleProvider) session);
             repository.nodes().save(node);
             session.commit();
         }
 
         // Verify node exists in new session
         try (var session = sessionFactory.create()) {
-            final var repository = SqliteGraphRepository.create((SqliteSession) session);
+            final var repository = SqliteGraphRepository.create((SqliteHandleProvider) session);
             final var foundNode = repository.nodes().find(locator);
-            assertTrue(foundNode.isPresent());
-            assertEquals(data.value(), foundNode.get().data().value());
+            assertNotNull(foundNode);
+            assertEquals(data.value(), foundNode.data().value());
         }
     }
 
@@ -83,16 +82,17 @@ final class SqliteSessionIntegrationTest {
 
         // Save node in session but rollback manually
         try (var session = sessionFactory.create()) {
-            final var repository = SqliteGraphRepository.create((SqliteSession) session);
+            final var repository = SqliteGraphRepository.create((SqliteHandleProvider) session);
             repository.nodes().save(node);
             session.rollback();
         }
 
         // Verify node does not exist in new session
         try (var session = sessionFactory.create()) {
-            final var repository = SqliteGraphRepository.create((SqliteSession) session);
-            final var foundNode = repository.nodes().find(locator);
-            assertFalse(foundNode.isPresent());
+            final var repository = SqliteGraphRepository.create((SqliteHandleProvider) session);
+            assertThrows(
+                    dev.iq.common.error.IoException.class,
+                    () -> repository.nodes().find(locator));
         }
     }
 
@@ -107,7 +107,7 @@ final class SqliteSessionIntegrationTest {
         // Save node in session but cause exception without explicit commit/rollback
         assertThrows(RuntimeException.class, () -> {
             try (var session = sessionFactory.create()) {
-                final var repository = SqliteGraphRepository.create((SqliteSession) session);
+                final var repository = SqliteGraphRepository.create((SqliteHandleProvider) session);
                 repository.nodes().save(node);
                 // Simulate an error before commit - session should auto-rollback on close
                 throw new RuntimeException("Simulated error");
@@ -116,9 +116,10 @@ final class SqliteSessionIntegrationTest {
 
         // Verify node does not exist in new session (auto-rollback occurred)
         try (var session = sessionFactory.create()) {
-            final var repository = SqliteGraphRepository.create((SqliteSession) session);
-            final var foundNode = repository.nodes().find(locator);
-            assertFalse(foundNode.isPresent());
+            final var repository = SqliteGraphRepository.create((SqliteHandleProvider) session);
+            assertThrows(
+                    dev.iq.common.error.IoException.class,
+                    () -> repository.nodes().find(locator));
         }
     }
 }

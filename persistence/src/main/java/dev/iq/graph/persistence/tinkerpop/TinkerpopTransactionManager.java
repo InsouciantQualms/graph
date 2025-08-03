@@ -11,7 +11,6 @@ import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Transaction;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.AbstractTransactionStatus;
 import org.springframework.transaction.support.SimpleTransactionStatus;
@@ -22,16 +21,16 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 public final class TinkerpopTransactionManager implements PlatformTransactionManager {
 
-    private final Supplier<Graph> graphSupplier;
+    private final Supplier<? extends Graph> graphSupplier;
     private static final String GRAPH_TRANSACTION_KEY = "tinkerpop.graph.transaction";
 
-    public TinkerpopTransactionManager(final Supplier<Graph> graphSupplier) {
+    public TinkerpopTransactionManager(final Supplier<? extends Graph> graphSupplier) {
 
         this.graphSupplier = graphSupplier;
     }
 
     @Override
-    public TransactionStatus getTransaction(final TransactionDefinition definition) throws TransactionException {
+    public TransactionStatus getTransaction(final TransactionDefinition definition) {
 
         final var graph = graphSupplier.get();
 
@@ -55,13 +54,13 @@ public final class TinkerpopTransactionManager implements PlatformTransactionMan
         // Store transaction in thread-local
         TransactionSynchronizationManager.bindResource(GRAPH_TRANSACTION_KEY, tx);
 
-        return new TinkerpopTransactionStatus(tx, true);
+        return new TinkerpopTransactionStatus(tx);
     }
 
     @Override
-    public void commit(final TransactionStatus status) throws TransactionException {
+    public void commit(final TransactionStatus status) {
 
-        if (status instanceof TinkerpopTransactionStatus txStatus && txStatus.isNewTransaction()) {
+        if ((status instanceof final TinkerpopTransactionStatus txStatus) && txStatus.isNewTransaction()) {
             try {
                 txStatus.getTransaction().commit();
             } finally {
@@ -71,9 +70,9 @@ public final class TinkerpopTransactionManager implements PlatformTransactionMan
     }
 
     @Override
-    public void rollback(final TransactionStatus status) throws TransactionException {
+    public void rollback(final TransactionStatus status) {
 
-        if (status instanceof TinkerpopTransactionStatus txStatus && txStatus.isNewTransaction()) {
+        if ((status instanceof final TinkerpopTransactionStatus txStatus) && txStatus.isNewTransaction()) {
             try {
                 txStatus.getTransaction().rollback();
             } finally {
@@ -90,10 +89,10 @@ public final class TinkerpopTransactionManager implements PlatformTransactionMan
         private final Transaction transaction;
         private final boolean newTransaction;
 
-        TinkerpopTransactionStatus(final Transaction transaction, final boolean newTransaction) {
+        TinkerpopTransactionStatus(final Transaction transaction) {
 
             this.transaction = transaction;
-            this.newTransaction = newTransaction;
+            this.newTransaction = true;
         }
 
         Transaction getTransaction() {

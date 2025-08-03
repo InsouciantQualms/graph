@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
-import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,10 +25,9 @@ final class SqliteSessionFactoryTest {
 
     @BeforeEach
     void before() {
-        // For testing, we need to use a real in-memory SQLite database
-        // since the constructor initializes the schema
-        final DataSource dataSource = new SQLiteDataSource();
-        ((SQLiteDataSource) dataSource).setUrl("jdbc:sqlite::memory:");
+
+        final var dataSource = new SQLiteDataSource();
+        dataSource.setUrl("jdbc:sqlite::memory:");
 
         sessionFactory = new SqliteSessionFactory(dataSource);
     }

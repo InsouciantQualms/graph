@@ -10,7 +10,6 @@ import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.AbstractTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -29,7 +28,7 @@ public final class SqliteTransactionManager implements PlatformTransactionManage
     }
 
     @Override
-    public TransactionStatus getTransaction(final TransactionDefinition definition) throws TransactionException {
+    public TransactionStatus getTransaction(final TransactionDefinition definition) {
 
         // Check if we already have an active transaction
         final var existingHandle = (Handle) TransactionSynchronizationManager.getResource(HANDLE_KEY);
@@ -49,9 +48,9 @@ public final class SqliteTransactionManager implements PlatformTransactionManage
     }
 
     @Override
-    public void commit(final TransactionStatus status) throws TransactionException {
+    public void commit(final TransactionStatus status) {
 
-        if (status instanceof SqliteTransactionStatus txStatus && txStatus.isNewTransaction()) {
+        if ((status instanceof final SqliteTransactionStatus txStatus) && txStatus.isNewTransaction()) {
             try {
                 txStatus.getHandle().commit();
             } finally {
@@ -62,9 +61,9 @@ public final class SqliteTransactionManager implements PlatformTransactionManage
     }
 
     @Override
-    public void rollback(final TransactionStatus status) throws TransactionException {
+    public void rollback(final TransactionStatus status) {
 
-        if (status instanceof SqliteTransactionStatus txStatus && txStatus.isNewTransaction()) {
+        if ((status instanceof final SqliteTransactionStatus txStatus) && txStatus.isNewTransaction()) {
             try {
                 txStatus.getHandle().rollback();
             } finally {

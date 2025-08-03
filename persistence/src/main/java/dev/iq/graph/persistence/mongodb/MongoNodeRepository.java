@@ -81,12 +81,19 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     }
 
     @Override
-    public Optional<Node> find(final Locator locator) {
+    public List<Node> findVersions(final NanoId nodeId) {
+        return findAll(nodeId);
+    }
+
+    @Override
+    public Node find(final Locator locator) {
         final var document = collection
                 .find(and(eq("id", locator.id().id()), eq("versionId", locator.version())))
                 .first();
 
-        return Optional.ofNullable(document).map(this::documentToNode);
+        return Optional.ofNullable(document)
+                .map(this::documentToNode)
+                .orElseThrow(() -> new IllegalArgumentException("Node not found for locator: " + locator));
     }
 
     @Override

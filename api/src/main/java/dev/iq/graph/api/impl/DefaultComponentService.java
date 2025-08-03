@@ -71,7 +71,7 @@ public final class DefaultComponentService implements ComponentService {
 
         final var allComponents = componentOperations.allActive().stream()
                 .flatMap(component ->
-                        componentOperations.findAllVersions(component.locator().id()).stream())
+                        componentOperations.findVersions(component.locator().id()).stream())
                 .toList();
         return allComponents.stream()
                 .filter(component -> !component.created().isAfter(timestamp)
@@ -86,10 +86,7 @@ public final class DefaultComponentService implements ComponentService {
     @Transactional(readOnly = true)
     public Component find(final Locator locator) {
 
-        return repository
-                .components()
-                .find(locator)
-                .orElseThrow(() -> new IllegalArgumentException("Component not found: " + locator));
+        return repository.components().find(locator);
     }
 
     @Override
@@ -108,7 +105,7 @@ public final class DefaultComponentService implements ComponentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Component> findAllVersions(final NanoId id) {
+    public List<Component> findVersions(final NanoId id) {
 
         return repository.components().findAll(id);
     }

@@ -210,7 +210,7 @@ class ComponentOperationsTest {
                 timestamp.plusSeconds(2));
 
         // Find all versions
-        final var versions = componentOps.findAllVersions(component1.locator().id());
+        final var versions = componentOps.findVersions(component1.locator().id());
 
         assertEquals(2, versions.size());
         assertEquals(1, versions.get(0).locator().version());

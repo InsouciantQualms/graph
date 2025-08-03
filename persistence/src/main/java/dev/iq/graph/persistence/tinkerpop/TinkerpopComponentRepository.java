@@ -116,14 +116,15 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
     }
 
     @Override
-    public Optional<Component> find(final Locator locator) {
+    public Component find(final Locator locator) {
         return Io.withReturn(() -> traversal
                 .V()
                 .hasLabel("component")
                 .has("id", locator.id().id())
                 .has("version", locator.version())
                 .tryNext()
-                .map(this::vertexToComponent));
+                .map(this::vertexToComponent)
+                .orElseThrow(() -> new IllegalArgumentException("Component not found for locator: " + locator)));
     }
 
     @Override
@@ -132,6 +133,11 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
                 () -> traversal.V().hasLabel("component").has("id", id.id()).order().by("version").toList().stream()
                         .map(this::vertexToComponent)
                         .toList());
+    }
+
+    @Override
+    public List<Component> findVersions(final NanoId id) {
+        return findAll(id);
     }
 
     @Override
@@ -232,15 +238,19 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
                     final var elementType = edge.value("elementType");
 
                     if ("SimpleNode".equals(elementType)) {
-                        nodeRepository
-                                .find(new Locator(
-                                        new NanoId(elementVertex.value("id")), elementVertex.<Integer>value("version")))
-                                .ifPresent(elements::add);
+                        try {
+                            elements.add(nodeRepository.find(new Locator(
+                                    new NanoId(elementVertex.value("id")), elementVertex.<Integer>value("version"))));
+                        } catch (IllegalArgumentException ignored) {
+                            // Element not found, skip it
+                        }
                     } else if ("SimpleEdge".equals(elementType)) {
-                        edgeRepository
-                                .find(new Locator(
-                                        new NanoId(elementVertex.value("id")), elementVertex.<Integer>value("version")))
-                                .ifPresent(elements::add);
+                        try {
+                            elements.add(edgeRepository.find(new Locator(
+                                    new NanoId(elementVertex.value("id")), elementVertex.<Integer>value("version"))));
+                        } catch (IllegalArgumentException ignored) {
+                            // Element not found, skip it
+                        }
                     }
                 });
 

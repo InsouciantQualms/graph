@@ -51,16 +51,15 @@ public class PathOperationsTest {
         // Create test nodes
         final var timestamp = Instant.now();
         final var nodeType = new SimpleType("NODE");
-        final var edgeType = new SimpleType("EDGE");
 
         final var locatorA = new Locator(new NanoId("nodeA"), 1);
-        final var locatorB = new Locator(new NanoId("nodeB"), 1);
-        final var locatorC = new Locator(new NanoId("nodeC"), 1);
 
         nodeA = new SimpleNode(
                 locatorA, nodeType, List.of(), new TestData("NodeA"), timestamp, Optional.empty(), new HashSet<>());
+        final var locatorB = new Locator(new NanoId("nodeB"), 1);
         nodeB = new SimpleNode(
                 locatorB, nodeType, List.of(), new TestData("NodeB"), timestamp, Optional.empty(), new HashSet<>());
+        final var locatorC = new Locator(new NanoId("nodeC"), 1);
         nodeC = new SimpleNode(
                 locatorC, nodeType, List.of(), new TestData("NodeC"), timestamp, Optional.empty(), new HashSet<>());
 
@@ -72,6 +71,7 @@ public class PathOperationsTest {
         // Create test edges
         final var edgeLocatorAB = new Locator(new NanoId("edgeAB"), 1);
         final var edgeLocatorBC = new Locator(new NanoId("edgeBC"), 1);
+        final var edgeType = new SimpleType("EDGE");
         final var edgeAB = new SimpleEdge(
                 edgeLocatorAB,
                 edgeType,
@@ -114,7 +114,7 @@ public class PathOperationsTest {
         assertInstanceOf(List.class, paths);
         // Verify that if list is not empty, it contains Path instances
         if (!paths.isEmpty()) {
-            assertInstanceOf(Path.class, paths.get(0));
+            assertInstanceOf(Path.class, paths.getFirst());
         }
     }
 

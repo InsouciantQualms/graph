@@ -34,7 +34,7 @@ public final class SpringTransactionalSqliteSession implements Session, SqliteHa
             return transactionHandle;
         }
         // For non-transactional operations, use a single shared handle
-        if (fallbackHandle == null || !isHandleValid()) {
+        if ((fallbackHandle == null) || !isHandleValid()) {
             fallbackHandle = jdbi.open();
         }
         return fallbackHandle;
@@ -66,6 +66,6 @@ public final class SpringTransactionalSqliteSession implements Session, SqliteHa
     private boolean isHandleValid() {
 
         return Io.withReturn(
-                () -> fallbackHandle != null && fallbackHandle.getConnection().isValid(1));
+                () -> (fallbackHandle != null) && fallbackHandle.getConnection().isValid(1));
     }
 }

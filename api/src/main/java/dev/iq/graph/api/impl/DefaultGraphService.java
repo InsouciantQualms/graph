@@ -12,6 +12,7 @@ import dev.iq.graph.model.Path;
 import dev.iq.graph.model.jgrapht.GraphOperations;
 import dev.iq.graph.model.jgrapht.NodeOperations;
 import dev.iq.graph.persistence.GraphRepository;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,7 +63,7 @@ public final class DefaultGraphService implements GraphService {
         final var activeNodes = nodeOperations.allActive();
 
         // Find all connected paths among active nodes
-        final var connectedPaths = new java.util.ArrayList<Path>();
+        final var connectedPaths = new ArrayList<Path>();
 
         for (var i = 0; i < activeNodes.size(); i++) {
             for (var j = i + 1; j < activeNodes.size(); j++) {
@@ -72,10 +73,6 @@ public final class DefaultGraphService implements GraphService {
                 // FIXME: Use pathOperations once it's properly injected
                 // if (pathOperations.pathExists(sourceNode, targetNode)) {
                 //     final var paths = pathOperations.allPaths(sourceNode, targetNode);
-                if (false) {
-                    final var paths = java.util.List.<Path>of();
-                    connectedPaths.addAll(paths);
-                }
             }
         }
 

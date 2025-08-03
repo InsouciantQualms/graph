@@ -95,7 +95,12 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
     }
 
     @Override
-    public Optional<Node> find(final Locator locator) {
+    public List<Node> findVersions(final NanoId nodeId) {
+        return findAll(nodeId);
+    }
+
+    @Override
+    public Node find(final Locator locator) {
         final var sql = "SELECT * FROM node WHERE id = :id AND version_id = :version_id";
 
         return Io.withReturn(() -> getHandle()
@@ -103,7 +108,8 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
                 .bind("id", locator.id().id())
                 .bind("version_id", locator.version())
                 .map(new NodeMapper())
-                .findOne());
+                .findOne()
+                .orElseThrow(() -> new IllegalArgumentException("Node not found for locator: " + locator)));
     }
 
     @Override

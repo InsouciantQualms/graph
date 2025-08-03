@@ -32,7 +32,7 @@ class MongoGraphOperationsTest {
     private MongoGraphOperations graphOperations;
 
     @BeforeEach
-    void before() {
+    final void before() {
         // Start embedded MongoDB if not already started
         if (mongodProcess == null) {
             mongodProcess = MongoTestConfig.startMongoDbOrSkip();
@@ -46,7 +46,7 @@ class MongoGraphOperationsTest {
     }
 
     @AfterEach
-    void after() {
+    final void after() {
         if (session != null) {
             session.database().drop();
             session.close();
@@ -64,12 +64,12 @@ class MongoGraphOperationsTest {
     }
 
     @Test
-    void testConstructorCreatesValidInstance() {
+    final void testConstructorCreatesValidInstance() {
         assertNotNull(graphOperations);
     }
 
     @Test
-    void testOperationsWithNonExistentNodes() {
+    final void testOperationsWithNonExistentNodes() {
         final var nonExistentId = NanoId.generate();
 
         // These should not throw exceptions even with non-existent IDs

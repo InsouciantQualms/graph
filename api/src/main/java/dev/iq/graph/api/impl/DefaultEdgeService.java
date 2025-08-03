@@ -82,10 +82,7 @@ public final class DefaultEdgeService implements EdgeService {
     @Transactional(readOnly = true)
     public Edge find(final Locator locator) {
 
-        return repository
-                .edges()
-                .find(locator)
-                .orElseThrow(() -> new IllegalArgumentException("Edge not found: " + locator));
+        return repository.edges().find(locator);
     }
 
     @Override
@@ -104,7 +101,7 @@ public final class DefaultEdgeService implements EdgeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Edge> findAllVersions(final NanoId id) {
+    public List<Edge> findVersions(final NanoId id) {
 
         return repository.edges().findAll(id);
     }

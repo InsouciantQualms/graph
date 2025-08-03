@@ -87,12 +87,19 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     }
 
     @Override
-    public Optional<Edge> find(final Locator locator) {
+    public List<Edge> findVersions(final NanoId edgeId) {
+        return findAll(edgeId);
+    }
+
+    @Override
+    public Edge find(final Locator locator) {
         final var document = collection
                 .find(and(eq("id", locator.id().id()), eq("versionId", locator.version())))
                 .first();
 
-        return Optional.ofNullable(document).map(this::documentToEdge);
+        return Optional.ofNullable(document)
+                .map(this::documentToEdge)
+                .orElseThrow(() -> new IllegalArgumentException("Edge not found for locator: " + locator));
     }
 
     @Override
@@ -141,12 +148,8 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
             final var sourceLocator = new Locator(sourceId, sourceVersionId);
             final var targetLocator = new Locator(targetId, targetVersionId);
 
-            final var source = nodeRepository
-                    .find(sourceLocator)
-                    .orElseThrow(() -> new IllegalStateException("Source node not found: " + sourceLocator));
-            final var target = nodeRepository
-                    .find(targetLocator)
-                    .orElseThrow(() -> new IllegalStateException("Target node not found: " + targetLocator));
+            final var source = nodeRepository.find(sourceLocator);
+            final var target = nodeRepository.find(targetLocator);
 
             final var type = new SimpleType(versionedData.type());
             return new SimpleEdge(

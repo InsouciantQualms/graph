@@ -38,19 +38,19 @@ public final class MongoTestConfig {
     public static TransitionWalker.ReachedState<RunningMongodProcess> startMongoDbOrSkip() {
         try {
             // Check if binaries are already cached
-            final String userHome = System.getProperty("user.home");
-            final File embedMongoDir = new File(userHome, ".embedmongo");
-            final boolean hasCachedBinaries = embedMongoDir.exists() && embedMongoDir.isDirectory();
+            final var userHome = System.getProperty("user.home");
+            final var embedMongoDir = new File(userHome, ".embedmongo");
+            final var hasCachedBinaries = embedMongoDir.exists() && embedMongoDir.isDirectory();
 
             // Binaries are downloaded on first use if not cached
 
             return Mongod.instance().start(Version.Main.V7_0);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             // Check if the exception is due to network connectivity issues
-            Throwable cause = e.getCause();
+            var cause = e.getCause();
             while (cause != null) {
-                if (cause instanceof ConnectException || cause instanceof SocketTimeoutException) {
-                    final String msg = "Skipping MongoDB tests - network connectivity required to download "
+                if ((cause instanceof ConnectException) || (cause instanceof SocketTimeoutException)) {
+                    final var msg = "Skipping MongoDB tests - network connectivity required to download "
                             + "MongoDB binaries. To run tests offline, first run with network connectivity "
                             + "to cache binaries in ~/.embedmongo/";
                     Assumptions.assumeFalse(true, msg);

@@ -39,7 +39,7 @@ interface IdentifiableBase<T extends Versioned> {
     /**
      * Returns all versions available for the specified ID.
      */
-    List<T> findAllVersions(NanoId id);
+    List<T> findVersions(NanoId id);
 
     /**
      * Returns all IDs that are active in the entire graph.

@@ -65,10 +65,7 @@ public final class DefaultNodeService implements NodeService {
     @Transactional(readOnly = true)
     public Node find(final Locator locator) {
 
-        return repository
-                .nodes()
-                .find(locator)
-                .orElseThrow(() -> new IllegalArgumentException("Node not found: " + locator));
+        return repository.nodes().find(locator);
     }
 
     @Override
@@ -87,7 +84,7 @@ public final class DefaultNodeService implements NodeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Node> findAllVersions(final NanoId id) {
+    public List<Node> findVersions(final NanoId id) {
 
         return repository.nodes().findAll(id);
     }

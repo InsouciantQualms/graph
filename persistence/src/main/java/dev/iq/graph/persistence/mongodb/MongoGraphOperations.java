@@ -64,7 +64,7 @@ public final class MongoGraphOperations {
                                 new Document(
                                         "$setUnion",
                                         Arrays.asList(
-                                                Arrays.asList("$id"),
+                                                List.of("$id"),
                                                 new Document(
                                                         "$map",
                                                         new Document()
@@ -171,7 +171,7 @@ public final class MongoGraphOperations {
                         .append("in", idField));
     }
 
-    private Document createEdgeFilter(final String edgesField) {
+    private static Document createEdgeFilter(final String edgesField) {
         return new Document(
                 "$filter",
                 new Document()
@@ -180,7 +180,7 @@ public final class MongoGraphOperations {
                         .append("cond", createNotExpiredCondition()));
     }
 
-    private Document createNotExpiredCondition() {
+    private static Document createNotExpiredCondition() {
         return new Document("$not", new Document("$ifNull", Arrays.asList("$$edge.expired", false)));
     }
 

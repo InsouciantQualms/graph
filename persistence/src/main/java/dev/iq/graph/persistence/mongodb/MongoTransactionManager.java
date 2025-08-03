@@ -10,7 +10,6 @@ import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.AbstractTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -29,7 +28,7 @@ public final class MongoTransactionManager implements PlatformTransactionManager
     }
 
     @Override
-    public TransactionStatus getTransaction(final TransactionDefinition definition) throws TransactionException {
+    public TransactionStatus getTransaction(final TransactionDefinition definition) {
 
         // Check if we already have an active transaction
         final var existingSession = (ClientSession) TransactionSynchronizationManager.getResource(SESSION_KEY);
@@ -49,9 +48,9 @@ public final class MongoTransactionManager implements PlatformTransactionManager
     }
 
     @Override
-    public void commit(final TransactionStatus status) throws TransactionException {
+    public void commit(final TransactionStatus status) {
 
-        if (status instanceof MongoTransactionStatus txStatus && txStatus.isNewTransaction()) {
+        if ((status instanceof final MongoTransactionStatus txStatus) && txStatus.isNewTransaction()) {
             try {
                 txStatus.getSession().commitTransaction();
             } finally {
@@ -62,9 +61,9 @@ public final class MongoTransactionManager implements PlatformTransactionManager
     }
 
     @Override
-    public void rollback(final TransactionStatus status) throws TransactionException {
+    public void rollback(final TransactionStatus status) {
 
-        if (status instanceof MongoTransactionStatus txStatus && txStatus.isNewTransaction()) {
+        if ((status instanceof final MongoTransactionStatus txStatus) && txStatus.isNewTransaction()) {
             try {
                 txStatus.getSession().abortTransaction();
             } finally {

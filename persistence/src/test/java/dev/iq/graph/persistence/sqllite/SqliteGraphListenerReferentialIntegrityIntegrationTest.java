@@ -23,7 +23,7 @@ final class SqliteGraphListenerReferentialIntegrityIntegrationTest
 
     private DataSource dataSource;
 
-    private DataSource createInMemoryDataSource() {
+    private static DataSource createInMemoryDataSource() {
         final var config = new HikariConfig();
         config.setJdbcUrl("jdbc:sqlite::memory:");
         config.setDriverClassName("org.sqlite.JDBC");
@@ -42,6 +42,6 @@ final class SqliteGraphListenerReferentialIntegrityIntegrationTest
         // Create a new repository with its own handle managed by the session
         final var sessionFactory = new SqliteSessionFactory(dataSource);
         final var session = sessionFactory.create();
-        return SqliteGraphRepository.create((SqliteSession) session);
+        return SqliteGraphRepository.create((SqliteHandleProvider) session);
     }
 }

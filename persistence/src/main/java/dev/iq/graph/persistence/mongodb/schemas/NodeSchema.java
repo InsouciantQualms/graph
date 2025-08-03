@@ -8,8 +8,12 @@ package dev.iq.graph.persistence.mongodb.schemas;
 
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.CreateCollectionOptions;
+import com.mongodb.client.model.ValidationAction;
+import com.mongodb.client.model.ValidationLevel;
 import com.mongodb.client.model.ValidationOptions;
+import java.util.Arrays;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 
 /**
  * MongoDB JSON Schema for Node collection.
@@ -20,11 +24,11 @@ public final class NodeSchema {
 
     public static final String COLLECTION_NAME = "nodes";
 
-    public static final Document SCHEMA = new Document(
+    public static final Bson SCHEMA = new Document(
             "$jsonSchema",
             new Document()
                     .append("bsonType", "object")
-                    .append("required", java.util.Arrays.asList("_id", "id", "versionId", "type", "created", "data"))
+                    .append("required", Arrays.asList("_id", "id", "versionId", "type", "created", "data"))
                     .append(
                             "properties",
                             new Document()
@@ -77,20 +81,20 @@ public final class NodeSchema {
                     .append("additionalProperties", false));
 
     public static void createCollection(final MongoDatabase database) {
-        if (!collectionExists(database, COLLECTION_NAME)) {
+        if (!collectionExists(database)) {
             database.createCollection(
                     COLLECTION_NAME,
                     new CreateCollectionOptions()
                             .validationOptions(new ValidationOptions()
                                     .validator(SCHEMA)
-                                    .validationLevel(com.mongodb.client.model.ValidationLevel.STRICT)
-                                    .validationAction(com.mongodb.client.model.ValidationAction.ERROR)));
+                                    .validationLevel(ValidationLevel.STRICT)
+                                    .validationAction(ValidationAction.ERROR)));
         }
     }
 
-    private static boolean collectionExists(final MongoDatabase database, final String collectionName) {
-        for (final String name : database.listCollectionNames()) {
-            if (name.equals(collectionName)) {
+    private static boolean collectionExists(final MongoDatabase database) {
+        for (final var name : database.listCollectionNames()) {
+            if (name.equals(NodeSchema.COLLECTION_NAME)) {
                 return true;
             }
         }

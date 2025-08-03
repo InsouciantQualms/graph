@@ -8,7 +8,9 @@ package dev.iq.graph.persistence.mongodb;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mongodb.client.MongoClient;
@@ -76,10 +78,10 @@ final class MongoNodeRepositoryTest {
         assertEquals(node, savedNode);
 
         final var foundNode = repository.find(locator);
-        assertTrue(foundNode.isPresent());
-        assertEquals(locator, foundNode.get().locator());
-        assertSame(data.javaClass(), foundNode.get().data().javaClass());
-        assertEquals(data.value(), foundNode.get().data().value());
+        assertNotNull(foundNode);
+        assertEquals(locator, foundNode.locator());
+        assertSame(data.javaClass(), foundNode.data().javaClass());
+        assertEquals(data.value(), foundNode.data().value());
     }
 
     @Test
@@ -90,10 +92,8 @@ final class MongoNodeRepositoryTest {
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
 
-        final var node1 = new SimpleNode(
-                locator1, List.of(), data, created, Optional.of(created.plusSeconds(10)));
-        final var node2 =
-                new SimpleNode(locator2, List.of(), data, created.plusSeconds(5), Optional.empty());
+        final var node1 = new SimpleNode(locator1, List.of(), data, created, Optional.of(created.plusSeconds(10)));
+        final var node2 = new SimpleNode(locator2, List.of(), data, created.plusSeconds(5), Optional.empty());
 
         repository.save(node1);
         repository.save(node2);
@@ -109,11 +109,8 @@ final class MongoNodeRepositoryTest {
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
 
-
-        final var node1 =
-                new SimpleNode(new Locator(nodeId, 1), List.of(), data, created, Optional.empty());
-        final var node2 =
-                new SimpleNode(new Locator(nodeId, 2), List.of(), data, created, Optional.empty());
+        final var node1 = new SimpleNode(new Locator(nodeId, 1), List.of(), data, created, Optional.empty());
+        final var node2 = new SimpleNode(new Locator(nodeId, 2), List.of(), data, created, Optional.empty());
 
         repository.save(node1);
         repository.save(node2);
@@ -152,7 +149,6 @@ final class MongoNodeRepositoryTest {
         repository.save(node);
         assertTrue(repository.delete(nodeId));
 
-        final var foundNode = repository.find(locator);
-        assertFalse(foundNode.isPresent());
+        assertThrows(IllegalArgumentException.class, () -> repository.find(locator));
     }
 }

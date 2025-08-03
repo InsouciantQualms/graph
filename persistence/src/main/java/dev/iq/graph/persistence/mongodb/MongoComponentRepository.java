@@ -104,12 +104,19 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
     }
 
     @Override
-    public Optional<Component> find(final Locator locator) {
+    public List<Component> findVersions(final NanoId componentId) {
+        return findAll(componentId);
+    }
+
+    @Override
+    public Component find(final Locator locator) {
         final var document = collection
                 .find(and(eq("id", locator.id().id()), eq("versionId", locator.version())))
                 .first();
 
-        return Optional.ofNullable(document).map(this::documentToComponent);
+        return Optional.ofNullable(document)
+                .map(this::documentToComponent)
+                .orElseThrow(() -> new IllegalArgumentException("Component not found for locator: " + locator));
     }
 
     @Override
@@ -163,9 +170,17 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
                 final var elementType = elementDoc.getString("elementType");
 
                 if ("node".equals(elementType)) {
-                    nodeRepository.find(elementLocator).ifPresent(elements::add);
+                    try {
+                        elements.add(nodeRepository.find(elementLocator));
+                    } catch (IllegalArgumentException ignored) {
+                        // Element not found, skip it
+                    }
                 } else if ("edge".equals(elementType)) {
-                    edgeRepository.find(elementLocator).ifPresent(elements::add);
+                    try {
+                        elements.add(edgeRepository.find(elementLocator));
+                    } catch (IllegalArgumentException ignored) {
+                        // Element not found, skip it
+                    }
                 }
             }
 

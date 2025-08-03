@@ -107,7 +107,7 @@ public class EdgeOperationsReferentialIntegrityTest {
         assertEquals(edge1.locator().id(), edge3.locator().id());
 
         // Verify we can retrieve all versions
-        final var allVersions = edgeOps.findAllVersions(edge1.locator().id());
+        final var allVersions = edgeOps.findVersions(edge1.locator().id());
         assertEquals(3, allVersions.size());
 
         // Verify only the latest version is active
@@ -194,7 +194,7 @@ public class EdgeOperationsReferentialIntegrityTest {
         assertEquals(nodeB, edge3.target());
 
         // Verify endpoints are preserved in historical queries
-        final var allVersions = edgeOps.findAllVersions(edge1.locator().id());
+        final var allVersions = edgeOps.findVersions(edge1.locator().id());
         for (final var version : allVersions) {
             assertEquals(nodeA, version.source());
             assertEquals(nodeB, version.target());

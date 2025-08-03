@@ -8,6 +8,8 @@ package dev.iq.graph.persistence.config;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import dev.iq.graph.persistence.GraphRepository;
 import dev.iq.graph.persistence.mongodb.MongoGraphRepository;
 import dev.iq.graph.persistence.mongodb.MongoSession;
@@ -41,7 +43,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("tinkerpop")
-    public Graph tinkerpopGraph() {
+    public final Graph tinkerpopGraph() {
 
         return TinkerGraph.open();
     }
@@ -51,7 +53,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("tinkerpop")
-    public Supplier<Graph> graphSupplier(final Graph graph) {
+    public final Supplier<Graph> graphSupplier(final Graph graph) {
 
         return () -> graph;
     }
@@ -61,7 +63,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("tinkerpop")
-    public PlatformTransactionManager tinkerpopTransactionManager(final Supplier<Graph> graphSupplier) {
+    public final PlatformTransactionManager tinkerpopTransactionManager(final Supplier<Graph> graphSupplier) {
 
         return new TinkerpopTransactionManager(graphSupplier);
     }
@@ -71,7 +73,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("tinkerpop")
-    public TransactionTemplate transactionTemplate(final PlatformTransactionManager transactionManager) {
+    public final TransactionTemplate transactionTemplate(final PlatformTransactionManager transactionManager) {
 
         return new TransactionTemplate(transactionManager);
     }
@@ -81,11 +83,11 @@ public class TestPersistenceConfiguration {
      */
     @Bean("graphRepository")
     @Profile("tinkerpop")
-    public GraphRepository tinkerpopGraphRepository(final Graph graph) {
+    public final GraphRepository tinkerpopGraphRepository(final Graph graph) {
 
         final var sessionFactory = new TinkerpopSessionFactory();
         try (var session = (TinkerpopSession) sessionFactory.create()) {
-            return (TinkerpopGraphRepository) TinkerpopGraphRepository.create(session);
+            return TinkerpopGraphRepository.create(session);
         }
     }
 
@@ -94,17 +96,17 @@ public class TestPersistenceConfiguration {
      */
     @Bean("graphRepository")
     @Profile("sqlite")
-    public GraphRepository sqliteGraphRepository(final Jdbi jdbi) {
+    public static final GraphRepository sqliteGraphRepository(final Jdbi jdbi) {
 
         // Initialize schema
         initializeSqliteSchema(jdbi);
 
         // Create a Spring transaction-aware session
         final var session = new SpringTransactionalSqliteSession(jdbi);
-        return (SqliteGraphRepository) SqliteGraphRepository.create(session);
+        return SqliteGraphRepository.create(session);
     }
 
-    private void initializeSqliteSchema(final Jdbi jdbi) {
+    private static void initializeSqliteSchema(final Jdbi jdbi) {
 
         jdbi.useHandle(handle -> {
             // Enable foreign keys for SQLite
@@ -214,10 +216,10 @@ public class TestPersistenceConfiguration {
      */
     @Bean("graphRepository")
     @Profile("mongodb")
-    public GraphRepository mongoGraphRepository(final MongoClient mongoClient) {
+    public final GraphRepository mongoGraphRepository(final MongoClient mongoClient) {
 
         final var session = new MongoSession(mongoClient, "test");
-        return (MongoGraphRepository) MongoGraphRepository.create(session);
+        return MongoGraphRepository.create(session);
     }
 
     /**
@@ -225,13 +227,13 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("sqlite")
-    public DataSource sqliteDataSource() {
+    public final DataSource sqliteDataSource() {
 
         // Create an in-memory SQLite database for tests
-        final var hikariConfig = new com.zaxxer.hikari.HikariConfig();
+        final var hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl("jdbc:sqlite::memory:");
         hikariConfig.setMaximumPoolSize(1);
-        return new com.zaxxer.hikari.HikariDataSource(hikariConfig);
+        return new HikariDataSource(hikariConfig);
     }
 
     /**
@@ -239,7 +241,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("sqlite")
-    public Jdbi jdbi(final DataSource dataSource) {
+    public final Jdbi jdbi(final DataSource dataSource) {
 
         return Jdbi.create(dataSource);
     }
@@ -249,7 +251,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("sqlite")
-    public PlatformTransactionManager sqliteTransactionManager(final Jdbi jdbi) {
+    public final PlatformTransactionManager sqliteTransactionManager(final Jdbi jdbi) {
 
         return new SqliteTransactionManager(jdbi);
     }
@@ -259,7 +261,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("sqlite")
-    public TransactionTemplate sqliteTransactionTemplate(final PlatformTransactionManager transactionManager) {
+    public final TransactionTemplate sqliteTransactionTemplate(final PlatformTransactionManager transactionManager) {
 
         return new TransactionTemplate(transactionManager);
     }
@@ -269,7 +271,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("mongodb")
-    public MongoClient mongoClient() {
+    public final MongoClient mongoClient() {
 
         // Use embedded MongoDB for tests
         return MongoClients.create("mongodb://localhost:27017");
@@ -280,7 +282,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("mongodb")
-    public PlatformTransactionManager mongoTransactionManager(final MongoClient mongoClient) {
+    public final PlatformTransactionManager mongoTransactionManager(final MongoClient mongoClient) {
 
         return new MongoTransactionManager(mongoClient);
     }
@@ -290,7 +292,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("mongodb")
-    public TransactionTemplate mongoTransactionTemplate(final PlatformTransactionManager transactionManager) {
+    public final TransactionTemplate mongoTransactionTemplate(final PlatformTransactionManager transactionManager) {
 
         return new TransactionTemplate(transactionManager);
     }
