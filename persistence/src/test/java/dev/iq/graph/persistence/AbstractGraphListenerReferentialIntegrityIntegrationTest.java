@@ -9,8 +9,8 @@ package dev.iq.graph.persistence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.VersionedRepository;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleData;

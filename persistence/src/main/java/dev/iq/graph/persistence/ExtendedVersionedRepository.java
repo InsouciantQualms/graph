@@ -6,9 +6,9 @@
 
 package dev.iq.graph.persistence;
 
-import dev.iq.common.persist.VersionedRepository;
 import dev.iq.common.version.NanoId;
 import dev.iq.common.version.Versioned;
+import dev.iq.common.version.VersionedRepository;
 import java.util.List;
 
 /**

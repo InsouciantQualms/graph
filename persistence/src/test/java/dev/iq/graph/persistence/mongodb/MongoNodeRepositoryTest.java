@@ -90,8 +90,10 @@ final class MongoNodeRepositoryTest {
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
 
-        final var node1 = new SimpleNode(locator1, List.of(), data, created, Optional.of(created.plusSeconds(10)));
-        final var node2 = new SimpleNode(locator2, List.of(), data, created.plusSeconds(5), Optional.empty());
+        final var node1 = new SimpleNode(
+                locator1, List.of(), data, created, Optional.of(created.plusSeconds(10)));
+        final var node2 =
+                new SimpleNode(locator2, List.of(), data, created.plusSeconds(5), Optional.empty());
 
         repository.save(node1);
         repository.save(node2);
@@ -107,8 +109,11 @@ final class MongoNodeRepositoryTest {
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
 
-        final var node1 = new SimpleNode(new Locator(nodeId, 1), List.of(), data, created, Optional.empty());
-        final var node2 = new SimpleNode(new Locator(nodeId, 2), List.of(), data, created, Optional.empty());
+
+        final var node1 =
+                new SimpleNode(new Locator(nodeId, 1), List.of(), data, created, Optional.empty());
+        final var node2 =
+                new SimpleNode(new Locator(nodeId, 2), List.of(), data, created, Optional.empty());
 
         repository.save(node1);
         repository.save(node2);
