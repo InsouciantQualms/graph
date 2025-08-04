@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -67,6 +68,9 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
 
             // Save properties in separate table
             saveProperties(node.locator().id(), node.locator().version(), node.data());
+
+            // Save components in junction table
+            saveComponents(node.locator().id(), node.locator().version(), node.components());
         });
 
         return node;
@@ -193,7 +197,9 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
             final var data = loadProperties(id, versionId);
             final var locator = new Locator(id, versionId);
 
-            return new SimpleNode(locator, type, List.of(), data, created, expired, new HashSet<>());
+            final var components = loadComponents(id, versionId);
+
+            return new SimpleNode(locator, type, data, components, created, expired);
         }
     }
 
@@ -238,6 +244,55 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
                     })
                     .list();
             return serde.deserialize(properties);
+        });
+    }
+
+    private void saveComponents(final NanoId nodeId, final int version, final Set<Locator> components) {
+        final var sql =
+                """
+                INSERT INTO node_components (node_id, node_version, component_id, component_version)
+                VALUES (:node_id, :node_version, :component_id, :component_version)
+                """;
+
+        if (components.isEmpty()) {
+            return;
+        }
+
+        Io.withVoid(() -> {
+            final var batch = getHandle().prepareBatch(sql);
+            for (final var component : components) {
+                batch.bind("node_id", nodeId.id())
+                        .bind("node_version", version)
+                        .bind("component_id", component.id().id())
+                        .bind("component_version", component.version())
+                        .add();
+            }
+            batch.execute();
+        });
+    }
+
+    private Set<Locator> loadComponents(final NanoId nodeId, final int version) {
+        final var sql =
+                """
+                SELECT component_id, component_version
+                FROM node_components
+                WHERE node_id = :node_id AND node_version = :node_version
+                """;
+
+        return Io.withReturn(() -> {
+            final var components = new HashSet<Locator>();
+            getHandle()
+                    .createQuery(sql)
+                    .bind("node_id", nodeId.id())
+                    .bind("node_version", version)
+                    .map((rs, ctx) -> {
+                        final var componentId = new NanoId(rs.getString("component_id"));
+                        final var componentVersion = rs.getInt("component_version");
+                        components.add(new Locator(componentId, componentVersion));
+                        return null;
+                    })
+                    .list();
+            return components;
         });
     }
 }

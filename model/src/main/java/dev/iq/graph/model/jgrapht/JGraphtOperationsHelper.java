@@ -26,12 +26,12 @@ import org.jgrapht.graph.AsSubgraph;
 /**
  * Helper utilities for graph operations.
  */
-public final class OperationsHelper {
+public final class JGraphtOperationsHelper {
 
     /**
      * Type contains only static members.
      */
-    private OperationsHelper() {}
+    private JGraphtOperationsHelper() {}
 
     /**
      * Validates that an element can be expired.

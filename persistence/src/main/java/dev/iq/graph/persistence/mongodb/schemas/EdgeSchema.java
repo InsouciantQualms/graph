@@ -25,6 +25,31 @@ public final class EdgeSchema {
     private EdgeSchema() {}
 
     public static final String COLLECTION_NAME = "edges";
+    private static final String NANO_ID_PATTERN = "^[0-9a-zA-Z_-]{21}$";
+
+    private static Document createComponentSchema() {
+        return new Document()
+                .append("bsonType", "array")
+                .append(
+                        "items",
+                        new Document()
+                                .append("bsonType", "object")
+                                .append("required", Arrays.asList("id", "versionId"))
+                                .append(
+                                        "properties",
+                                        new Document()
+                                                .append(
+                                                        "id",
+                                                        new Document()
+                                                                .append("bsonType", "string")
+                                                                .append("pattern", NANO_ID_PATTERN))
+                                                .append(
+                                                        "versionId",
+                                                        new Document()
+                                                                .append("bsonType", "int")
+                                                                .append("minimum", 1))))
+                .append("description", "Array of component locators this edge references");
+    }
 
     public static final Bson SCHEMA = new Document(
             "$jsonSchema",
@@ -42,7 +67,8 @@ public final class EdgeSchema {
                                     "sourceId",
                                     "sourceVersionId",
                                     "targetId",
-                                    "targetVersionId"))
+                                    "targetVersionId",
+                                    "components"))
                     .append(
                             "properties",
                             new Document()
@@ -115,7 +141,8 @@ public final class EdgeSchema {
                                             new Document()
                                                     .append("bsonType", "int")
                                                     .append("minimum", 1)
-                                                    .append("description", "Version number of the target node")))
+                                                    .append("description", "Version number of the target node"))
+                                    .append("components", createComponentSchema()))
                     .append("additionalProperties", false));
 
     public static void createCollection(final MongoDatabase database) {

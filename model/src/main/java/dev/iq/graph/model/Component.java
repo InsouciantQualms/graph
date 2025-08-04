@@ -7,18 +7,18 @@
 package dev.iq.graph.model;
 
 import dev.iq.common.version.Versioned;
-import java.util.List;
 
 /**
- * Represents a versioned, maximally connected subgraph containing nodes and edges.
+ * Represents a versioned component that groups elements in a graph.
+ * Components are referenced by elements rather than containing them directly.
  * Implementations must be immutable and thread-safe.
  */
 public interface Component extends Versioned {
 
     /**
-     * Returns the list of elements contained in this component.
+     * Returns the type of this component.
      */
-    List<Element> elements();
+    Type type();
 
     /**
      * Returns the data associated with this component.

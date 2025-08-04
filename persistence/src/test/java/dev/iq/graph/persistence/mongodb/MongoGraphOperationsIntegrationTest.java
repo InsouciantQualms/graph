@@ -51,7 +51,7 @@ class MongoGraphOperationsIntegrationTest {
         // Create collections with schemas
         NodeSchema.createCollection(session.database());
         EdgeSchema.createCollection(session.database());
-        ComponentSchema.createCollections(session.database());
+        ComponentSchema.createCollection(session.database());
 
         repository = MongoGraphRepository.create(session);
         graphOps = repository.graphOperations();
@@ -66,7 +66,7 @@ class MongoGraphOperationsIntegrationTest {
     }
 
     @AfterAll
-    static void tearDownClass() {
+    static void afterClass() {
         if (mongoClient != null) {
             mongoClient.close();
         }

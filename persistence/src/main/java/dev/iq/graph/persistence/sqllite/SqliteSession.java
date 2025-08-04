@@ -21,6 +21,10 @@ public final class SqliteSession implements Session, SqliteHandleProvider {
     public SqliteSession(final Jdbi jdbi) {
 
         handle = jdbi.open();
+
+        // Enable foreign keys for SQLite (must be done per connection)
+        Io.withVoid(() -> handle.execute("PRAGMA foreign_keys = ON"));
+
         handle.begin();
     }
 

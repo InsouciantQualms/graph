@@ -29,9 +29,9 @@ import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 import org.bson.Document;
 import org.springframework.stereotype.Repository;
@@ -55,6 +55,9 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
             final var document = MongoHelper.createBaseDocument(
                     node.locator(), node.type().code(), node.created(), serde.serialize(node.data()));
             MongoHelper.addExpiryToDocument(document, node.expired());
+
+            // Add components
+            document.append("components", MongoHelper.serializeComponents(node.components()));
 
             collection.insertOne(document);
             return node;
@@ -134,14 +137,13 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
             final var data = serde.deserialize(versionedData.serializedData());
             final var type = new SimpleType(versionedData.type());
 
+            // Extract components
+            @SuppressWarnings("unchecked")
+            final var componentDocs = (List<Document>) document.get("components", List.class);
+            final Set<Locator> components = MongoHelper.deserializeComponents(componentDocs);
+
             return new SimpleNode(
-                    versionedData.locator(),
-                    type,
-                    List.of(),
-                    data,
-                    versionedData.created(),
-                    versionedData.expired(),
-                    new HashSet<>());
+                    versionedData.locator(), type, data, components, versionedData.created(), versionedData.expired());
         });
     }
 

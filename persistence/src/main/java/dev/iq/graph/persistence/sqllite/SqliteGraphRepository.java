@@ -21,7 +21,7 @@ public record SqliteGraphRepository(
 
         final var nodeRepository = new SqliteNodeRepository(session);
         final var edgeRepository = new SqliteEdgeRepository(session, nodeRepository);
-        return new SqliteGraphRepository(
-                nodeRepository, edgeRepository, new SqliteComponentRepository(session, nodeRepository, edgeRepository));
+        final var componentRepository = new SqliteComponentRepository(session);
+        return new SqliteGraphRepository(nodeRepository, edgeRepository, componentRepository);
     }
 }

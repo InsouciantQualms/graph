@@ -15,9 +15,10 @@ import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.model.simple.SimpleNode;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.config.TestPersistenceConfiguration;
 import java.time.Instant;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.jupiter.api.Disabled;
@@ -61,7 +62,8 @@ class SpringTransactionIntegrationTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-data");
         final var created = Instant.now();
-        final var node = new SimpleNode(locator, List.of(), data, created, Optional.empty());
+        final var node =
+                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
 
         // Save node within transaction
         graphRepository.nodes().save(node);
@@ -79,7 +81,8 @@ class SpringTransactionIntegrationTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-data");
         final var created = Instant.now();
-        final var node = new SimpleNode(locator, List.of(), data, created, Optional.empty());
+        final var node =
+                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
 
         // Save node in transaction but rollback
         assertThrows(
@@ -93,12 +96,12 @@ class SpringTransactionIntegrationTest {
         // Verify node does not exist after rollback
         // Need to check within a transaction to ensure proper isolation
         final var nodeException = assertThrows(
-                IllegalArgumentException.class,
+                dev.iq.common.error.IoException.class,
                 () -> transactionTemplate.execute(status -> {
                     graphRepository.nodes().find(locator);
                     return null;
                 }));
-        assertTrue(nodeException.getMessage().contains("Node not found for locator"));
+        assertTrue(nodeException.getCause().getMessage().contains("Node not found for locator"));
     }
 
     @Test
@@ -111,7 +114,8 @@ class SpringTransactionIntegrationTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-data");
         final var created = Instant.now();
-        final var node = new SimpleNode(locator, List.of(), data, created, Optional.empty());
+        final var node =
+                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
 
         // Start transaction but don't commit yet
         transactionTemplate.execute(status -> {
@@ -129,11 +133,11 @@ class SpringTransactionIntegrationTest {
         // After rollback, node should not exist
         // Need to check within a transaction to ensure proper isolation
         final var nodeException = assertThrows(
-                IllegalArgumentException.class,
+                dev.iq.common.error.IoException.class,
                 () -> transactionTemplate.execute(status -> {
                     graphRepository.nodes().find(locator);
                     return null;
                 }));
-        assertTrue(nodeException.getMessage().contains("Node not found for locator"));
+        assertTrue(nodeException.getCause().getMessage().contains("Node not found for locator"));
     }
 }

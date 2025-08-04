@@ -23,12 +23,39 @@ public final class NodeSchema {
     private NodeSchema() {}
 
     public static final String COLLECTION_NAME = "nodes";
+    private static final String NANO_ID_PATTERN = "^[0-9a-zA-Z_-]{21}$";
+
+    private static Document createComponentSchema() {
+        return new Document()
+                .append("bsonType", "array")
+                .append(
+                        "items",
+                        new Document()
+                                .append("bsonType", "object")
+                                .append("required", Arrays.asList("id", "versionId"))
+                                .append(
+                                        "properties",
+                                        new Document()
+                                                .append(
+                                                        "id",
+                                                        new Document()
+                                                                .append("bsonType", "string")
+                                                                .append("pattern", NANO_ID_PATTERN))
+                                                .append(
+                                                        "versionId",
+                                                        new Document()
+                                                                .append("bsonType", "int")
+                                                                .append("minimum", 1))))
+                .append("description", "Array of component locators this node references");
+    }
 
     public static final Bson SCHEMA = new Document(
             "$jsonSchema",
             new Document()
                     .append("bsonType", "object")
-                    .append("required", Arrays.asList("_id", "id", "versionId", "type", "created", "data"))
+                    .append(
+                            "required",
+                            Arrays.asList("_id", "id", "versionId", "type", "created", "data", "components"))
                     .append(
                             "properties",
                             new Document()
@@ -77,7 +104,8 @@ public final class NodeSchema {
                                             "data",
                                             new Document()
                                                     .append("bsonType", "string")
-                                                    .append("description", "Serialized JSON data of the node")))
+                                                    .append("description", "Serialized JSON data of the node"))
+                                    .append("components", createComponentSchema()))
                     .append("additionalProperties", false));
 
     public static void createCollection(final MongoDatabase database) {

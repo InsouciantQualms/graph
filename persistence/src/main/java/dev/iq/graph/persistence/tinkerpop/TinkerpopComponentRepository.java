@@ -10,13 +10,12 @@ import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
-import dev.iq.graph.model.Element;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleComponent;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,7 +25,6 @@ import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.springframework.stereotype.Repository;
@@ -63,21 +61,12 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
             vertex.property("created", component.created().toString());
             component.expired().ifPresent(exp -> vertex.property("expired", exp.toString()));
 
+            // Store type
+            vertex.property("type", component.type().code());
+
             // Store data properties directly on the vertex
             final var properties = serde.serialize(component.data());
             properties.forEach(vertex::property);
-
-            // Save element associations
-            for (final var element : component.elements()) {
-                final var elementVertex = traversal
-                        .V()
-                        .has("id", element.locator().id().id())
-                        .has("version", element.locator().version())
-                        .tryNext();
-
-                elementVertex.ifPresent(value -> vertex.addEdge("contains", value)
-                        .property("elementType", element.getClass().getSimpleName()));
-            }
 
             return component;
         });
@@ -211,49 +200,12 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
 
         // Reconstruct data from vertex properties
         final var properties = vertex.keys().stream()
-                .filter(key -> !List.of("id", "version", "created", "expired").contains(key))
+                .filter(key ->
+                        !List.of("id", "version", "type", "created", "expired").contains(key))
                 .collect(Collectors.toMap(Function.identity(), vertex::<Object>value));
         final var data = serde.deserialize(properties);
+        final var type = new SimpleType(vertex.value("type"));
 
-        // Load elements associated with this component
-        final var elements = loadComponentElements(vertex);
-
-        return new SimpleComponent(locator, elements, data, created, expired);
-    }
-
-    private List<Element> loadComponentElements(final Vertex componentVertex) {
-        final var elements = new ArrayList<Element>();
-
-        traversal
-                .V(componentVertex)
-                .outE("contains")
-                .as("edge")
-                .inV()
-                .as("element")
-                .select("edge", "element")
-                .toList()
-                .forEach(map -> {
-                    final var elementVertex = (Vertex) map.get("element");
-                    final var edge = (Edge) map.get("edge");
-                    final var elementType = edge.value("elementType");
-
-                    if ("SimpleNode".equals(elementType)) {
-                        try {
-                            elements.add(nodeRepository.find(new Locator(
-                                    new NanoId(elementVertex.value("id")), elementVertex.<Integer>value("version"))));
-                        } catch (IllegalArgumentException ignored) {
-                            // Element not found, skip it
-                        }
-                    } else if ("SimpleEdge".equals(elementType)) {
-                        try {
-                            elements.add(edgeRepository.find(new Locator(
-                                    new NanoId(elementVertex.value("id")), elementVertex.<Integer>value("version"))));
-                        } catch (IllegalArgumentException ignored) {
-                            // Element not found, skip it
-                        }
-                    }
-                });
-
-        return elements;
+        return new SimpleComponent(locator, type, data, created, expired);
     }
 }

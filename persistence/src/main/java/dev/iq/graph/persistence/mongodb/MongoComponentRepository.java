@@ -22,15 +22,13 @@ import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
-import dev.iq.graph.model.Element;
-import dev.iq.graph.model.Node;
 import dev.iq.graph.model.serde.JsonSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleComponent;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -44,42 +42,23 @@ import org.springframework.stereotype.Repository;
 public final class MongoComponentRepository implements ExtendedVersionedRepository<Component> {
 
     private final MongoCollection<Document> collection;
-    private final MongoCollection<Document> elementsCollection;
     private final Serde<String> serde = new JsonSerde();
-    private final MongoNodeRepository nodeRepository;
-    private final MongoEdgeRepository edgeRepository;
 
-    public MongoComponentRepository(
-            final MongoDatabase database,
-            final MongoNodeRepository nodeRepository,
-            final MongoEdgeRepository edgeRepository) {
+    public MongoComponentRepository(final MongoDatabase database) {
         collection = database.getCollection("components");
-        elementsCollection = database.getCollection("component_elements");
-        this.nodeRepository = nodeRepository;
-        this.edgeRepository = edgeRepository;
     }
 
     @Override
     public Component save(final Component component) {
         return Io.withReturn(() -> {
             final var document = MongoHelper.createBaseDocument(
-                    component.locator(), "component", component.created(), serde.serialize(component.data()));
+                    component.locator(),
+                    component.type().code(),
+                    component.created(),
+                    serde.serialize(component.data()));
             MongoHelper.addExpiryToDocument(document, component.expired());
 
             collection.insertOne(document);
-
-            // Save component elements relationships
-            for (final var element : component.elements()) {
-                final var elementDoc = new Document()
-                        .append("componentId", component.locator().id().id())
-                        .append("componentVersionId", component.locator().version())
-                        .append("elementId", element.locator().id().id())
-                        .append("elementVersionId", element.locator().version())
-                        .append("elementType", (element instanceof Node) ? "node" : "edge");
-
-                elementsCollection.insertOne(elementDoc);
-            }
-
             return component;
         });
     }
@@ -135,9 +114,8 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
 
     @Override
     public boolean delete(final NanoId componentId) {
-        final var componentResult = collection.deleteMany(eq("id", componentId.id()));
-        final var elementsResult = elementsCollection.deleteMany(eq("componentId", componentId.id()));
-        return componentResult.getDeletedCount() > 0;
+        final var result = collection.deleteMany(eq("id", componentId.id()));
+        return result.getDeletedCount() > 0;
     }
 
     @Override
@@ -156,36 +134,10 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
         return Io.withReturn(() -> {
             final var versionedData = MongoHelper.extractVersionedData(document);
             final var data = serde.deserialize(versionedData.serializedData());
-
-            // Load component elements
-            final var elements = new ArrayList<Element>();
-            final var elementDocs = elementsCollection.find(and(
-                    eq("componentId", versionedData.locator().id().id()),
-                    eq("componentVersionId", versionedData.locator().version())));
-
-            for (final var elementDoc : elementDocs) {
-                final var elementId = new NanoId(elementDoc.getString("elementId"));
-                final var elementVersionId = elementDoc.getInteger("elementVersionId");
-                final var elementLocator = new Locator(elementId, elementVersionId);
-                final var elementType = elementDoc.getString("elementType");
-
-                if ("node".equals(elementType)) {
-                    try {
-                        elements.add(nodeRepository.find(elementLocator));
-                    } catch (IllegalArgumentException ignored) {
-                        // Element not found, skip it
-                    }
-                } else if ("edge".equals(elementType)) {
-                    try {
-                        elements.add(edgeRepository.find(elementLocator));
-                    } catch (IllegalArgumentException ignored) {
-                        // Element not found, skip it
-                    }
-                }
-            }
+            final var type = new SimpleType(versionedData.type());
 
             return new SimpleComponent(
-                    versionedData.locator(), elements, data, versionedData.created(), versionedData.expired());
+                    versionedData.locator(), type, data, versionedData.created(), versionedData.expired());
         });
     }
 

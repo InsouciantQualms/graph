@@ -103,6 +103,7 @@ public final class SqliteSessionFactory implements SessionFactory {
                     CREATE TABLE IF NOT EXISTS component (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,
+                        type TEXT NOT NULL,
                         created TEXT NOT NULL,
                         expired TEXT,
                         PRIMARY KEY (id, version_id)
@@ -122,16 +123,30 @@ public final class SqliteSessionFactory implements SessionFactory {
                     )
                     """);
 
-            // Create component-element junction table
+            // Create node_components junction table
             handle.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS component_element (
+                    CREATE TABLE IF NOT EXISTS node_components (
+                        node_id TEXT NOT NULL,
+                        node_version INTEGER NOT NULL,
                         component_id TEXT NOT NULL,
                         component_version INTEGER NOT NULL,
-                        element_id TEXT NOT NULL,
-                        element_version INTEGER NOT NULL,
-                        element_type TEXT NOT NULL,
-                        PRIMARY KEY (component_id, component_version, element_id, element_version),
+                        PRIMARY KEY (node_id, node_version, component_id, component_version),
+                        FOREIGN KEY (node_id, node_version) REFERENCES node(id, version_id),
+                        FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id)
+                    )
+                    """);
+
+            // Create edge_components junction table
+            handle.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS edge_components (
+                        edge_id TEXT NOT NULL,
+                        edge_version INTEGER NOT NULL,
+                        component_id TEXT NOT NULL,
+                        component_version INTEGER NOT NULL,
+                        PRIMARY KEY (edge_id, edge_version, component_id, component_version),
+                        FOREIGN KEY (edge_id, edge_version) REFERENCES edge(id, version_id),
                         FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id)
                     )
                     """);
@@ -142,6 +157,14 @@ public final class SqliteSessionFactory implements SessionFactory {
             handle.execute("CREATE INDEX IF NOT EXISTS idx_component_expired ON component(id, expired)");
             handle.execute("CREATE INDEX IF NOT EXISTS idx_edge_source ON edge(source_id, source_version_id)");
             handle.execute("CREATE INDEX IF NOT EXISTS idx_edge_target ON edge(target_id, target_version_id)");
+            handle.execute("CREATE INDEX IF NOT EXISTS idx_node_components_node "
+                    + "ON node_components(node_id, node_version)");
+            handle.execute("CREATE INDEX IF NOT EXISTS idx_node_components_component "
+                    + "ON node_components(component_id, component_version)");
+            handle.execute("CREATE INDEX IF NOT EXISTS idx_edge_components_edge "
+                    + "ON edge_components(edge_id, edge_version)");
+            handle.execute("CREATE INDEX IF NOT EXISTS idx_edge_components_component "
+                    + "ON edge_components(component_id, component_version)");
         }));
     }
 

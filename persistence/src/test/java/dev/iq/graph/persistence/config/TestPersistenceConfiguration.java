@@ -43,7 +43,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("tinkerpop")
-    public final Graph tinkerpopGraph() {
+    public Graph tinkerpopGraph() {
 
         return TinkerGraph.open();
     }
@@ -53,7 +53,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("tinkerpop")
-    public final Supplier<Graph> graphSupplier(final Graph graph) {
+    public Supplier<Graph> graphSupplier(final Graph graph) {
 
         return () -> graph;
     }
@@ -63,7 +63,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("tinkerpop")
-    public final PlatformTransactionManager tinkerpopTransactionManager(final Supplier<Graph> graphSupplier) {
+    public PlatformTransactionManager tinkerpopTransactionManager(final Supplier<Graph> graphSupplier) {
 
         return new TinkerpopTransactionManager(graphSupplier);
     }
@@ -73,7 +73,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("tinkerpop")
-    public final TransactionTemplate transactionTemplate(final PlatformTransactionManager transactionManager) {
+    public TransactionTemplate transactionTemplate(final PlatformTransactionManager transactionManager) {
 
         return new TransactionTemplate(transactionManager);
     }
@@ -83,7 +83,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean("graphRepository")
     @Profile("tinkerpop")
-    public final GraphRepository tinkerpopGraphRepository(final Graph graph) {
+    public GraphRepository tinkerpopGraphRepository(final Graph graph) {
 
         final var sessionFactory = new TinkerpopSessionFactory();
         try (var session = (TinkerpopSession) sessionFactory.create()) {
@@ -96,7 +96,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean("graphRepository")
     @Profile("sqlite")
-    public static final GraphRepository sqliteGraphRepository(final Jdbi jdbi) {
+    public GraphRepository sqliteGraphRepository(final Jdbi jdbi) {
 
         // Initialize schema
         initializeSqliteSchema(jdbi);
@@ -176,6 +176,7 @@ public class TestPersistenceConfiguration {
                     CREATE TABLE IF NOT EXISTS component (
                         id TEXT NOT NULL,
                         version_id INTEGER NOT NULL,
+                        type TEXT NOT NULL,
                         created TEXT NOT NULL,
                         expired TEXT,
                         PRIMARY KEY (id, version_id)
@@ -195,16 +196,30 @@ public class TestPersistenceConfiguration {
                     )
                     """);
 
-            // Create component-element junction table
+            // Create node_components junction table
             handle.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS component_element (
+                    CREATE TABLE IF NOT EXISTS node_components (
+                        node_id TEXT NOT NULL,
+                        node_version INTEGER NOT NULL,
                         component_id TEXT NOT NULL,
                         component_version INTEGER NOT NULL,
-                        element_id TEXT NOT NULL,
-                        element_version INTEGER NOT NULL,
-                        element_type TEXT NOT NULL,
-                        PRIMARY KEY (component_id, component_version, element_id, element_version),
+                        PRIMARY KEY (node_id, node_version, component_id, component_version),
+                        FOREIGN KEY (node_id, node_version) REFERENCES node(id, version_id),
+                        FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id)
+                    )
+                    """);
+
+            // Create edge_components junction table
+            handle.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS edge_components (
+                        edge_id TEXT NOT NULL,
+                        edge_version INTEGER NOT NULL,
+                        component_id TEXT NOT NULL,
+                        component_version INTEGER NOT NULL,
+                        PRIMARY KEY (edge_id, edge_version, component_id, component_version),
+                        FOREIGN KEY (edge_id, edge_version) REFERENCES edge(id, version_id),
                         FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id)
                     )
                     """);
@@ -216,7 +231,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean("graphRepository")
     @Profile("mongodb")
-    public final GraphRepository mongoGraphRepository(final MongoClient mongoClient) {
+    public GraphRepository mongoGraphRepository(final MongoClient mongoClient) {
 
         final var session = new MongoSession(mongoClient, "test");
         return MongoGraphRepository.create(session);
@@ -227,7 +242,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("sqlite")
-    public final DataSource sqliteDataSource() {
+    public DataSource sqliteDataSource() {
 
         // Create an in-memory SQLite database for tests
         final var hikariConfig = new HikariConfig();
@@ -241,7 +256,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("sqlite")
-    public final Jdbi jdbi(final DataSource dataSource) {
+    public Jdbi jdbi(final DataSource dataSource) {
 
         return Jdbi.create(dataSource);
     }
@@ -251,7 +266,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("sqlite")
-    public final PlatformTransactionManager sqliteTransactionManager(final Jdbi jdbi) {
+    public PlatformTransactionManager sqliteTransactionManager(final Jdbi jdbi) {
 
         return new SqliteTransactionManager(jdbi);
     }
@@ -261,7 +276,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("sqlite")
-    public final TransactionTemplate sqliteTransactionTemplate(final PlatformTransactionManager transactionManager) {
+    public TransactionTemplate sqliteTransactionTemplate(final PlatformTransactionManager transactionManager) {
 
         return new TransactionTemplate(transactionManager);
     }
@@ -271,7 +286,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("mongodb")
-    public final MongoClient mongoClient() {
+    public MongoClient mongoClient() {
 
         // Use embedded MongoDB for tests
         return MongoClients.create("mongodb://localhost:27017");
@@ -282,7 +297,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("mongodb")
-    public final PlatformTransactionManager mongoTransactionManager(final MongoClient mongoClient) {
+    public PlatformTransactionManager mongoTransactionManager(final MongoClient mongoClient) {
 
         return new MongoTransactionManager(mongoClient);
     }
@@ -292,7 +307,7 @@ public class TestPersistenceConfiguration {
      */
     @Bean
     @Profile("mongodb")
-    public final TransactionTemplate mongoTransactionTemplate(final PlatformTransactionManager transactionManager) {
+    public TransactionTemplate mongoTransactionTemplate(final PlatformTransactionManager transactionManager) {
 
         return new TransactionTemplate(transactionManager);
     }

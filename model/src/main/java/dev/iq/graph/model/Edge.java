@@ -14,13 +14,9 @@ import dev.iq.common.annotation.Stable;
 @Stable
 public interface Edge extends Element {
 
-    /**
-     * Returns the source node of this edge.
-     */
+    /** Returns the source node of this edge. */
     Node source();
 
-    /**
-     * Returns the target node of this edge.
-     */
+    /** Returns the target node of this edge. */
     Node target();
 }

@@ -11,15 +11,14 @@ import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
-import dev.iq.graph.model.Element;
 import dev.iq.graph.model.serde.PropertiesSerde;
 import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleComponent;
+import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,18 +34,11 @@ import org.springframework.stereotype.Repository;
 @Repository("sqliteComponentRepository")
 public final class SqliteComponentRepository implements ExtendedVersionedRepository<Component> {
 
-    private final SqliteNodeRepository nodeRepository;
-    private final SqliteEdgeRepository edgeRepository;
     private final Serde<Map<String, Object>> serde = new PropertiesSerde();
     private final SqliteHandleProvider session;
 
-    public SqliteComponentRepository(
-            final SqliteHandleProvider session,
-            final SqliteNodeRepository nodeRepository,
-            final SqliteEdgeRepository edgeRepository) {
+    public SqliteComponentRepository(final SqliteHandleProvider session) {
         this.session = session;
-        this.nodeRepository = nodeRepository;
-        this.edgeRepository = edgeRepository;
         // Schema initialization is handled by SqliteConnectionProvider
     }
 
@@ -59,8 +51,8 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
     public Component save(final Component component) {
         final var sql =
                 """
-                INSERT INTO component (id, version_id, created, expired)
-                VALUES (:id, :version_id, :created, :expired)
+                INSERT INTO component (id, version_id, type, created, expired)
+                VALUES (:id, :version_id, :type, :created, :expired)
                 """;
 
         Io.withVoid(() -> {
@@ -68,6 +60,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
                     .createUpdate(sql)
                     .bind("id", component.locator().id().id())
                     .bind("version_id", component.locator().version())
+                    .bind("type", component.type().code())
                     .bind("created", component.created().toString())
                     .bind("expired", component.expired().map(Object::toString).orElse(null))
                     .execute();
@@ -76,7 +69,6 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
             saveProperties(component.locator().id(), component.locator().version(), component.data());
         });
 
-        saveComponentElements(component);
         return component;
     }
 
@@ -84,7 +76,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
     public Optional<Component> findActive(final NanoId id) {
         final var sql =
                 """
-                SELECT id, version_id, created, expired
+                SELECT id, version_id, type, created, expired
                 FROM component
                 WHERE id = :id AND expired IS NULL
                 ORDER BY version_id DESC
@@ -102,7 +94,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
     public Optional<Component> findAt(final NanoId id, final Instant timestamp) {
         final var sql =
                 """
-                SELECT id, version_id, created, expired
+                SELECT id, version_id, type, created, expired
                 FROM component
                 WHERE id = :id
                   AND created <= :timestamp
@@ -123,7 +115,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
     public Component find(final Locator locator) {
         final var sql =
                 """
-                SELECT id, version_id, created, expired
+                SELECT id, version_id, type, created, expired
                 FROM component
                 WHERE id = :id AND version_id = :version_id
                 """;
@@ -141,7 +133,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
     public List<Component> findAll(final NanoId id) {
         final var sql =
                 """
-                SELECT id, version_id, created, expired
+                SELECT id, version_id, type, created, expired
                 FROM component
                 WHERE id = :id
                 ORDER BY version_id
@@ -178,27 +170,14 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
 
     @Override
     public boolean delete(final NanoId id) {
-        final var deleteElementsSql =
-                """
-                DELETE FROM component_element
-                WHERE component_id = :id
-                """;
-
         final var deleteComponentSql =
                 """
                 DELETE FROM component
                 WHERE id = :id
                 """;
 
-        return Io.withReturn(() -> {
-            getHandle().createUpdate(deleteElementsSql).bind("id", id.id()).execute();
-
-            return getHandle()
-                            .createUpdate(deleteComponentSql)
-                            .bind("id", id.id())
-                            .execute()
-                    > 0;
-        });
+        return Io.withReturn(() ->
+                getHandle().createUpdate(deleteComponentSql).bind("id", id.id()).execute() > 0);
     }
 
     @Override
@@ -229,15 +208,14 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
             final var id = new NanoId(rs.getString("id"));
             final var version = rs.getInt("version_id");
             final var locator = new Locator(id, version);
+            final var type = new SimpleType(rs.getString("type"));
             final var created = Instant.parse(rs.getString("created"));
             final var expiredStr = rs.getString("expired");
             final var expired =
                     (expiredStr != null) ? Optional.of(Instant.parse(expiredStr)) : Optional.<Instant>empty();
             final var data = loadProperties(id, version);
 
-            final var elements = loadComponentElements(id, version);
-
-            return new SimpleComponent(locator, elements, data, created, expired);
+            return new SimpleComponent(locator, type, data, created, expired);
         }
     }
 
@@ -282,68 +260,6 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
                     })
                     .list();
             return serde.deserialize(properties);
-        });
-    }
-
-    private void saveComponentElements(final Component component) {
-        final var sql =
-                """
-                INSERT INTO component_element (component_id, component_version,
-                                               element_id, element_version, element_type)
-                VALUES (:component_id, :component_version,
-                        :element_id, :element_version, :element_type)
-                """;
-
-        Io.withVoid(() -> {
-            final var batch = getHandle().prepareBatch(sql);
-            for (final var element : component.elements()) {
-                batch.bind("component_id", component.locator().id().id())
-                        .bind("component_version", component.locator().version())
-                        .bind("element_id", element.locator().id().id())
-                        .bind("element_version", element.locator().version())
-                        .bind("element_type", element.getClass().getSimpleName())
-                        .add();
-            }
-            batch.execute();
-        });
-    }
-
-    private List<Element> loadComponentElements(final NanoId componentId, final int componentVersion) {
-        final var sql =
-                """
-                SELECT element_id, element_version, element_type
-                FROM component_element
-                WHERE component_id = :component_id AND component_version = :component_version
-                """;
-
-        return Io.withReturn(() -> {
-            final var elements = new ArrayList<Element>();
-            getHandle()
-                    .createQuery(sql)
-                    .bind("component_id", componentId.id())
-                    .bind("component_version", componentVersion)
-                    .map((rs, ctx) -> {
-                        final var elementId = new NanoId(rs.getString("element_id"));
-                        final var elementVersion = rs.getInt("element_version");
-                        final var elementType = rs.getString("element_type");
-
-                        if ("SimpleNode".equals(elementType)) {
-                            try {
-                                elements.add(nodeRepository.find(new Locator(elementId, elementVersion)));
-                            } catch (IllegalArgumentException ignored) {
-                                // Element not found, skip it
-                            }
-                        } else if ("SimpleEdge".equals(elementType)) {
-                            try {
-                                elements.add(edgeRepository.find(new Locator(elementId, elementVersion)));
-                            } catch (IllegalArgumentException ignored) {
-                                // Element not found, skip it
-                            }
-                        }
-                        return null;
-                    })
-                    .list();
-            return elements;
         });
     }
 }

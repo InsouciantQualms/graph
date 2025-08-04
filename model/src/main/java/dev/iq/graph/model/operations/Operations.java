@@ -4,20 +4,15 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-package dev.iq.graph.model;
+package dev.iq.graph.model.operations;
 
-import dev.iq.common.version.NanoId;
 import dev.iq.common.version.Versioned;
 import dev.iq.common.version.VersionedFinder;
-import java.time.Instant;
 
 /**
  * Common operations for versioned elements.
+ * This interface provides read-only operations for querying versioned graph elements.
  */
 public interface Operations<E extends Versioned> extends VersionedFinder<E> {
-
-    /**
-     * Expires an element at the given timestamp.
-     */
-    E expire(NanoId id, Instant timestamp);
+    // All operations are inherited from VersionedFinder
 }

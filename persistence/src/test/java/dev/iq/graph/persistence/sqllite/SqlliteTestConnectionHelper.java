@@ -134,37 +134,38 @@ final class SqlliteTestConnectionHelper {
                             CREATE TABLE IF NOT EXISTS component (
                                 id TEXT NOT NULL,
                                 version_id INTEGER NOT NULL,
+                                type TEXT NOT NULL,
                                 created TEXT NOT NULL,
                                 expired TEXT,
                                 PRIMARY KEY (id, version_id)
                             )
                             """);
 
-            // Create component_nodes table for many-to-many relationship
+            // Create node_components table for many-to-many relationship
             statement.execute(
                     """
-                            CREATE TABLE IF NOT EXISTS component_nodes (
-                                component_id TEXT NOT NULL,
-                                component_version INTEGER NOT NULL,
+                            CREATE TABLE IF NOT EXISTS node_components (
                                 node_id TEXT NOT NULL,
                                 node_version INTEGER NOT NULL,
-                                PRIMARY KEY (component_id, component_version, node_id, node_version),
-                                FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id),
-                                FOREIGN KEY (node_id, node_version) REFERENCES node(id, version_id)
+                                component_id TEXT NOT NULL,
+                                component_version INTEGER NOT NULL,
+                                PRIMARY KEY (node_id, node_version, component_id, component_version),
+                                FOREIGN KEY (node_id, node_version) REFERENCES node(id, version_id),
+                                FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id)
                             )
                             """);
 
-            // Create component_edges table for many-to-many relationship
+            // Create edge_components table for many-to-many relationship
             statement.execute(
                     """
-                            CREATE TABLE IF NOT EXISTS component_edges (
-                                component_id TEXT NOT NULL,
-                                component_version INTEGER NOT NULL,
+                            CREATE TABLE IF NOT EXISTS edge_components (
                                 edge_id TEXT NOT NULL,
                                 edge_version INTEGER NOT NULL,
-                                PRIMARY KEY (component_id, component_version, edge_id, edge_version),
-                                FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id),
-                                FOREIGN KEY (edge_id, edge_version) REFERENCES edge(id, version_id)
+                                component_id TEXT NOT NULL,
+                                component_version INTEGER NOT NULL,
+                                PRIMARY KEY (edge_id, edge_version, component_id, component_version),
+                                FOREIGN KEY (edge_id, edge_version) REFERENCES edge(id, version_id),
+                                FOREIGN KEY (component_id, component_version) REFERENCES component(id, version_id)
                             )
                             """);
 

@@ -22,9 +22,7 @@ public record TinkerpopGraphRepository(
         final var graph = session.graph();
         final var nodeRepository = new TinkerpopNodeRepository(graph);
         final var edgeRepository = new TinkerpopEdgeRepository(graph, nodeRepository);
-        return new TinkerpopGraphRepository(
-                nodeRepository,
-                edgeRepository,
-                new TinkerpopComponentRepository(graph, nodeRepository, edgeRepository));
+        final var componentRepository = new TinkerpopComponentRepository(graph, nodeRepository, edgeRepository);
+        return new TinkerpopGraphRepository(nodeRepository, edgeRepository, componentRepository);
     }
 }

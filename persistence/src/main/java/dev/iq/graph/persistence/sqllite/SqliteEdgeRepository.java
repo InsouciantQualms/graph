@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -83,6 +84,9 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
             // Save properties in separate table
             saveProperties(edge.locator().id(), edge.locator().version(), edge.data());
+
+            // Save components in junction table
+            saveComponents(edge.locator().id(), edge.locator().version(), edge.components());
         });
 
         return edge;
@@ -227,8 +231,10 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
             final var sourceNode = nodeRepository.find(new Locator(sourceId, sourceVersionId));
             final var targetNode = nodeRepository.find(new Locator(targetId, targetVersionId));
 
+            final var components = loadComponents(id, versionId);
+
             final var locator = new Locator(id, versionId);
-            return new SimpleEdge(locator, type, sourceNode, targetNode, data, created, expired, new HashSet<>());
+            return new SimpleEdge(locator, type, sourceNode, targetNode, data, components, created, expired);
         }
     }
 
@@ -273,6 +279,55 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
                     })
                     .list();
             return serde.deserialize(properties);
+        });
+    }
+
+    private void saveComponents(final NanoId edgeId, final int version, final Set<Locator> components) {
+        final var sql =
+                """
+                INSERT INTO edge_components (edge_id, edge_version, component_id, component_version)
+                VALUES (:edge_id, :edge_version, :component_id, :component_version)
+                """;
+
+        if (components.isEmpty()) {
+            return;
+        }
+
+        Io.withVoid(() -> {
+            final var batch = getHandle().prepareBatch(sql);
+            for (final var component : components) {
+                batch.bind("edge_id", edgeId.id())
+                        .bind("edge_version", version)
+                        .bind("component_id", component.id().id())
+                        .bind("component_version", component.version())
+                        .add();
+            }
+            batch.execute();
+        });
+    }
+
+    private Set<Locator> loadComponents(final NanoId edgeId, final int version) {
+        final var sql =
+                """
+                SELECT component_id, component_version
+                FROM edge_components
+                WHERE edge_id = :edge_id AND edge_version = :edge_version
+                """;
+
+        return Io.withReturn(() -> {
+            final var components = new HashSet<Locator>();
+            getHandle()
+                    .createQuery(sql)
+                    .bind("edge_id", edgeId.id())
+                    .bind("edge_version", version)
+                    .map((rs, ctx) -> {
+                        final var componentId = new NanoId(rs.getString("component_id"));
+                        final var componentVersion = rs.getInt("component_version");
+                        components.add(new Locator(componentId, componentVersion));
+                        return null;
+                    })
+                    .list();
+            return components;
         });
     }
 }

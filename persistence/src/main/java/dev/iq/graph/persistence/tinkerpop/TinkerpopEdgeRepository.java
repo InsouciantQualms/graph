@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
@@ -66,6 +67,9 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
 
         final var properties = serde.serialize(edge.data());
         properties.forEach(tinkerpopEdge::property);
+
+        // Save components
+        saveComponents(tinkerpopEdge, edge.components());
 
         return edge;
     }
@@ -196,7 +200,45 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
 
         final var source = nodeRepository.find(new Locator(sourceId, sourceVersionId));
         final var target = nodeRepository.find(new Locator(targetId, targetVersionId));
+        final var components = loadComponents(tinkerpopEdge);
 
-        return new SimpleEdge(locator, type, source, target, data, created, expired, new HashSet<>());
+        return new SimpleEdge(locator, type, source, target, data, components, created, expired);
+    }
+
+    private void saveComponents(final org.apache.tinkerpop.gremlin.structure.Edge edge, final Set<Locator> components) {
+        if (components.isEmpty()) {
+            return;
+        }
+
+        // Store components as a serialized property - each component as "componentId:versionId"
+        final var componentStrings = components.stream()
+                .map(loc -> loc.id().id() + ":" + loc.version())
+                .toList();
+        edge.property("components", String.join(",", componentStrings));
+    }
+
+    private Set<Locator> loadComponents(final org.apache.tinkerpop.gremlin.structure.Edge edge) {
+        final var components = new HashSet<Locator>();
+
+        if (edge.property("components").isPresent()) {
+            final var componentsStr = edge.<String>value("components");
+            if (!componentsStr.isEmpty()) {
+                final var componentPairs = componentsStr.split(",");
+                for (final var pair : componentPairs) {
+                    final var parts = pair.split(":");
+                    if (parts.length == 2) {
+                        try {
+                            final var id = new NanoId(parts[0]);
+                            final var version = Integer.parseInt(parts[1]);
+                            components.add(new Locator(id, version));
+                        } catch (NumberFormatException ignored) {
+                            // Skip invalid component references
+                        }
+                    }
+                }
+            }
+        }
+
+        return components;
     }
 }

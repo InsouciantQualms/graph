@@ -8,17 +8,17 @@ package dev.iq.graph.model.operations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.iq.common.version.Locateable;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
-import dev.iq.graph.model.jgrapht.EdgeOperations;
-import dev.iq.graph.model.jgrapht.NodeOperations;
+import dev.iq.graph.model.Type;
+import dev.iq.graph.model.jgrapht.mutable.JGraphtMutableEdgeOperations;
+import dev.iq.graph.model.jgrapht.mutable.JGraphtMutableNodeOperations;
+import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
-import org.jgrapht.graph.DefaultListenableGraph;
+import java.util.HashSet;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,40 +26,40 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Tests to validate that expired nodes have all connected edges expired.
+ * This complements NodeOperationsReferentialIntegrityTest with additional edge cases.
  */
 @DisplayName("Expired Node Edge Validation Tests")
 public class ExpiredNodeEdgeValidationTest {
 
-    private NodeOperations nodeOps;
-    private EdgeOperations edgeOps;
+    private org.jgrapht.Graph<Node, Edge> graph;
+    private JGraphtMutableNodeOperations nodeOps;
+    private JGraphtMutableEdgeOperations edgeOps;
+    private final Type defaultType = new SimpleType("test");
 
     @BeforeEach
     final void before() {
-
-        final var base = new DirectedMultigraph<Node, Edge>(null, null, false);
-        final var graph = new DefaultListenableGraph<>(base);
-
-        edgeOps = new EdgeOperations(graph);
-        nodeOps = new NodeOperations(graph, edgeOps);
+        graph = new DirectedMultigraph<>(null, null, false);
+        edgeOps = new JGraphtMutableEdgeOperations(graph);
+        nodeOps = new JGraphtMutableNodeOperations(graph, edgeOps);
     }
 
     @Test
-    @DisplayName("All incoming edges expired when node is expired")
-    final void testAllIncomingEdgesExpiredWithNode() {
+    @DisplayName("Multiple incoming edges expired when node is expired")
+    final void testMultipleIncomingEdgesExpiredWithNode() {
         final var timestamp1 = Instant.now();
         final var timestamp2 = timestamp1.plusSeconds(1);
         final var timestamp3 = timestamp2.plusSeconds(1);
 
         // Create nodes A, B, C all connecting to central node D
-        final var nodeA = nodeOps.add(new TestData("NodeA"), timestamp1);
-        final var nodeB = nodeOps.add(new TestData("NodeB"), timestamp1);
-        final var nodeC = nodeOps.add(new TestData("NodeC"), timestamp1);
-        final var nodeD = nodeOps.add(new TestData("NodeD"), timestamp1);
+        final var nodeA = nodeOps.add(defaultType, new TestData("NodeA"), new HashSet<>(), timestamp1);
+        final var nodeB = nodeOps.add(defaultType, new TestData("NodeB"), new HashSet<>(), timestamp1);
+        final var nodeC = nodeOps.add(defaultType, new TestData("NodeC"), new HashSet<>(), timestamp1);
+        final var nodeD = nodeOps.add(defaultType, new TestData("NodeD"), new HashSet<>(), timestamp1);
 
         // Create edges: A->D, B->D, C->D
-        final var edgeAD = edgeOps.add(nodeA, nodeD, new TestData("EdgeAD"), timestamp2);
-        final var edgeBD = edgeOps.add(nodeB, nodeD, new TestData("EdgeBD"), timestamp2);
-        final var edgeCD = edgeOps.add(nodeC, nodeD, new TestData("EdgeCD"), timestamp2);
+        edgeOps.add(defaultType, nodeA, nodeD, new TestData("EdgeAD"), new HashSet<>(), timestamp2);
+        edgeOps.add(defaultType, nodeB, nodeD, new TestData("EdgeBD"), new HashSet<>(), timestamp2);
+        edgeOps.add(defaultType, nodeC, nodeD, new TestData("EdgeCD"), new HashSet<>(), timestamp2);
 
         // Expire node D
         final var expiredNodeD = nodeOps.expire(nodeD.locator().id(), timestamp3);
@@ -68,34 +68,47 @@ public class ExpiredNodeEdgeValidationTest {
         assertTrue(expiredNodeD.expired().isPresent());
         assertEquals(timestamp3, expiredNodeD.expired().get());
 
-        // Verify all incoming edges to D are expired
-        assertEdgeExpired(edgeAD, timestamp3);
-        assertEdgeExpired(edgeBD, timestamp3);
-        assertEdgeExpired(edgeCD, timestamp3);
+        // Verify all edges in graph that connect to D are expired
+        final var allEdges = graph.edgeSet();
+        final var edgesToD = allEdges.stream()
+                .filter(e -> e.target().locator().id().equals(nodeD.locator().id()))
+                .toList();
+
+        assertEquals(3, edgesToD.size(), "Should have 3 edges to node D");
+        edgesToD.forEach(edge -> {
+            assertTrue(edge.expired().isPresent(), "Edge to D should be expired");
+            assertEquals(timestamp3, edge.expired().get(), "Edge should expire at same time as node");
+        });
 
         // Verify source nodes remain active
-        assertTrue(nodeOps.findActive(nodeA.locator().id()).isPresent());
-        assertTrue(nodeOps.findActive(nodeB.locator().id()).isPresent());
-        assertTrue(nodeOps.findActive(nodeC.locator().id()).isPresent());
+        assertTrue(graph.vertexSet().stream()
+                .anyMatch(n -> n.locator().id().equals(nodeA.locator().id())
+                        && n.expired().isEmpty()));
+        assertTrue(graph.vertexSet().stream()
+                .anyMatch(n -> n.locator().id().equals(nodeB.locator().id())
+                        && n.expired().isEmpty()));
+        assertTrue(graph.vertexSet().stream()
+                .anyMatch(n -> n.locator().id().equals(nodeC.locator().id())
+                        && n.expired().isEmpty()));
     }
 
     @Test
-    @DisplayName("All outgoing edges expired when node is expired")
-    final void testAllOutgoingEdgesExpiredWithNode() {
+    @DisplayName("Multiple outgoing edges expired when node is expired")
+    final void testMultipleOutgoingEdgesExpiredWithNode() {
         final var timestamp1 = Instant.now();
         final var timestamp2 = timestamp1.plusSeconds(1);
         final var timestamp3 = timestamp2.plusSeconds(1);
 
         // Create central node A connecting to nodes B, C, D
-        final var nodeA = nodeOps.add(new TestData("NodeA"), timestamp1);
-        final var nodeB = nodeOps.add(new TestData("NodeB"), timestamp1);
-        final var nodeC = nodeOps.add(new TestData("NodeC"), timestamp1);
-        final var nodeD = nodeOps.add(new TestData("NodeD"), timestamp1);
+        final var nodeA = nodeOps.add(defaultType, new TestData("NodeA"), new HashSet<>(), timestamp1);
+        final var nodeB = nodeOps.add(defaultType, new TestData("NodeB"), new HashSet<>(), timestamp1);
+        final var nodeC = nodeOps.add(defaultType, new TestData("NodeC"), new HashSet<>(), timestamp1);
+        final var nodeD = nodeOps.add(defaultType, new TestData("NodeD"), new HashSet<>(), timestamp1);
 
         // Create edges: A->B, A->C, A->D
-        final var edgeAB = edgeOps.add(nodeA, nodeB, new TestData("EdgeAB"), timestamp2);
-        final var edgeAC = edgeOps.add(nodeA, nodeC, new TestData("EdgeAC"), timestamp2);
-        final var edgeAD = edgeOps.add(nodeA, nodeD, new TestData("EdgeAD"), timestamp2);
+        edgeOps.add(defaultType, nodeA, nodeB, new TestData("EdgeAB"), new HashSet<>(), timestamp2);
+        edgeOps.add(defaultType, nodeA, nodeC, new TestData("EdgeAC"), new HashSet<>(), timestamp2);
+        edgeOps.add(defaultType, nodeA, nodeD, new TestData("EdgeAD"), new HashSet<>(), timestamp2);
 
         // Expire node A
         final var expiredNodeA = nodeOps.expire(nodeA.locator().id(), timestamp3);
@@ -104,171 +117,155 @@ public class ExpiredNodeEdgeValidationTest {
         assertTrue(expiredNodeA.expired().isPresent());
         assertEquals(timestamp3, expiredNodeA.expired().get());
 
-        // Verify all outgoing edges from A are expired
-        assertEdgeExpired(edgeAB, timestamp3);
-        assertEdgeExpired(edgeAC, timestamp3);
-        assertEdgeExpired(edgeAD, timestamp3);
+        // Verify all edges from A are expired
+        final var allEdges = graph.edgeSet();
+        final var edgesFromA = allEdges.stream()
+                .filter(e -> e.source().locator().id().equals(nodeA.locator().id()))
+                .toList();
+
+        assertEquals(3, edgesFromA.size(), "Should have 3 edges from node A");
+        edgesFromA.forEach(edge -> {
+            assertTrue(edge.expired().isPresent(), "Edge from A should be expired");
+            assertEquals(timestamp3, edge.expired().get(), "Edge should expire at same time as node");
+        });
 
         // Verify target nodes remain active
-        assertTrue(nodeOps.findActive(nodeB.locator().id()).isPresent());
-        assertTrue(nodeOps.findActive(nodeC.locator().id()).isPresent());
-        assertTrue(nodeOps.findActive(nodeD.locator().id()).isPresent());
+        assertTrue(graph.vertexSet().stream()
+                .anyMatch(n -> n.locator().id().equals(nodeB.locator().id())
+                        && n.expired().isEmpty()));
+        assertTrue(graph.vertexSet().stream()
+                .anyMatch(n -> n.locator().id().equals(nodeC.locator().id())
+                        && n.expired().isEmpty()));
+        assertTrue(graph.vertexSet().stream()
+                .anyMatch(n -> n.locator().id().equals(nodeD.locator().id())
+                        && n.expired().isEmpty()));
     }
 
     @Test
-    @DisplayName("Both incoming and outgoing edges expired when node is expired")
-    final void testBothDirectionEdgesExpiredWithNode() {
-        final var timestamp1 = Instant.now();
-        final var timestamp2 = timestamp1.plusSeconds(1);
-        final var timestamp3 = timestamp2.plusSeconds(1);
-
-        // Create nodes in chain: A -> B -> C with B as central node
-        final var nodeA = nodeOps.add(new TestData("NodeA"), timestamp1);
-        final var nodeB = nodeOps.add(new TestData("NodeB"), timestamp1);
-        final var nodeC = nodeOps.add(new TestData("NodeC"), timestamp1);
-        final var nodeD = nodeOps.add(new TestData("NodeD"), timestamp1);
-
-        // Create edges: A->B (incoming to B), B->C (outgoing from B), B->D (outgoing from B)
-        final var edgeAB = edgeOps.add(nodeA, nodeB, new TestData("EdgeAB"), timestamp2);
-        final var edgeBC = edgeOps.add(nodeB, nodeC, new TestData("EdgeBC"), timestamp2);
-        final var edgeBD = edgeOps.add(nodeB, nodeD, new TestData("EdgeBD"), timestamp2);
-
-        // Expire central node B
-        final var expiredNodeB = nodeOps.expire(nodeB.locator().id(), timestamp3);
-
-        // Verify node B is expired
-        assertTrue(expiredNodeB.expired().isPresent());
-        assertEquals(timestamp3, expiredNodeB.expired().get());
-
-        // Verify all edges connected to B are expired
-        assertEdgeExpired(edgeAB, timestamp3);
-        assertEdgeExpired(edgeBC, timestamp3);
-        assertEdgeExpired(edgeBD, timestamp3);
-
-        // Verify other nodes remain active
-        assertTrue(nodeOps.findActive(nodeA.locator().id()).isPresent());
-        assertTrue(nodeOps.findActive(nodeC.locator().id()).isPresent());
-        assertTrue(nodeOps.findActive(nodeD.locator().id()).isPresent());
-    }
-
-    @Test
-    @DisplayName("Only active edges expired when node contains both active and expired edges")
-    final void testOnlyActiveEdgesExpiredWithNode() {
+    @DisplayName("Mixed active and already-expired edges when node expires")
+    final void testMixedActiveAndExpiredEdges() {
         final var timestamp1 = Instant.now();
         final var timestamp2 = timestamp1.plusSeconds(1);
         final var timestamp3 = timestamp2.plusSeconds(1);
         final var timestamp4 = timestamp3.plusSeconds(1);
 
         // Create nodes
-        final var nodeA = nodeOps.add(new TestData("NodeA"), timestamp1);
-        final var nodeB = nodeOps.add(new TestData("NodeB"), timestamp1);
-        final var nodeC = nodeOps.add(new TestData("NodeC"), timestamp1);
+        final var nodeA = nodeOps.add(defaultType, new TestData("NodeA"), new HashSet<>(), timestamp1);
+        final var nodeB = nodeOps.add(defaultType, new TestData("NodeB"), new HashSet<>(), timestamp1);
+        final var nodeC = nodeOps.add(defaultType, new TestData("NodeC"), new HashSet<>(), timestamp1);
 
         // Create edges
-        final var edgeAB = edgeOps.add(nodeA, nodeB, new TestData("EdgeAB"), timestamp2);
-        final var edgeBC = edgeOps.add(nodeB, nodeC, new TestData("EdgeBC"), timestamp2);
+        final var edgeAB = edgeOps.add(defaultType, nodeA, nodeB, new TestData("EdgeAB"), new HashSet<>(), timestamp2);
+        final var edgeBC = edgeOps.add(defaultType, nodeB, nodeC, new TestData("EdgeBC"), new HashSet<>(), timestamp2);
 
         // Manually expire one edge before expiring the node
-        final var manuallyExpiredEdge = edgeOps.expire(edgeAB.locator().id(), timestamp3);
+        edgeOps.expire(edgeAB.locator().id(), timestamp3);
 
         // Expire node B
-        final var expiredNodeB = nodeOps.expire(nodeB.locator().id(), timestamp4);
+        nodeOps.expire(nodeB.locator().id(), timestamp4);
 
-        // Verify node B is expired
-        assertTrue(expiredNodeB.expired().isPresent());
-        assertEquals(timestamp4, expiredNodeB.expired().get());
+        // Verify both edges are expired but with different timestamps
+        final var allEdges = graph.edgeSet();
 
-        // Verify the manually expired edge timestamp is unchanged
-        final var currentExpiredEdgeAB = edgeOps.findVersions(edgeAB.locator().id()).stream()
-                .filter(e -> e.expired().isPresent())
-                .findFirst();
-        assertTrue(currentExpiredEdgeAB.isPresent());
-        assertEquals(timestamp3, currentExpiredEdgeAB.get().expired().get());
+        final var edgeAbInGraph = allEdges.stream()
+                .filter(e -> e.locator().id().equals(edgeAB.locator().id()))
+                .findFirst()
+                .orElseThrow();
+        final var edgeBcInGraph = allEdges.stream()
+                .filter(e -> e.locator().id().equals(edgeBC.locator().id()))
+                .findFirst()
+                .orElseThrow();
 
-        // Verify the active edge BC is expired with the node timestamp
-        assertEdgeExpired(edgeBC, timestamp4);
+        // Edge AB was expired earlier
+        assertTrue(edgeAbInGraph.expired().isPresent());
+        assertEquals(timestamp3, edgeAbInGraph.expired().get(), "Edge AB should keep its original expiry time");
+
+        // Edge BC was expired with the node
+        assertTrue(edgeBcInGraph.expired().isPresent());
+        assertEquals(timestamp4, edgeBcInGraph.expired().get(), "Edge BC should expire with the node");
     }
 
     @Test
-    @DisplayName("No active edges remain connected to expired node")
-    final void testNoActiveEdgesRemainConnectedToExpiredNode() {
+    @DisplayName("Bidirectional edges expired when node expires")
+    final void testBidirectionalEdgesExpired() {
         final var timestamp1 = Instant.now();
         final var timestamp2 = timestamp1.plusSeconds(1);
         final var timestamp3 = timestamp2.plusSeconds(1);
 
-        // Create complex graph
-        final var nodeA = nodeOps.add(new TestData("NodeA"), timestamp1);
-        final var nodeB = nodeOps.add(new TestData("NodeB"), timestamp1);
-        final var nodeC = nodeOps.add(new TestData("NodeC"), timestamp1);
-        final var nodeD = nodeOps.add(new TestData("NodeD"), timestamp1);
-        final var nodeE = nodeOps.add(new TestData("NodeE"), timestamp1);
+        // Create two nodes with edges in both directions
+        final var nodeA = nodeOps.add(defaultType, new TestData("NodeA"), new HashSet<>(), timestamp1);
+        final var nodeB = nodeOps.add(defaultType, new TestData("NodeB"), new HashSet<>(), timestamp1);
+        final var edgeAB = edgeOps.add(defaultType, nodeA, nodeB, new TestData("EdgeAB"), new HashSet<>(), timestamp2);
+        final var edgeBA = edgeOps.add(defaultType, nodeB, nodeA, new TestData("EdgeBA"), new HashSet<>(), timestamp2);
+
+        // Expire node A
+        nodeOps.expire(nodeA.locator().id(), timestamp3);
+
+        // Verify both edges are expired
+        final var edgeAbInGraph = graph.edgeSet().stream()
+                .filter(e -> e.locator().id().equals(edgeAB.locator().id()))
+                .findFirst()
+                .orElseThrow();
+        final var edgeBaInGraph = graph.edgeSet().stream()
+                .filter(e -> e.locator().id().equals(edgeBA.locator().id()))
+                .findFirst()
+                .orElseThrow();
+
+        assertTrue(edgeAbInGraph.expired().isPresent());
+        assertEquals(timestamp3, edgeAbInGraph.expired().get());
+        assertTrue(edgeBaInGraph.expired().isPresent());
+        assertEquals(timestamp3, edgeBaInGraph.expired().get());
+    }
+
+    @Test
+    @DisplayName("No active edges remain after node expiry in complex graph")
+    final void testNoActiveEdgesRemainInComplexGraph() {
+        final var timestamp1 = Instant.now();
+        final var timestamp2 = timestamp1.plusSeconds(1);
+        final var timestamp3 = timestamp2.plusSeconds(1);
+
+        // Create complex graph with node B as hub
+        final var nodeA = nodeOps.add(defaultType, new TestData("NodeA"), new HashSet<>(), timestamp1);
+        final var nodeB = nodeOps.add(defaultType, new TestData("NodeB"), new HashSet<>(), timestamp1);
+        final var nodeC = nodeOps.add(defaultType, new TestData("NodeC"), new HashSet<>(), timestamp1);
+        final var nodeD = nodeOps.add(defaultType, new TestData("NodeD"), new HashSet<>(), timestamp1);
+        final var nodeE = nodeOps.add(defaultType, new TestData("NodeE"), new HashSet<>(), timestamp1);
 
         // Create edges connecting to B from multiple directions
-        edgeOps.add(nodeA, nodeB, new TestData("EdgeAB"), timestamp2);
-        edgeOps.add(nodeB, nodeC, new TestData("EdgeBC"), timestamp2);
-        edgeOps.add(nodeD, nodeB, new TestData("EdgeDB"), timestamp2);
-        edgeOps.add(nodeB, nodeE, new TestData("EdgeBE"), timestamp2);
+        edgeOps.add(defaultType, nodeA, nodeB, new TestData("EdgeAB"), new HashSet<>(), timestamp2);
+        edgeOps.add(defaultType, nodeB, nodeC, new TestData("EdgeBC"), new HashSet<>(), timestamp2);
+        edgeOps.add(defaultType, nodeD, nodeB, new TestData("EdgeDB"), new HashSet<>(), timestamp2);
+        edgeOps.add(defaultType, nodeB, nodeE, new TestData("EdgeBE"), new HashSet<>(), timestamp2);
 
         // Expire node B
         nodeOps.expire(nodeB.locator().id(), timestamp3);
 
-        // Verify no active edges connect to the expired node B
-        final var allActiveEdges = edgeOps.allActive();
-        for (final var edge : allActiveEdges) {
-            assertNotEquals(
-                    nodeB.locator().id(),
-                    edge.source().locator().id(),
-                    "Active edge should not have expired node as source");
-            assertNotEquals(
-                    nodeB.locator().id(),
-                    edge.target().locator().id(),
-                    "Active edge should not have expired node as target");
-        }
+        // Count active edges connected to B
+        final var activeEdgesConnectedToB = graph.edgeSet().stream()
+                .filter(e -> e.expired().isEmpty())
+                .filter(e -> e.source().locator().id().equals(nodeB.locator().id())
+                        || e.target().locator().id().equals(nodeB.locator().id()))
+                .count();
 
-        // Verify there are still some active edges in the graph (between non-expired nodes)
-        final var remainingEdge = edgeOps.add(nodeA, nodeC, new TestData("EdgeAC"), timestamp3);
-        assertTrue(edgeOps.allActive().contains(remainingEdge));
-    }
+        assertEquals(0, activeEdgesConnectedToB, "No active edges should be connected to expired node B");
 
-    /**
-     * Helper method to assert that an edge is expired.
-     */
-    private void assertEdgeExpired(final Locateable originalEdge, final Instant expectedExpiredTime) {
-        // Verify that at least one version of the edge exists
-        final var allVersions = edgeOps.findVersions(originalEdge.locator().id());
-        assertFalse(
-                allVersions.isEmpty(),
-                () -> "Edge should exist in version history: "
-                        + originalEdge.locator().id());
-
-        // Verify that there is at least one expired version
-        final var hasExpiredVersion =
-                allVersions.stream().anyMatch(e -> e.expired().isPresent());
-        assertTrue(
-                hasExpiredVersion,
-                () -> "Should have at least one expired version for edge "
-                        + originalEdge.locator().id());
-
-        // Check if edge is still active - if so, it should be a different version than the original
-        final var activeEdge = edgeOps.findActive(originalEdge.locator().id());
-        if (activeEdge.isPresent()) {
-            // If there's still an active edge, it should be a different version or the original should be expired
-            final var originalStillActive = allVersions.stream()
-                    .anyMatch(e -> e.locator().equals(originalEdge.locator())
-                            && e.expired().isEmpty());
-            assertFalse(
-                    originalStillActive, () -> "Original edge should not still be active: " + originalEdge.locator());
-        }
+        // Verify we can still add edges between other nodes
+        final var newEdge = edgeOps.add(defaultType, nodeA, nodeC, new TestData("EdgeAC"), new HashSet<>(), timestamp3);
+        assertFalse(newEdge.expired().isPresent(), "New edge between active nodes should be active");
     }
 
     /**
      * Simple Data implementation for testing.
      */
-    private record TestData(Object value) implements Data {
+    private record TestData(String value) implements Data {
+        @Override
+        public String value() {
+            return value;
+        }
 
         @Override
         public Class<?> javaClass() {
-            return value.getClass();
+            return String.class;
         }
     }
 }

@@ -15,8 +15,9 @@ import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.model.simple.SimpleNode;
+import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Optional;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.structure.Graph;
@@ -67,11 +68,12 @@ final class TinkerpopNodeRepositoryTest {
     @DisplayName("findActive returns active node")
     void testFindActiveReturnsNode() {
 
-        final var nodeId = new NanoId("test-node");
+        final var nodeId = NanoId.generate();
         final var node = new SimpleNode(
                 new Locator(nodeId, 1),
-                List.of(),
+                new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
+                new HashSet<>(),
                 Instant.now(),
                 Optional.empty());
 
@@ -89,11 +91,12 @@ final class TinkerpopNodeRepositoryTest {
     @DisplayName("findActive returns empty when no active node exists")
     void testFindActiveReturnsEmpty() {
 
-        final var nodeId = new NanoId("test-node");
+        final var nodeId = NanoId.generate();
         final var expiredNode = new SimpleNode(
                 new Locator(nodeId, 1),
-                List.of(),
+                new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
+                new HashSet<>(),
                 Instant.now(),
                 Optional.of(Instant.now()));
 
@@ -108,17 +111,19 @@ final class TinkerpopNodeRepositoryTest {
     @DisplayName("findAll returns all versions of a node")
     void testFindAllReturnsAllVersions() {
 
-        final var nodeId = new NanoId("test-node");
+        final var nodeId = NanoId.generate();
         final var node1 = new SimpleNode(
                 new Locator(nodeId, 1),
-                List.of(),
+                new SimpleType("test"),
                 new SimpleData(String.class, "test-value-1"),
+                new HashSet<>(),
                 Instant.now(),
                 Optional.of(Instant.now()));
         final var node2 = new SimpleNode(
                 new Locator(nodeId, 2),
-                List.of(),
+                new SimpleType("test"),
                 new SimpleData(String.class, "test-value-2"),
+                new HashSet<>(),
                 Instant.now(),
                 Optional.empty());
 
@@ -138,7 +143,12 @@ final class TinkerpopNodeRepositoryTest {
 
         final var locator = new Locator(NanoId.generate(), 2);
         final var node = new SimpleNode(
-                locator, List.of(), new SimpleData(String.class, "test-value"), Instant.now(), Optional.empty());
+                locator,
+                new SimpleType("test"),
+                new SimpleData(String.class, "test-value"),
+                new HashSet<>(),
+                Instant.now(),
+                Optional.empty());
 
         repository.save(node);
 
@@ -152,14 +162,15 @@ final class TinkerpopNodeRepositoryTest {
     @DisplayName("findAt returns node at specific timestamp")
     void testFindAtReturnsNodeAtTimestamp() {
 
-        final var nodeId = new NanoId("test-node");
+        final var nodeId = NanoId.generate();
         final var timestamp = Instant.now();
         final var created = timestamp.minusSeconds(10);
 
         final var node = new SimpleNode(
                 new Locator(nodeId, 1),
-                List.of(),
+                new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
+                new HashSet<>(),
                 created,
                 Optional.empty());
 
@@ -178,8 +189,9 @@ final class TinkerpopNodeRepositoryTest {
         final var nodeId = NanoId.generate();
         final var node = new SimpleNode(
                 new Locator(nodeId, 1),
-                List.of(),
+                new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
+                new HashSet<>(),
                 Instant.now(),
                 Optional.empty());
 
@@ -203,8 +215,9 @@ final class TinkerpopNodeRepositoryTest {
         final var nodeId = NanoId.generate();
         final var node = new SimpleNode(
                 new Locator(nodeId, 1),
-                List.of(),
+                new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
+                new HashSet<>(),
                 Instant.now(),
                 Optional.empty());
 
@@ -225,6 +238,6 @@ final class TinkerpopNodeRepositoryTest {
 
         final var locator = new Locator(NanoId.generate(), 1);
         final var data = new SimpleData(String.class, "test-value");
-        return new SimpleNode(locator, List.of(), data, Instant.now(), Optional.empty());
+        return new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), Instant.now(), Optional.empty());
     }
 }

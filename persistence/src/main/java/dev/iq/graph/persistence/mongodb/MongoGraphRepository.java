@@ -26,9 +26,6 @@ public record MongoGraphRepository(
         final var edgeRepository = new MongoEdgeRepository(session.database(), nodeRepository);
         final var graphOperations = new MongoGraphOperations(session.database(), nodeRepository, edgeRepository);
         return new MongoGraphRepository(
-                nodeRepository,
-                edgeRepository,
-                new MongoComponentRepository(session.database(), nodeRepository, edgeRepository),
-                graphOperations);
+                nodeRepository, edgeRepository, new MongoComponentRepository(session.database()), graphOperations);
     }
 }

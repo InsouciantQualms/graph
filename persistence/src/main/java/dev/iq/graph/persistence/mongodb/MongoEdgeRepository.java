@@ -29,9 +29,9 @@ import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 import org.bson.Document;
 import org.springframework.stereotype.Repository;
@@ -61,6 +61,9 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
                     .append("targetId", edge.target().locator().id().id())
                     .append("targetVersionId", edge.target().locator().version());
             MongoHelper.addExpiryToDocument(document, edge.expired());
+
+            // Add components
+            document.append("components", MongoHelper.serializeComponents(edge.components()));
 
             collection.insertOne(document);
             return edge;
@@ -152,15 +155,21 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
             final var target = nodeRepository.find(targetLocator);
 
             final var type = new SimpleType(versionedData.type());
+
+            // Extract components
+            @SuppressWarnings("unchecked")
+            final var componentDocs = (List<Document>) document.get("components", List.class);
+            final Set<Locator> components = MongoHelper.deserializeComponents(componentDocs);
+
             return new SimpleEdge(
                     versionedData.locator(),
                     type,
                     source,
                     target,
                     data,
+                    components,
                     versionedData.created(),
-                    versionedData.expired(),
-                    new HashSet<>());
+                    versionedData.expired());
         });
     }
 

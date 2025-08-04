@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,7 +35,7 @@ import org.junit.jupiter.api.Test;
 @DisplayName("PathOperations Tests")
 public class PathOperationsTest {
 
-    private PathOperations pathOps;
+    private JGraphtPathOperations pathOps;
     private Node nodeA;
     private Node nodeB;
     private Node nodeC;
@@ -46,22 +47,19 @@ public class PathOperationsTest {
         final var graph = new DirectedMultigraph<Node, Edge>(null, null, false);
 
         // Create PathOperations with the graph
-        pathOps = new PathOperations(graph);
+        pathOps = new JGraphtPathOperations(graph);
 
         // Create test nodes
         final var timestamp = Instant.now();
         final var nodeType = new SimpleType("NODE");
+        final Set<Locator> emptyComponents = new HashSet<>();
 
         final var locatorA = new Locator(new NanoId("nodeA"), 1);
-
-        nodeA = new SimpleNode(
-                locatorA, nodeType, List.of(), new TestData("NodeA"), timestamp, Optional.empty(), new HashSet<>());
+        nodeA = new SimpleNode(locatorA, nodeType, new TestData("NodeA"), emptyComponents, timestamp, Optional.empty());
         final var locatorB = new Locator(new NanoId("nodeB"), 1);
-        nodeB = new SimpleNode(
-                locatorB, nodeType, List.of(), new TestData("NodeB"), timestamp, Optional.empty(), new HashSet<>());
+        nodeB = new SimpleNode(locatorB, nodeType, new TestData("NodeB"), emptyComponents, timestamp, Optional.empty());
         final var locatorC = new Locator(new NanoId("nodeC"), 1);
-        nodeC = new SimpleNode(
-                locatorC, nodeType, List.of(), new TestData("NodeC"), timestamp, Optional.empty(), new HashSet<>());
+        nodeC = new SimpleNode(locatorC, nodeType, new TestData("NodeC"), emptyComponents, timestamp, Optional.empty());
 
         // Add nodes to graph
         graph.addVertex(nodeA);
@@ -78,18 +76,18 @@ public class PathOperationsTest {
                 nodeA,
                 nodeB,
                 new TestData("EdgeAB"),
+                emptyComponents,
                 timestamp,
-                Optional.empty(),
-                new HashSet<>());
+                Optional.empty());
         final var edgeBC = new SimpleEdge(
                 edgeLocatorBC,
                 edgeType,
                 nodeB,
                 nodeC,
                 new TestData("EdgeBC"),
+                emptyComponents,
                 timestamp,
-                Optional.empty(),
-                new HashSet<>());
+                Optional.empty());
 
         // Add edges to graph
         graph.addEdge(nodeA, nodeB, edgeAB);
@@ -99,19 +97,20 @@ public class PathOperationsTest {
     @Test
     @DisplayName("shortestPath returns Path instance")
     final void testShortestPathReturnsPath() {
-        // Test that shortestPath method returns a Path
-        final var path = pathOps.shortestPath(nodeA, nodeB);
-        assertNotNull(path);
-        assertInstanceOf(Path.class, path);
+        // Test that findShortestPath method returns an Optional<Path>
+        final var pathOpt = pathOps.findShortestPath(nodeA, nodeB);
+        assertNotNull(pathOpt);
+        assertTrue(pathOpt.isPresent());
+        assertInstanceOf(Path.class, pathOpt.get());
     }
 
     @Test
     @DisplayName("allPaths returns List<Path>")
     final void testAllPathsReturnsList() {
-        // Test that allPaths method returns a List<Path>
-        final var paths = pathOps.allPaths(nodeA, nodeC);
+        // Test that findAllPaths method returns a List<Path>
+        final var paths = pathOps.findAllPaths(nodeA, nodeC);
         assertNotNull(paths);
-        assertInstanceOf(List.class, paths);
+        assertTrue(paths instanceof List<?>);
         // Verify that if list is not empty, it contains Path instances
         if (!paths.isEmpty()) {
             assertInstanceOf(Path.class, paths.getFirst());
@@ -123,7 +122,6 @@ public class PathOperationsTest {
     final void testPathExistsReturnsBoolean() {
         // Test that pathExists method returns a boolean
         final var exists = pathOps.pathExists(nodeA, nodeC);
-        assertInstanceOf(Boolean.class, exists);
         // Should be true since there's a path A->B->C
         assertTrue(exists);
     }

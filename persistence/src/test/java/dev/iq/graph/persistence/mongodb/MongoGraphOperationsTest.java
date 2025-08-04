@@ -54,7 +54,7 @@ class MongoGraphOperationsTest {
     }
 
     @AfterAll
-    static void tearDownClass() {
+    static void afterClass() {
         if (mongoClient != null) {
             mongoClient.close();
         }

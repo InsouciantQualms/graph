@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
@@ -58,6 +59,9 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
 
         final var properties = serde.serialize(node.data());
         properties.forEach(vertex::property);
+
+        // Save components
+        saveComponents(vertex, node.components());
 
         return node;
     }
@@ -165,13 +169,51 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
         }
 
         final var properties = vertex.keys().stream()
-                .filter(key -> !List.of("id", "versionId", "type", "created", "expired")
+                .filter(key -> !List.of("id", "versionId", "type", "created", "expired", "components")
                         .contains(key))
                 .collect(Collectors.toMap(Function.identity(), vertex::<Object>value));
 
         final var data = serde.deserialize(properties);
         final var locator = new Locator(id, versionId);
+        final var components = loadComponents(vertex);
 
-        return new SimpleNode(locator, type, List.of(), data, created, expired, new HashSet<>());
+        return new SimpleNode(locator, type, data, components, created, expired);
+    }
+
+    private void saveComponents(final Vertex vertex, final Set<Locator> components) {
+        if (components.isEmpty()) {
+            return;
+        }
+
+        // Store components as a serialized property - each component as "componentId:versionId"
+        final var componentStrings = components.stream()
+                .map(loc -> loc.id().id() + ":" + loc.version())
+                .toList();
+        vertex.property("components", String.join(",", componentStrings));
+    }
+
+    private Set<Locator> loadComponents(final Vertex vertex) {
+        final var components = new HashSet<Locator>();
+
+        if (vertex.property("components").isPresent()) {
+            final var componentsStr = vertex.<String>value("components");
+            if (!componentsStr.isEmpty()) {
+                final var componentPairs = componentsStr.split(",");
+                for (final var pair : componentPairs) {
+                    final var parts = pair.split(":");
+                    if (parts.length == 2) {
+                        try {
+                            final var id = new NanoId(parts[0]);
+                            final var version = Integer.parseInt(parts[1]);
+                            components.add(new Locator(id, version));
+                        } catch (NumberFormatException ignored) {
+                            // Skip invalid component references
+                        }
+                    }
+                }
+            }
+        }
+
+        return components;
     }
 }

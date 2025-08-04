@@ -27,7 +27,7 @@ final class MongoGraphListenerReferentialIntegrityIntegrationTest
     private static final String TEST_DB = "test_graph_integration";
 
     @BeforeAll
-    static void setUpClass() {
+    static void beforeClass() {
         mongodProcess = MongoTestConfig.startMongoDbOrSkip();
         final var serverAddress = mongodProcess.current().getServerAddress();
         final var uri = "mongodb://" + serverAddress.getHost() + ':' + serverAddress.getPort();
@@ -44,7 +44,7 @@ final class MongoGraphListenerReferentialIntegrityIntegrationTest
     }
 
     @AfterAll
-    static void tearDownClass() {
+    static void afterClass() {
         if (mongoClient != null) {
             mongoClient.close();
         }

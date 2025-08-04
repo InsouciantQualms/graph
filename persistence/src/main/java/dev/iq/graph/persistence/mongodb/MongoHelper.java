@@ -11,8 +11,11 @@ import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 import org.bson.Document;
 
@@ -90,6 +93,32 @@ final class MongoHelper {
         return Io.withReturn(() -> StreamSupport.stream(stringIds.spliterator(), false)
                 .map(NanoId::new)
                 .toList());
+    }
+
+    /**
+     * Serializes a set of component locators to a list of documents.
+     */
+    static List<Document> serializeComponents(final Set<Locator> components) {
+        final var list = new ArrayList<Document>();
+        for (final var locator : components) {
+            list.add(new Document().append("id", locator.id().id()).append("versionId", locator.version()));
+        }
+        return list;
+    }
+
+    /**
+     * Deserializes a list of documents to a set of component locators.
+     */
+    static Set<Locator> deserializeComponents(final List<Document> documents) {
+        final var components = new HashSet<Locator>();
+        if (documents != null) {
+            for (final var doc : documents) {
+                final var id = new NanoId(doc.getString("id"));
+                final var versionId = doc.getInteger("versionId");
+                components.add(new Locator(id, versionId));
+            }
+        }
+        return components;
     }
 
     /**

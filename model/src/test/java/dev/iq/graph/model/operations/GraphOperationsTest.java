@@ -6,84 +6,77 @@
 
 package dev.iq.graph.model.operations;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import dev.iq.common.version.Locator;
 import dev.iq.graph.model.Data;
-import dev.iq.graph.model.Edge;
-import dev.iq.graph.model.Node;
-import dev.iq.graph.model.jgrapht.EdgeOperations;
-import dev.iq.graph.model.jgrapht.GraphOperations;
-import dev.iq.graph.model.jgrapht.NodeOperations;
+import dev.iq.graph.model.Graph;
+import dev.iq.graph.model.Type;
+import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
-import org.jgrapht.event.GraphEdgeChangeEvent;
-import org.jgrapht.event.GraphListener;
-import org.jgrapht.event.GraphVertexChangeEvent;
-import org.jgrapht.graph.DefaultListenableGraph;
-import org.jgrapht.graph.DirectedMultigraph;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 /**
- * Tests for GraphOperations class to verify shortestPath returns Path and allPaths returns List of Path.
+ * Tests for Graph interface and builder.
  */
-@DisplayName("GraphOperations Tests")
+@DisplayName("Graph Interface Tests")
 public class GraphOperationsTest {
 
-    private GraphOperations graphOps;
-    private Node nodeA;
-    private Node nodeB;
-    private Node nodeC;
+    private final Type defaultType = new SimpleType("test");
 
-    @BeforeEach
-    final void before() {
+    @Test
+    @DisplayName("Graph builder creates graph successfully")
+    final void testGraphBuilderCreation() {
+        // Test that we can create a graph using the builder
+        final var builder = Graph.builder();
+        assertNotNull(builder, "Graph builder should not be null");
 
-        // Create shared graph and operations
-        final var base = new DirectedMultigraph<Node, Edge>(null, null, false);
-        final var graph = new DefaultListenableGraph<>(base);
+        // Add at least one node to satisfy validation requirement
+        final var nodeLocator = Locator.generate();
+        builder.addNode(nodeLocator, defaultType, new TestData("Node1"), Instant.now());
 
-        // Create operations that share the same graph
-        final var edgeOps = new EdgeOperations(graph);
-        final var nodeOps = new NodeOperations(graph, edgeOps);
+        // Validate and build
+        final var graph = builder.validate().build();
+        assertNotNull(graph, "Built graph should not be null");
 
-        // Create GraphOperations with an empty listener
-        graphOps = new GraphOperations(new GraphListener<>() {
-            @Override
-            public void vertexAdded(final GraphVertexChangeEvent<Node> e) {}
-
-            @Override
-            public void vertexRemoved(final GraphVertexChangeEvent<Node> e) {}
-
-            @Override
-            public void edgeAdded(final GraphEdgeChangeEvent<Node, Edge> e) {}
-
-            @Override
-            public void edgeRemoved(final GraphEdgeChangeEvent<Node, Edge> e) {}
-        });
-
-        // Create test nodes using NodeOperations so they get added to a graph
-        final var timestamp = Instant.now();
-        nodeA = nodeOps.add(new TestData("NodeA"), timestamp);
-        nodeB = nodeOps.add(new TestData("NodeB"), timestamp);
-        nodeC = nodeOps.add(new TestData("NodeC"), timestamp);
-
-        // Create test edges using EdgeOperations so they get added to the graph
-        final var edgeAB = edgeOps.add(nodeA, nodeB, new TestData("EdgeAB"), timestamp);
-        final var edgeBC = edgeOps.add(nodeB, nodeC, new TestData("EdgeBC"), timestamp);
-
-        // Note: GraphOperations creates its own separate graph, so these nodes/edges
-        // won't be in that graph. For meaningful path tests, we'd need to modify
-        // GraphOperations to accept an existing graph.
+        // Verify we can access operations
+        assertNotNull(graph.nodes(), "Node operations should not be null");
+        assertNotNull(graph.edges(), "Edge operations should not be null");
+        assertNotNull(graph.components(), "Component operations should not be null");
+        assertNotNull(graph.paths(), "Path operations should not be null");
     }
 
-    // Path-related tests have been moved to PathOperationsTest
-    // since shortestPath and allPaths methods were moved to PathOperations class
+    @Test
+    @DisplayName("Graph provides access to all operation interfaces")
+    final void testGraphOperationInterfaces() {
+        final var builder = Graph.builder();
+
+        // Add a node
+        builder.addNode(Locator.generate(), defaultType, new TestData("Node1"), Instant.now());
+
+        final var graph = builder.validate().build();
+
+        // Test that all operation interfaces are accessible
+        assertTrue(graph.nodes() instanceof NodeOperations);
+        assertTrue(graph.edges() instanceof EdgeOperations);
+        assertTrue(graph.components() instanceof ComponentOperations);
+        assertTrue(graph.paths() instanceof PathOperations);
+    }
 
     /**
-     * Simple Data implementation for testing.
+     * Test data implementation.
      */
-    private record TestData(Object value) implements Data {
+    private record TestData(String value) implements Data {
+        @Override
+        public String value() {
+            return value;
+        }
 
         @Override
         public Class<?> javaClass() {
-            return value.getClass();
+            return String.class;
         }
     }
 }

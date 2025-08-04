@@ -13,9 +13,11 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleNode;
+import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Helper class for creating test data objects.
@@ -27,14 +29,18 @@ final class TestDataHelper {
     public static Node createNode(final NanoId id, final int version, final Data data, final Instant created) {
 
         final var locator = new Locator(id, version);
-        return new SimpleNode(locator, List.of(), data, created, Optional.empty());
+        final var type = new SimpleType("test");
+        final Set<Locator> components = new HashSet<>();
+        return new SimpleNode(locator, type, data, components, created, Optional.empty());
     }
 
     public static Node createExpiredNode(
             final NanoId id, final int version, final Data data, final Instant created, final Instant expired) {
 
         final var locator = new Locator(id, version);
-        return new SimpleNode(locator, List.of(), data, created, Optional.of(expired));
+        final var type = new SimpleType("test");
+        final Set<Locator> components = new HashSet<>();
+        return new SimpleNode(locator, type, data, components, created, Optional.of(expired));
     }
 
     public static Edge createEdge(
@@ -46,7 +52,9 @@ final class TestDataHelper {
             final Instant created) {
 
         final var locator = new Locator(id, version);
-        return new SimpleEdge(locator, source, target, data, created, Optional.empty());
+        final var type = new SimpleType("test");
+        final Set<Locator> components = new HashSet<>();
+        return new SimpleEdge(locator, type, source, target, data, components, created, Optional.empty());
     }
 
     @SuppressWarnings("MethodWithTooManyParameters")
@@ -60,6 +68,8 @@ final class TestDataHelper {
             final Instant expired) {
 
         final var locator = new Locator(id, version);
-        return new SimpleEdge(locator, source, target, data, created, Optional.of(expired));
+        final var type = new SimpleType("test");
+        final Set<Locator> components = new HashSet<>();
+        return new SimpleEdge(locator, type, source, target, data, components, created, Optional.of(expired));
     }
 }
