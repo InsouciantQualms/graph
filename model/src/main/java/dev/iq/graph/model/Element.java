@@ -6,16 +6,14 @@
 package dev.iq.graph.model;
 
 import dev.iq.common.annotation.Stable;
-import dev.iq.common.version.Locator;
 import dev.iq.common.version.Versioned;
-import java.util.Set;
 
 @Stable
 public interface Element extends Versioned {
 
+    /** Indicates the type of the element. */
     Type type();
 
+    /** Data associated with the element. */
     Data data();
-
-    Set<Locator> components();
 }

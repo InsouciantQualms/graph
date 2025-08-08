@@ -30,7 +30,7 @@ public final class TinkerpopSession implements Session {
             graphTx.open();
             tx = Optional.of(graphTx);
         } catch (final UnsupportedOperationException e) {
-            // Graph doesn't support transactions - that's okay for TinkerGraph
+            // GraphSpace doesn't support transactions - that's okay for TinkerGraph
             // We'll operate without explicit transaction management
         }
         transaction = tx;

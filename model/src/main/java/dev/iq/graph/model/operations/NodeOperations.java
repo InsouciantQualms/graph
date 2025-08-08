@@ -6,38 +6,27 @@
 
 package dev.iq.graph.model.operations;
 
-import dev.iq.graph.model.Component;
-import dev.iq.graph.model.Edge;
+import dev.iq.common.annotation.Stable;
+import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Node;
-import java.util.Set;
+import dev.iq.graph.model.Type;
+import java.time.Instant;
 
 /**
- * Operations for managing nodes in a graph.
+ * Mutable operations for managing nodes in a graph during construction or bulk operations.
+ * These operations are separate from the immutable ComponentSpace interface as they serve
+ * a different purpose - graph construction rather than graph querying.
  */
-public interface NodeOperations extends Operations<Node> {
+@Stable
+public interface NodeOperations {
 
-    /**
-     * Gets all outgoing edges from the specified node.
-     */
-    Set<Edge> outgoingEdges(Node node);
+    /** Adds a new node to the graph. */
+    Node add(NanoId id, Type type, Data data, Instant timestamp);
 
-    /**
-     * Gets all incoming edges to the specified node.
-     */
-    Set<Edge> incomingEdges(Node node);
+    /** Updates an existing node in the graph.  This will expire the current version and create a new version. */
+    Node update(NanoId id, Type type, Data data, Instant timestamp);
 
-    /**
-     * Gets all edges connected to the specified node (both incoming and outgoing).
-     */
-    Set<Edge> edges(Node node);
-
-    /**
-     * Gets all components that contain the specified node.
-     */
-    Set<Component> components(Node node);
-
-    /**
-     * Gets all neighbor nodes connected to the specified node.
-     */
-    Set<Node> neighbors(Node node);
+    /** Expires a node at the given timestamp. */
+    Node expire(NanoId id, Instant timestamp);
 }

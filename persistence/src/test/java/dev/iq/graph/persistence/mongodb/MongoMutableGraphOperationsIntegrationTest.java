@@ -28,7 +28,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class MongoGraphOperationsIntegrationTest {
+class MongoMutableGraphOperationsIntegrationTest {
 
     private static TransitionWalker.ReachedState<RunningMongodProcess> mongodProcess;
     private static MongoClient mongoClient;

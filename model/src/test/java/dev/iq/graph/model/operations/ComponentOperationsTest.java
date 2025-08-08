@@ -22,19 +22,20 @@ import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import org.jgrapht.Graph;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for ComponentOperations.
+ * Unit tests for ComponentSpace.
  */
 class ComponentOperationsTest {
 
     private JGraphtMutableNodeOperations nodeOps;
     private JGraphtMutableEdgeOperations edgeOps;
     private JGraphtMutableComponentOperations componentOps;
-    private org.jgrapht.Graph<Node, Edge> graph;
+    private Graph<Node, Edge> graph;
     private final Type defaultType = new SimpleType("test");
     private final Type componentType = new SimpleType("component");
     private final Instant timestamp = Instant.now();

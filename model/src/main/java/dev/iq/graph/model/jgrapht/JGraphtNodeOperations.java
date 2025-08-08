@@ -8,11 +8,11 @@ package dev.iq.graph.model.jgrapht;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.VersionedFinder;
 import dev.iq.common.version.Versions;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
-import dev.iq.graph.model.operations.NodeOperations;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +25,7 @@ import org.jgrapht.Graph;
  * This class provides query-only operations on nodes. For mutation operations,
  * see JGraphtMutableNodeOperations.
  */
-public final class JGraphtNodeOperations implements NodeOperations {
+public final class JGraphtNodeOperations implements VersionedFinder<Node> {
 
     private final Graph<Node, Edge> graph;
 

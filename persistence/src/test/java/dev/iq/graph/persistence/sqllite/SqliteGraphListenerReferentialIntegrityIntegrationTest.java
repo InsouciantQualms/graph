@@ -17,7 +17,7 @@ import org.junit.jupiter.api.DisplayName;
  * Integration tests for SqliteGraphRepository to validate
  * referential integrity when using graph listeners.
  */
-@DisplayName("SQLite Graph Listener Referential Integrity Integration Tests")
+@DisplayName("SQLite GraphSpace Listener Referential Integrity Integration Tests")
 final class SqliteGraphListenerReferentialIntegrityIntegrationTest
         extends AbstractGraphListenerReferentialIntegrityIntegrationTest {
 

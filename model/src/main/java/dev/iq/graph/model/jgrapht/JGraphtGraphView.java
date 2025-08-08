@@ -7,14 +7,13 @@
 package dev.iq.graph.model.jgrapht;
 
 import dev.iq.graph.model.Edge;
-import dev.iq.graph.model.GraphView;
 import dev.iq.graph.model.Node;
 import java.util.HashSet;
 import java.util.Set;
 import org.jgrapht.Graph;
 
 /**
- * JGraphT implementation of GraphView that provides a filtered view of a graph.
+ * JGraphT implementation of View that provides a filtered view of a graph.
  */
 public final class JGraphtGraphView implements GraphView {
 
@@ -27,8 +26,8 @@ public final class JGraphtGraphView implements GraphView {
      */
     public JGraphtGraphView(final Graph<Node, Edge> graph) {
         this.graph = graph;
-        this.nodeFilter = null;
-        this.edgeFilter = null;
+        nodeFilter = null;
+        edgeFilter = null;
     }
 
     /**
@@ -36,8 +35,8 @@ public final class JGraphtGraphView implements GraphView {
      */
     public JGraphtGraphView(final Graph<Node, Edge> graph, final Set<Node> nodes, final Set<Edge> edges) {
         this.graph = graph;
-        this.nodeFilter = new HashSet<>(nodes);
-        this.edgeFilter = new HashSet<>(edges);
+        nodeFilter = new HashSet<>(nodes);
+        edgeFilter = new HashSet<>(edges);
     }
 
     @Override

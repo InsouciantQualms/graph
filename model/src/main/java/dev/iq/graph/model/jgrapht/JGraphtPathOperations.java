@@ -9,7 +9,6 @@ package dev.iq.graph.model.jgrapht;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Path;
-import dev.iq.graph.model.operations.PathOperations;
 import java.util.List;
 import java.util.Optional;
 import org.jgrapht.Graph;
@@ -20,7 +19,7 @@ import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 /**
  * Operations that derive or compute paths between nodes.
  */
-public final class JGraphtPathOperations implements PathOperations {
+public final class JGraphtPathOperations {
 
     /** Delegate graph. */
     private final Graph<Node, Edge> graph;

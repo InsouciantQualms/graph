@@ -18,7 +18,7 @@ import org.jgrapht.event.GraphVertexChangeEvent;
 import org.springframework.stereotype.Repository;
 
 /**
- * Graph listener that queues up database operations in response to graph events and then
+ * GraphSpace listener that queues up database operations in response to graph events and then
  * executes then defers execution until the flush() method is called.
  */
 @Repository("delegatedGraphListenerRepository")

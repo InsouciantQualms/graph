@@ -6,6 +6,8 @@
 package dev.iq.graph.model;
 
 import dev.iq.common.annotation.Stable;
+import dev.iq.common.version.Locator;
+import java.util.Set;
 
 /**
  * Represents a directed edge in the graph connecting two nodes.
@@ -19,4 +21,7 @@ public interface Edge extends Element {
 
     /** Returns the target node of this edge. */
     Node target();
+
+    /** Returns the components associated with this edge. */
+    Set<Locator> components();
 }

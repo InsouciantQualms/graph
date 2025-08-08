@@ -14,7 +14,7 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Type;
 import dev.iq.graph.model.jgrapht.JGraphtOperationsHelper;
-import dev.iq.graph.model.operations.mutable.MutableNodeOperations;
+import dev.iq.graph.model.operations.mutable.NodeOperations;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
@@ -37,7 +37,7 @@ import org.jgrapht.Graph;
  * - When a node is expired, all connected edges are also expired
  * - When a node is updated, connected edges are recreated to point to the new version
  */
-public final class JGraphtMutableNodeOperations implements MutableNodeOperations {
+public final class JGraphtMutableNodeOperations implements NodeOperations {
 
     private final Graph<Node, Edge> graph;
     private final JGraphtMutableEdgeOperations edgeOperations;
@@ -188,9 +188,9 @@ public final class JGraphtMutableNodeOperations implements MutableNodeOperations
         }
 
         final Set<Locator> updated = new HashSet<>();
-        for (Locator component : components) {
+        for (final Locator component : components) {
             final Locator newLocator = pendingComponentUpdates.get(component);
-            updated.add(newLocator != null ? newLocator : component);
+            updated.add((newLocator != null) ? newLocator : component);
         }
         return updated;
     }
@@ -200,14 +200,14 @@ public final class JGraphtMutableNodeOperations implements MutableNodeOperations
      * This is used by the component operations to ensure edges get updated component references.
      */
     public void setPendingComponentUpdates(final Map<Locator, Locator> updates) {
-        this.pendingComponentUpdates = new HashMap<>(updates);
+        pendingComponentUpdates = new HashMap<>(updates);
     }
 
     /**
      * Clears pending component updates.
      */
     public void clearPendingComponentUpdates() {
-        this.pendingComponentUpdates.clear();
+        pendingComponentUpdates.clear();
     }
 
     /**

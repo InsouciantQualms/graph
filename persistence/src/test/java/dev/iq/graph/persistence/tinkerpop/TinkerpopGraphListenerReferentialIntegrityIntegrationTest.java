@@ -15,7 +15,7 @@ import org.junit.jupiter.api.DisplayName;
  * Integration tests for TinkerpopGraphRepository to validate
  * referential integrity when using graph listeners.
  */
-@DisplayName("Tinkerpop Graph Listener Referential Integrity Integration Tests")
+@DisplayName("Tinkerpop GraphSpace Listener Referential Integrity Integration Tests")
 final class TinkerpopGraphListenerReferentialIntegrityIntegrationTest
         extends AbstractGraphListenerReferentialIntegrityIntegrationTest {
 

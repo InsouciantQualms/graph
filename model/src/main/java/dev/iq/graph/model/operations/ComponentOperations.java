@@ -6,35 +6,30 @@
 
 package dev.iq.graph.model.operations;
 
+import dev.iq.common.annotation.Stable;
+import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
-import dev.iq.graph.model.Edge;
-import dev.iq.graph.model.Element;
-import dev.iq.graph.model.GraphView;
-import dev.iq.graph.model.Node;
-import java.util.Set;
+import dev.iq.graph.model.Data;
+import dev.iq.graph.model.Type;
+import java.time.Instant;
 
 /**
- * Operations for managing components in a graph.
+ * Mutable operations for managing components in a graph during construction or bulk operations.
+ * These operations are separate from the immutable ComponentSpace interface as they serve
+ * a different purpose - graph construction rather than graph querying.
+ *
+ * When a component is updated, all elements referencing it need to be updated to maintain
+ * referential integrity with the new component version.
  */
-public interface ComponentOperations extends Operations<Component> {
+@Stable
+public interface ComponentOperations {
 
-    /**
-     * Returns a graph view representing this component.
-     */
-    GraphView asGraph(Component component);
+    /** Adds a new component. */
+    Component add(Type type, Data data, Instant timestamp);
 
-    /**
-     * Gets all nodes in the specified component.
-     */
-    Set<Node> nodes(Component component);
+    /** Updates an existing component.  This will expire the current version and create a new version. */
+    Component update(NanoId id, Type type, Data data, Instant timestamp);
 
-    /**
-     * Gets all edges in the specified component.
-     */
-    Set<Edge> edges(Component component);
-
-    /**
-     * Checks if the specified element is contained in the component.
-     */
-    boolean contains(Component component, Element element);
+    /** Expires a component at the given timestamp. */
+    Component expire(NanoId id, Instant timestamp);
 }

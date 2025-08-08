@@ -21,13 +21,14 @@ import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import org.jgrapht.Graph;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Integration tests for ComponentOperations referential integrity.
+ * Integration tests for ComponentSpace referential integrity.
  * Tests the rules:
  * - Components are pure metadata objects (Type + Data)
  * - Elements reference components via Set&lt;Locator&gt;
@@ -37,7 +38,7 @@ import org.junit.jupiter.api.Test;
 @DisplayName("Component Referential Integrity Integration Tests")
 class ComponentReferentialIntegrityIntegrationTest {
 
-    private org.jgrapht.Graph<Node, Edge> graph;
+    private Graph<Node, Edge> graph;
     private JGraphtMutableNodeOperations nodeOps;
     private JGraphtMutableEdgeOperations edgeOps;
     private JGraphtMutableComponentOperations componentOps;

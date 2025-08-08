@@ -9,11 +9,10 @@ package dev.iq.graph.model.jgrapht;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Component;
+import dev.iq.graph.model.ComponentSpace;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
-import dev.iq.graph.model.GraphView;
 import dev.iq.graph.model.Node;
-import dev.iq.graph.model.operations.ComponentOperations;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -34,7 +33,7 @@ import org.jgrapht.Graph;
  * In the new model, components don't contain elements. Instead, elements reference
  * components via their components() method returning Set&lt;Locator&gt;.
  */
-public final class JGraphtComponentOperations implements ComponentOperations {
+public final class JGraphtComponentOperations implements ComponentSpace {
 
     private final Graph<Node, Edge> graph;
     private final Map<NanoId, List<Component>> componentVersions;

@@ -6,6 +6,7 @@
 
 package dev.iq.graph.model;
 
+import dev.iq.common.annotation.Stable;
 import dev.iq.common.version.Versioned;
 
 /**
@@ -13,15 +14,12 @@ import dev.iq.common.version.Versioned;
  * Components are referenced by elements rather than containing them directly.
  * Implementations must be immutable and thread-safe.
  */
+@Stable
 public interface Component extends Versioned {
 
-    /**
-     * Returns the type of this component.
-     */
+    /** Returns the type of this component. */
     Type type();
 
-    /**
-     * Returns the data associated with this component.
-     */
+    /** Returns the data associated with this component. */
     Data data();
 }

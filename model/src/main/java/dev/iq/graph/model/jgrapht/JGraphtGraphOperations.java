@@ -7,29 +7,28 @@
 package dev.iq.graph.model.jgrapht;
 
 import dev.iq.graph.model.Component;
+import dev.iq.graph.model.ComponentSpace;
 import dev.iq.graph.model.Edge;
-import dev.iq.graph.model.GraphBuilder;
-import dev.iq.graph.model.GraphView;
+import dev.iq.graph.model.GraphSpace;
 import dev.iq.graph.model.Node;
-import dev.iq.graph.model.operations.ComponentOperations;
 import dev.iq.graph.model.operations.EdgeOperations;
 import dev.iq.graph.model.operations.NodeOperations;
-import dev.iq.graph.model.operations.PathOperations;
 import java.util.List;
 import java.util.Set;
+import org.jgrapht.Graph;
 import org.jgrapht.ListenableGraph;
 import org.jgrapht.event.GraphListener;
 import org.jgrapht.graph.DefaultListenableGraph;
 import org.jgrapht.graph.DirectedMultigraph;
 
 /**
- * JGraphT implementation of Graph interface.
+ * JGraphT implementation of GraphSpace interface.
  * Serves as a container for all graph elements and operations.
  */
-public final class JGraphtGraphOperations implements dev.iq.graph.model.Graph {
+public final class JGraphtGraphOperations implements GraphSpace {
 
     /** JGraphT delegated in memory graph. */
-    private final org.jgrapht.Graph<Node, Edge> graph;
+    private final Graph<Node, Edge> graph;
 
     /**
      * Creates graph operations that will forward any events on to the specified listener.
@@ -46,7 +45,7 @@ public final class JGraphtGraphOperations implements dev.iq.graph.model.Graph {
      */
     public JGraphtGraphOperations(final GraphListener<Node, Edge> listener) {
 
-        final org.jgrapht.Graph<Node, Edge> base = new DirectedMultigraph<>(null, null, false);
+        final Graph<Node, Edge> base = new DirectedMultigraph<>(null, null, false);
         final ListenableGraph<Node, Edge> wrapper = new DefaultListenableGraph<>(base);
         wrapper.addGraphListener(listener);
         graph = wrapper;
@@ -62,8 +61,8 @@ public final class JGraphtGraphOperations implements dev.iq.graph.model.Graph {
      * Creates a graph from a pre-built JGraphT graph and components.
      * This constructor is used by the builder pattern.
      */
-    JGraphtGraphOperations(final org.jgrapht.Graph<Node, Edge> builtGraph, final List<Component> components) {
-        this.graph = builtGraph;
+    JGraphtGraphOperations(final Graph<Node, Edge> builtGraph, final List<Component> components) {
+        graph = builtGraph;
 
         // Initialize operations
         edgeOps = new JGraphtEdgeOperations(graph);
@@ -72,7 +71,7 @@ public final class JGraphtGraphOperations implements dev.iq.graph.model.Graph {
         pathOps = new JGraphtPathOperations(graph);
 
         // Add components to the component operations
-        for (Component component : components) {
+        for (final var component : components) {
             componentOps.addPrebuiltComponent(component);
         }
     }
@@ -88,7 +87,7 @@ public final class JGraphtGraphOperations implements dev.iq.graph.model.Graph {
     }
 
     @Override
-    public ComponentOperations components() {
+    public ComponentSpace components() {
         return componentOps;
     }
 
@@ -105,15 +104,5 @@ public final class JGraphtGraphOperations implements dev.iq.graph.model.Graph {
     @Override
     public GraphView asView(final Set<Node> nodes, final Set<Edge> edges) {
         return new JGraphtGraphView(graph, nodes, edges);
-    }
-
-    @Override
-    public GraphBuilder toBuilder() {
-        return new JGraphtGraphBuilder(this);
-    }
-
-    @Override
-    public void close() throws Exception {
-        // No resources to close for in-memory graph
     }
 }

@@ -14,7 +14,7 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Type;
 import dev.iq.graph.model.jgrapht.JGraphtOperationsHelper;
-import dev.iq.graph.model.operations.mutable.MutableComponentOperations;
+import dev.iq.graph.model.operations.ComponentOperations;
 import dev.iq.graph.model.simple.SimpleComponent;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ import org.jgrapht.Graph;
  * Elements reference components via Set&lt;Locator&gt;.
  * When a component is updated, all elements referencing it must be updated.
  */
-public final class JGraphtMutableComponentOperations implements MutableComponentOperations {
+public final class JGraphtMutableComponentOperations implements ComponentOperations {
 
     private final Graph<Node, Edge> graph;
     private final Map<NanoId, List<Component>> componentVersions;
@@ -47,7 +47,7 @@ public final class JGraphtMutableComponentOperations implements MutableComponent
             final JGraphtMutableNodeOperations nodeOperations,
             final JGraphtMutableEdgeOperations edgeOperations) {
         this.graph = graph;
-        this.componentVersions = new HashMap<>();
+        componentVersions = new HashMap<>();
         this.nodeOperations = nodeOperations;
         this.edgeOperations = edgeOperations;
     }
@@ -143,7 +143,7 @@ public final class JGraphtMutableComponentOperations implements MutableComponent
      */
     private Set<Node> collectNodesToUpdate(final Locator oldLocator) {
         final Set<Node> nodesToUpdate = new HashSet<>();
-        for (Node node : graph.vertexSet()) {
+        for (final Node node : graph.vertexSet()) {
             if (node.expired().isEmpty() && node.components().contains(oldLocator)) {
                 nodesToUpdate.add(node);
             }
@@ -156,7 +156,7 @@ public final class JGraphtMutableComponentOperations implements MutableComponent
      */
     private Set<NanoId> collectEdgesUpdatedByNodeUpdate(final Set<Node> nodesToUpdate) {
         final Set<NanoId> edgesUpdatedByNodeUpdate = new HashSet<>();
-        for (Node node : nodesToUpdate) {
+        for (final Node node : nodesToUpdate) {
             // When a node is updated, all its connected edges are recreated
             graph.incomingEdgesOf(node).stream()
                     .filter(e -> e.expired().isEmpty())
@@ -176,7 +176,7 @@ public final class JGraphtMutableComponentOperations implements MutableComponent
             final Locator oldLocator,
             final Locator newLocator,
             final Instant timestamp) {
-        for (Node node : nodesToUpdate) {
+        for (final Node node : nodesToUpdate) {
             // Create new components set with updated reference
             final Set<Locator> updatedComponents = new HashSet<>(node.components());
             updatedComponents.remove(oldLocator);
@@ -196,7 +196,7 @@ public final class JGraphtMutableComponentOperations implements MutableComponent
             final Set<NanoId> edgesUpdatedByNodeUpdate,
             final Instant timestamp) {
         final Set<Edge> edgesToUpdate = new HashSet<>();
-        for (Edge edge : graph.edgeSet()) {
+        for (final Edge edge : graph.edgeSet()) {
             if (edge.expired().isEmpty()
                     && edge.components().contains(oldLocator)
                     && !edgesUpdatedByNodeUpdate.contains(edge.locator().id())) {
@@ -204,7 +204,7 @@ public final class JGraphtMutableComponentOperations implements MutableComponent
             }
         }
 
-        for (Edge edge : edgesToUpdate) {
+        for (final Edge edge : edgesToUpdate) {
             // Create new components set with updated reference
             final Set<Locator> updatedComponents = new HashSet<>(edge.components());
             updatedComponents.remove(oldLocator);

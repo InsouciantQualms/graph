@@ -6,36 +6,37 @@
 
 package dev.iq.graph.model.operations;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.iq.common.version.Locator;
+import dev.iq.graph.model.ComponentSpace;
 import dev.iq.graph.model.Data;
-import dev.iq.graph.model.Graph;
 import dev.iq.graph.model.Type;
+import dev.iq.graph.model.jgrapht.JGraphtGraphBuilder;
 import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
+import java.util.HashSet;
+import org.jgrapht.graph.builder.GraphBuilder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for Graph interface and builder.
+ * Tests for GraphSpace interface and builder.
  */
-@DisplayName("Graph Interface Tests")
-public class GraphOperationsTest {
+@DisplayName("GraphSpace Interface Tests")
+public class MutableGraphOperationsTest {
 
     private final Type defaultType = new SimpleType("test");
 
     @Test
-    @DisplayName("Graph builder creates graph successfully")
+    @DisplayName("GraphSpace builder creates graph successfully")
     final void testGraphBuilderCreation() {
         // Test that we can create a graph using the builder
-        final var builder = Graph.builder();
-        assertNotNull(builder, "Graph builder should not be null");
+        final GraphBuilder builder = new JGraphtGraphBuilder();
+        assertNotNull(builder, "GraphSpace builder should not be null");
 
         // Add at least one node to satisfy validation requirement
-        final var nodeLocator = Locator.generate();
-        builder.addNode(nodeLocator, defaultType, new TestData("Node1"), Instant.now());
+        builder.nodes().add(defaultType, new TestData("Node1"), new HashSet<>(), Instant.now());
 
         // Validate and build
         final var graph = builder.validate().build();
@@ -49,20 +50,20 @@ public class GraphOperationsTest {
     }
 
     @Test
-    @DisplayName("Graph provides access to all operation interfaces")
+    @DisplayName("GraphSpace provides access to all operation interfaces")
     final void testGraphOperationInterfaces() {
-        final var builder = Graph.builder();
+        final GraphBuilder builder = new JGraphtGraphBuilder();
 
         // Add a node
-        builder.addNode(Locator.generate(), defaultType, new TestData("Node1"), Instant.now());
+        builder.nodes().add(defaultType, new TestData("Node1"), new HashSet<>(), Instant.now());
 
         final var graph = builder.validate().build();
 
         // Test that all operation interfaces are accessible
-        assertTrue(graph.nodes() instanceof NodeOperations);
-        assertTrue(graph.edges() instanceof EdgeOperations);
-        assertTrue(graph.components() instanceof ComponentOperations);
-        assertTrue(graph.paths() instanceof PathOperations);
+        assertInstanceOf(NodeOperations.class, graph.nodes());
+        assertInstanceOf(EdgeOperations.class, graph.edges());
+        assertInstanceOf(ComponentSpace.class, graph.components());
+        assertInstanceOf(PathOperations.class, graph.paths());
     }
 
     /**

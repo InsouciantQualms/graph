@@ -6,28 +6,30 @@
 
 package dev.iq.graph.model.operations;
 
-import dev.iq.graph.model.Component;
+import dev.iq.common.annotation.Stable;
+import dev.iq.common.version.Locator;
+import dev.iq.common.version.NanoId;
+import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Type;
+import java.time.Instant;
 import java.util.Set;
 
 /**
- * Operations for managing edges in a graph.
+ * Mutable operations for managing edges in a graph during construction or bulk operations.
+ * These operations are separate from the immutable EdgeOperations interface as they serve
+ * a different purpose - graph construction rather than graph querying.
  */
-public interface EdgeOperations extends Operations<Edge> {
+@Stable
+public interface EdgeOperations {
 
-    /**
-     * Gets the source node of the specified edge.
-     */
-    Node source(Edge edge);
+    /** Adds a new edge to the graph. */
+    Edge add(Type type, Node source, Node target, Data data, Set<Locator> components, Instant timestamp);
 
-    /**
-     * Gets the target node of the specified edge.
-     */
-    Node target(Edge edge);
+    /** Updates an existing edge.  This will expire the current version and create a new version. */
+    Edge update(NanoId id, Type type, Data data, Set<Locator> components, Instant timestamp);
 
-    /**
-     * Gets all components that contain the specified edge.
-     */
-    Set<Component> components(Edge edge);
+    /** Expires an edge at the given timestamp. */
+    Edge expire(NanoId id, Instant timestamp);
 }

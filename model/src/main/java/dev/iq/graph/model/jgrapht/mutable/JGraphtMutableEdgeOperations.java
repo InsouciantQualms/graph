@@ -14,7 +14,7 @@ import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Type;
 import dev.iq.graph.model.jgrapht.JGraphtOperationsHelper;
-import dev.iq.graph.model.operations.mutable.MutableEdgeOperations;
+import dev.iq.graph.model.operations.EdgeOperations;
 import dev.iq.graph.model.simple.SimpleEdge;
 import java.time.Instant;
 import java.util.Optional;
@@ -29,7 +29,7 @@ import org.jgrapht.Graph;
  * cascading updates - when an edge is expired or updated, it doesn't
  * affect the nodes it connects.
  */
-public final class JGraphtMutableEdgeOperations implements MutableEdgeOperations {
+public final class JGraphtMutableEdgeOperations implements EdgeOperations {
 
     private final Graph<Node, Edge> graph;
 

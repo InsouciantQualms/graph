@@ -10,7 +10,7 @@ import dev.iq.graph.persistence.GraphRepository;
 import org.springframework.stereotype.Repository;
 
 /**
- * Graph listener repository using an in memory SQLite implementation.
+ * GraphSpace listener repository using an in memory SQLite implementation.
  */
 @Repository("sqliteGraphRepository")
 public record SqliteGraphRepository(

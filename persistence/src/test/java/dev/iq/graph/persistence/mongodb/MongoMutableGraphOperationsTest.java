@@ -20,9 +20,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for MongoGraphOperations construction and basic validation.
- * For comprehensive functionality tests, see MongoGraphOperationsIntegrationTest.
+ * For comprehensive functionality tests, see MongoMutableGraphOperationsIntegrationTest.
  */
-class MongoGraphOperationsTest {
+class MongoMutableGraphOperationsTest {
 
     private static TransitionWalker.ReachedState<RunningMongodProcess> mongodProcess;
     private static MongoClient mongoClient;
