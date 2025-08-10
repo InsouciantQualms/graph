@@ -13,11 +13,11 @@ import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
-import dev.iq.graph.model.serde.PropertiesSerde;
-import dev.iq.graph.model.serde.Serde;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
+import dev.iq.graph.persistence.serde.PropertiesSerde;
+import dev.iq.graph.persistence.serde.Serde;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
@@ -231,7 +231,7 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
                             final var id = new NanoId(parts[0]);
                             final var version = Integer.parseInt(parts[1]);
                             components.add(new Locator(id, version));
-                        } catch (NumberFormatException ignored) {
+                        } catch (final NumberFormatException ignored) {
                             // Skip invalid component references
                         }
                     }

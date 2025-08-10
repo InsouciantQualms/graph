@@ -6,7 +6,7 @@
 
 package dev.iq.graph.model.jgrapht;
 
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.common.version.Versioned;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Element;
@@ -37,7 +37,7 @@ public final class JGraphtOperationsHelper {
      * Validates that an element can be expired.
      */
     public static <E extends Versioned> E validateForExpiry(
-            final Optional<E> element, final NanoId id, final String elementType) {
+            final Optional<E> element, final Uid id, final String elementType) {
 
         return element.orElseThrow(() -> new IllegalArgumentException(elementType + " not found: " + id));
     }

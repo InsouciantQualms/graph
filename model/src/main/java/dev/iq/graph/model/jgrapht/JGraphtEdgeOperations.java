@@ -7,11 +7,12 @@
 package dev.iq.graph.model.jgrapht;
 
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.common.version.Versions;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.operations.EdgeOperations;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -43,13 +44,13 @@ public final class JGraphtEdgeOperations implements EdgeOperations {
     }
 
     @Override
-    public Optional<Edge> findActive(final NanoId id) {
+    public Optional<Edge> findActive(final Uid id) {
 
         return Versions.findActive(id, graph.edgeSet());
     }
 
     @Override
-    public Optional<Edge> findAt(final NanoId id, final Instant timestamp) {
+    public Optional<Edge> findAt(final Uid id, final Instant timestamp) {
 
         return Versions.findAt(id, timestamp, graph.edgeSet());
     }
@@ -64,7 +65,7 @@ public final class JGraphtEdgeOperations implements EdgeOperations {
     }
 
     @Override
-    public List<Edge> findVersions(final NanoId id) {
+    public List<Edge> findVersions(final Uid id) {
 
         return Versions.findAllVersions(id, graph.edgeSet());
     }

@@ -4,7 +4,7 @@
  * To reach the creator, visit https://www.linkedin.com/in/saschagoldsmith.
  */
 
-package dev.iq.graph.model.serde;
+package dev.iq.graph.persistence.serde;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.iq.common.fp.Io;

@@ -7,7 +7,7 @@
 package dev.iq.graph.model.jgrapht;
 
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.ComponentSpace;
 import dev.iq.graph.model.Edge;
@@ -36,7 +36,7 @@ import org.jgrapht.Graph;
 public final class JGraphtComponentOperations implements ComponentSpace {
 
     private final Graph<Node, Edge> graph;
-    private final Map<NanoId, List<Component>> componentVersions;
+    private final Map<Uid, List<Component>> componentVersions;
 
     public JGraphtComponentOperations(final Graph<Node, Edge> graph) {
         this.graph = graph;
@@ -55,7 +55,7 @@ public final class JGraphtComponentOperations implements ComponentSpace {
     }
 
     @Override
-    public Optional<Component> findActive(final NanoId id) {
+    public Optional<Component> findActive(final Uid id) {
         final var versions = componentVersions.get(id);
         if (versions == null) {
             return Optional.empty();
@@ -66,7 +66,7 @@ public final class JGraphtComponentOperations implements ComponentSpace {
     }
 
     @Override
-    public Optional<Component> findAt(final NanoId id, final Instant timestamp) {
+    public Optional<Component> findAt(final Uid id, final Instant timestamp) {
         // Find the component version active at timestamp
         final var versions = componentVersions.get(id);
         if (versions == null) {
@@ -93,7 +93,7 @@ public final class JGraphtComponentOperations implements ComponentSpace {
     }
 
     @Override
-    public List<Component> findVersions(final NanoId id) {
+    public List<Component> findVersions(final Uid id) {
         final var versions = componentVersions.get(id);
         return (versions != null) ? new ArrayList<>(versions) : List.of();
     }

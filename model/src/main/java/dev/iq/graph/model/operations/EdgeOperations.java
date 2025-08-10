@@ -8,7 +8,7 @@ package dev.iq.graph.model.operations;
 
 import dev.iq.common.annotation.Stable;
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
@@ -28,8 +28,8 @@ public interface EdgeOperations {
     Edge add(Type type, Node source, Node target, Data data, Set<Locator> components, Instant timestamp);
 
     /** Updates an existing edge.  This will expire the current version and create a new version. */
-    Edge update(NanoId id, Type type, Data data, Set<Locator> components, Instant timestamp);
+    Edge update(Uid id, Type type, Data data, Set<Locator> components, Instant timestamp);
 
     /** Expires an edge at the given timestamp. */
-    Edge expire(NanoId id, Instant timestamp);
+    Edge expire(Uid id, Instant timestamp);
 }

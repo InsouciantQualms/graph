@@ -7,7 +7,7 @@
 package dev.iq.graph.model.operations;
 
 import dev.iq.common.annotation.Stable;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Type;
@@ -28,8 +28,8 @@ public interface ComponentOperations {
     Component add(Type type, Data data, Instant timestamp);
 
     /** Updates an existing component.  This will expire the current version and create a new version. */
-    Component update(NanoId id, Type type, Data data, Instant timestamp);
+    Component update(Uid id, Type type, Data data, Instant timestamp);
 
     /** Expires a component at the given timestamp. */
-    Component expire(NanoId id, Instant timestamp);
+    Component expire(Uid id, Instant timestamp);
 }

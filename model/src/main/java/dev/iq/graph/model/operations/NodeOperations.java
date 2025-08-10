@@ -7,7 +7,7 @@
 package dev.iq.graph.model.operations;
 
 import dev.iq.common.annotation.Stable;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Type;
@@ -22,11 +22,11 @@ import java.time.Instant;
 public interface NodeOperations {
 
     /** Adds a new node to the graph. */
-    Node add(NanoId id, Type type, Data data, Instant timestamp);
+    Node add(Uid id, Type type, Data data, Instant timestamp);
 
     /** Updates an existing node in the graph.  This will expire the current version and create a new version. */
-    Node update(NanoId id, Type type, Data data, Instant timestamp);
+    Node update(Uid id, Type type, Data data, Instant timestamp);
 
     /** Expires a node at the given timestamp. */
-    Node expire(NanoId id, Instant timestamp);
+    Node expire(Uid id, Instant timestamp);
 }

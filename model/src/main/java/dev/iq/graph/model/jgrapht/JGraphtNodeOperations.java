@@ -7,7 +7,7 @@
 package dev.iq.graph.model.jgrapht;
 
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.common.version.VersionedFinder;
 import dev.iq.common.version.Versions;
 import dev.iq.graph.model.Component;
@@ -44,12 +44,12 @@ public final class JGraphtNodeOperations implements VersionedFinder<Node> {
     }
 
     @Override
-    public Optional<Node> findActive(final NanoId id) {
+    public Optional<Node> findActive(final Uid id) {
         return Versions.findActive(id, graph.vertexSet());
     }
 
     @Override
-    public Optional<Node> findAt(final NanoId id, final Instant timestamp) {
+    public Optional<Node> findAt(final Uid id, final Instant timestamp) {
         return Versions.findAt(id, timestamp, graph.vertexSet());
     }
 
@@ -62,7 +62,7 @@ public final class JGraphtNodeOperations implements VersionedFinder<Node> {
     }
 
     @Override
-    public List<Node> findVersions(final NanoId id) {
+    public List<Node> findVersions(final Uid id) {
         return Versions.findAllVersions(id, graph.vertexSet());
     }
 
@@ -70,7 +70,7 @@ public final class JGraphtNodeOperations implements VersionedFinder<Node> {
         return Versions.allActive(graph.vertexSet());
     }
 
-    public Optional<Node> findNodeAt(final NanoId id, final Instant timestamp) {
+    public Optional<Node> findNodeAt(final Uid id, final Instant timestamp) {
         return findAt(id, timestamp);
     }
 

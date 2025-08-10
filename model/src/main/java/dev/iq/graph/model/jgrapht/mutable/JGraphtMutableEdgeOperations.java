@@ -7,7 +7,7 @@
 package dev.iq.graph.model.jgrapht.mutable;
 
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.common.version.Versions;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
@@ -52,33 +52,33 @@ public final class JGraphtMutableEdgeOperations implements EdgeOperations {
     }
 
     @Override
-    public Edge update(final NanoId id, final Data data, final Instant timestamp) {
+    public Edge update(final Uid id, final Data data, final Instant timestamp) {
         final var existingEdge =
                 JGraphtOperationsHelper.validateForExpiry(Versions.findActive(id, graph.edgeSet()), id, "Edge");
         return performUpdate(id, existingEdge.type(), data, existingEdge.components(), timestamp);
     }
 
     @Override
-    public Edge update(final NanoId id, final Type type, final Data data, final Instant timestamp) {
+    public Edge update(final Uid id, final Type type, final Data data, final Instant timestamp) {
         final var existingEdge =
                 JGraphtOperationsHelper.validateForExpiry(Versions.findActive(id, graph.edgeSet()), id, "Edge");
         return performUpdate(id, type, data, existingEdge.components(), timestamp);
     }
 
     @Override
-    public Edge updateComponents(final NanoId id, final Set<Locator> components, final Instant timestamp) {
+    public Edge updateComponents(final Uid id, final Set<Locator> components, final Instant timestamp) {
         final var existingEdge =
                 JGraphtOperationsHelper.validateForExpiry(Versions.findActive(id, graph.edgeSet()), id, "Edge");
         return performUpdate(id, existingEdge.type(), existingEdge.data(), components, timestamp);
     }
 
     private Edge performUpdate(
-            final NanoId id, final Type type, final Data data, final Set<Locator> components, final Instant timestamp) {
+            final Uid id, final Type type, final Data data, final Set<Locator> components, final Instant timestamp) {
         // First expire the existing edge
         final var expired = expire(id, timestamp);
 
         // Then create a new version with incremented locator
-        final var incremented = expired.locator().increment();
+        final var incremented = expired.locator().next();
         final var newEdge = new SimpleEdge(
                 incremented, type, expired.source(), expired.target(), data, components, timestamp, Optional.empty());
         graph.addEdge(newEdge.source(), newEdge.target(), newEdge);
@@ -86,7 +86,7 @@ public final class JGraphtMutableEdgeOperations implements EdgeOperations {
     }
 
     @Override
-    public Edge expire(final NanoId id, final Instant timestamp) {
+    public Edge expire(final Uid id, final Instant timestamp) {
         final var edge =
                 JGraphtOperationsHelper.validateForExpiry(Versions.findActive(id, graph.edgeSet()), id, "Edge");
 

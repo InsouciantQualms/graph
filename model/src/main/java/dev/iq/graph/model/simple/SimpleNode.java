@@ -12,8 +12,6 @@ import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Type;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.Set;
 
-public record SimpleNode(
-        Locator locator, Type type, Data data, Set<Locator> components, Instant created, Optional<Instant> expired)
+public record SimpleNode(Locator locator, Type type, Data data, Instant created, Optional<Instant> expired)
         implements Node {}

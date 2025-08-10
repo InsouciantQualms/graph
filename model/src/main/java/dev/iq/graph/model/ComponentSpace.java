@@ -6,7 +6,7 @@
 
 package dev.iq.graph.model;
 
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.common.version.VersionedFinder;
 import java.util.Set;
 
@@ -16,8 +16,8 @@ import java.util.Set;
 public interface ComponentSpace extends VersionedFinder<Component> {
 
     /** Returns a view of all elemeents in the specified component. */
-    View view(NanoId id);
+    View view(Uid id);
 
     /** Gets all components containing the specified element (node or edge). */
-    Set<Component> componentsForElement(NanoId id);
+    Set<Component> componentsForElement(Uid id);
 }

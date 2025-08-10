@@ -24,4 +24,10 @@ public record SimpleEdge(
         Set<Locator> components,
         Instant created,
         Optional<Instant> expired)
-        implements Edge {}
+        implements Edge {
+
+    @SuppressWarnings("ConstructorWithTooManyParameters")
+    public SimpleEdge {
+        components = Set.copyOf(components);
+    }
+}

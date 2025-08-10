@@ -7,7 +7,7 @@
 package dev.iq.graph.model.jgrapht.mutable;
 
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.common.version.Versions;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
@@ -58,28 +58,28 @@ public final class JGraphtMutableNodeOperations implements NodeOperations {
     }
 
     @Override
-    public Node update(final NanoId id, final Data data, final Instant timestamp) {
+    public Node update(final Uid id, final Data data, final Instant timestamp) {
         final var existingNode =
                 JGraphtOperationsHelper.validateForExpiry(Versions.findActive(id, graph.vertexSet()), id, "Node");
         return performUpdate(id, existingNode.type(), data, existingNode.components(), timestamp);
     }
 
     @Override
-    public Node update(final NanoId id, final Type type, final Data data, final Instant timestamp) {
+    public Node update(final Uid id, final Type type, final Data data, final Instant timestamp) {
         final var existingNode =
                 JGraphtOperationsHelper.validateForExpiry(Versions.findActive(id, graph.vertexSet()), id, "Node");
         return performUpdate(id, type, data, existingNode.components(), timestamp);
     }
 
     @Override
-    public Node updateComponents(final NanoId id, final Set<Locator> components, final Instant timestamp) {
+    public Node updateComponents(final Uid id, final Set<Locator> components, final Instant timestamp) {
         final var existingNode =
                 JGraphtOperationsHelper.validateForExpiry(Versions.findActive(id, graph.vertexSet()), id, "Node");
         return performUpdate(id, existingNode.type(), existingNode.data(), components, timestamp);
     }
 
     private Node performUpdate(
-            final NanoId id, final Type type, final Data data, final Set<Locator> components, final Instant timestamp) {
+            final Uid id, final Type type, final Data data, final Set<Locator> components, final Instant timestamp) {
         final var existingNode =
                 JGraphtOperationsHelper.validateForExpiry(Versions.findActive(id, graph.vertexSet()), id, "Node");
 
@@ -90,7 +90,7 @@ public final class JGraphtMutableNodeOperations implements NodeOperations {
         final var expired = expire(id, timestamp);
 
         // Create new version
-        final var incremented = expired.locator().increment();
+        final var incremented = expired.locator().next();
         final var newNode = new SimpleNode(incremented, type, data, components, timestamp, Optional.empty());
         graph.addVertex(newNode);
 
@@ -101,7 +101,7 @@ public final class JGraphtMutableNodeOperations implements NodeOperations {
     }
 
     @Override
-    public Node expire(final NanoId id, final Instant timestamp) {
+    public Node expire(final Uid id, final Instant timestamp) {
         final var node =
                 JGraphtOperationsHelper.validateForExpiry(Versions.findActive(id, graph.vertexSet()), id, "Node");
 
@@ -244,5 +244,5 @@ public final class JGraphtMutableNodeOperations implements NodeOperations {
      * Helper record to store edge information for recreation.
      */
     private record EdgeRecreationInfo(
-            NanoId id, Type type, Node source, Node target, Data data, Set<Locator> components, boolean incoming) {}
+            Uid id, Type type, Node source, Node target, Data data, Set<Locator> components, boolean incoming) {}
 }

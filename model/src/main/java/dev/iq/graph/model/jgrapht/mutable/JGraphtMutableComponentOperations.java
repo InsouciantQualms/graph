@@ -7,7 +7,7 @@
 package dev.iq.graph.model.jgrapht.mutable;
 
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
@@ -38,7 +38,7 @@ import org.jgrapht.Graph;
 public final class JGraphtMutableComponentOperations implements ComponentOperations {
 
     private final Graph<Node, Edge> graph;
-    private final Map<NanoId, List<Component>> componentVersions;
+    private final Map<Uid, List<Component>> componentVersions;
     private final JGraphtMutableNodeOperations nodeOperations;
     private final JGraphtMutableEdgeOperations edgeOperations;
 
@@ -64,23 +64,23 @@ public final class JGraphtMutableComponentOperations implements ComponentOperati
     }
 
     @Override
-    public Component update(final NanoId id, final Data data, final Instant timestamp) {
+    public Component update(final Uid id, final Data data, final Instant timestamp) {
         final var existingComponent = JGraphtOperationsHelper.validateForExpiry(findActive(id), id, "Component");
         return performUpdate(id, existingComponent.type(), data, timestamp);
     }
 
     @Override
-    public Component update(final NanoId id, final Type type, final Data data, final Instant timestamp) {
+    public Component update(final Uid id, final Type type, final Data data, final Instant timestamp) {
         JGraphtOperationsHelper.validateForExpiry(findActive(id), id, "Component");
         return performUpdate(id, type, data, timestamp);
     }
 
-    private Component performUpdate(final NanoId id, final Type type, final Data data, final Instant timestamp) {
+    private Component performUpdate(final Uid id, final Type type, final Data data, final Instant timestamp) {
         // First expire the existing component
         final var expired = expire(id, timestamp);
 
         // Create new version with incremented locator
-        final var incremented = expired.locator().increment();
+        final var incremented = expired.locator().next();
         final var newComponent = new SimpleComponent(incremented, type, data, timestamp, Optional.empty());
 
         // Store new version
@@ -94,7 +94,7 @@ public final class JGraphtMutableComponentOperations implements ComponentOperati
     }
 
     @Override
-    public Component expire(final NanoId id, final Instant timestamp) {
+    public Component expire(final Uid id, final Instant timestamp) {
         final var component = JGraphtOperationsHelper.validateForExpiry(findActive(id), id, "Component");
 
         // Create expired version
@@ -125,7 +125,7 @@ public final class JGraphtMutableComponentOperations implements ComponentOperati
         try {
             // Collect nodes that need updating and track edges that will be updated
             final Set<Node> nodesToUpdate = collectNodesToUpdate(oldLocator);
-            final Set<NanoId> edgesUpdatedByNodeUpdate = collectEdgesUpdatedByNodeUpdate(nodesToUpdate);
+            final Set<Uid> edgesUpdatedByNodeUpdate = collectEdgesUpdatedByNodeUpdate(nodesToUpdate);
 
             // Update nodes - their edges will be recreated with updated component references
             updateNodes(nodesToUpdate, oldLocator, newLocator, timestamp);
@@ -154,8 +154,8 @@ public final class JGraphtMutableComponentOperations implements ComponentOperati
     /**
      * Collects IDs of edges that will be updated as part of node updates.
      */
-    private Set<NanoId> collectEdgesUpdatedByNodeUpdate(final Set<Node> nodesToUpdate) {
-        final Set<NanoId> edgesUpdatedByNodeUpdate = new HashSet<>();
+    private Set<Uid> collectEdgesUpdatedByNodeUpdate(final Set<Node> nodesToUpdate) {
+        final Set<Uid> edgesUpdatedByNodeUpdate = new HashSet<>();
         for (final Node node : nodesToUpdate) {
             // When a node is updated, all its connected edges are recreated
             graph.incomingEdgesOf(node).stream()
@@ -193,7 +193,7 @@ public final class JGraphtMutableComponentOperations implements ComponentOperati
     private void updateRemainingEdges(
             final Locator oldLocator,
             final Locator newLocator,
-            final Set<NanoId> edgesUpdatedByNodeUpdate,
+            final Set<Uid> edgesUpdatedByNodeUpdate,
             final Instant timestamp) {
         final Set<Edge> edgesToUpdate = new HashSet<>();
         for (final Edge edge : graph.edgeSet()) {
@@ -237,7 +237,7 @@ public final class JGraphtMutableComponentOperations implements ComponentOperati
                 .toList();
     }
 
-    private Optional<Component> findActive(final NanoId id) {
+    private Optional<Component> findActive(final Uid id) {
         final var versions = componentVersions.get(id);
         if (versions == null) {
             return Optional.empty();
