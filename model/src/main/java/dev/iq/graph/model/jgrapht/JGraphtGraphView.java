@@ -6,88 +6,131 @@
 
 package dev.iq.graph.model.jgrapht;
 
+import dev.iq.common.version.VersionedFinder;
 import dev.iq.graph.model.Edge;
+import dev.iq.graph.model.Element;
 import dev.iq.graph.model.Node;
-import java.util.HashSet;
+import dev.iq.graph.model.Path;
+import dev.iq.graph.model.View;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.jgrapht.Graph;
+import org.jgrapht.GraphPath;
+import org.jgrapht.alg.connectivity.ConnectivityInspector;
+import org.jgrapht.alg.shortestpath.AllDirectedPaths;
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 
 /**
  * JGraphT implementation of View that provides a filtered view of a graph.
  */
-public final class JGraphtGraphView implements GraphView {
+public final class JGraphtGraphView implements View {
 
+    /** Delegate graph. */
     private final Graph<Node, Edge> graph;
-    private final Set<Node> nodeFilter;
-    private final Set<Edge> edgeFilter;
 
-    /**
-     * Creates a view of the entire graph.
-     */
+    /** Creates a view (graph or component) using the specified delegate graph. */
     public JGraphtGraphView(final Graph<Node, Edge> graph) {
+
         this.graph = graph;
-        nodeFilter = null;
-        edgeFilter = null;
     }
 
-    /**
-     * Creates a filtered view of the graph with only the specified nodes and edges.
-     */
-    public JGraphtGraphView(final Graph<Node, Edge> graph, final Set<Node> nodes, final Set<Edge> edges) {
-        this.graph = graph;
-        nodeFilter = new HashSet<>(nodes);
-        edgeFilter = new HashSet<>(edges);
-    }
-
+    /** {@inheritDoc} */
     @Override
-    public Set<Node> nodes() {
-        return (nodeFilter != null) ? new HashSet<>(nodeFilter) : new HashSet<>(graph.vertexSet());
+    public VersionedFinder<Node> nodes() {
+
+        return new JGraphtNodeFinder(graph);
     }
 
+    /** {@inheritDoc} */
     @Override
-    public Set<Edge> edges() {
-        return (edgeFilter != null) ? new HashSet<>(edgeFilter) : new HashSet<>(graph.edgeSet());
+    public VersionedFinder<Edge> edges() {
+
+        return new JGraphtEdgeFinder(graph);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Set<Edge> outgoingEdges(final Node node) {
-        final var edges = graph.outgoingEdgesOf(node);
-        if (edgeFilter != null) {
-            final var filtered = new HashSet<>(edges);
-            filtered.retainAll(edgeFilter);
-            return filtered;
-        }
-        return new HashSet<>(edges);
+
+        return Set.copyOf(graph.outgoingEdgesOf(node));
     }
 
+    /** {@inheritDoc} */
     @Override
     public Set<Edge> incomingEdges(final Node node) {
-        final var edges = graph.incomingEdgesOf(node);
-        if (edgeFilter != null) {
-            final var filtered = new HashSet<>(edges);
-            filtered.retainAll(edgeFilter);
-            return filtered;
+
+        return Set.copyOf(graph.incomingEdgesOf(node));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Set<Node> neighbors(final Node node) {
+
+        final var outgoingNeighbors = graph.outgoingEdgesOf(node).stream()
+                .filter(edge -> edge.expired().isEmpty())
+                .map(Edge::target);
+
+        final var incomingNeighbors = graph.incomingEdgesOf(node).stream()
+                .filter(edge -> edge.expired().isEmpty())
+                .map(Edge::source);
+
+        return Stream.concat(outgoingNeighbors, incomingNeighbors).collect(Collectors.toSet());
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public boolean pathExists(final Node source, final Node target) {
+
+        final var inspector = new ConnectivityInspector<>(graph);
+        return inspector.pathExists(source, target);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Optional<Path> findShortestPath(final Node source, final Node target) {
+
+        final var pathAlgorithm = new DijkstraShortestPath<>(graph);
+        final var jgraphtPath = pathAlgorithm.getPath(source, target);
+        if (jgraphtPath == null) {
+            return Optional.empty();
         }
-        return new HashSet<>(edges);
+        return Optional.of(toPath(jgraphtPath));
     }
 
+    /** {@inheritDoc} */
     @Override
-    public Node source(final Edge edge) {
-        return graph.getEdgeSource(edge);
+    public List<Path> findAllPaths(final Node source, final Node target) {
+
+        final var allPathsAlgorithm = new AllDirectedPaths<>(graph);
+        final var maxPathLength = graph.vertexSet().size();
+        final var jgraphtPaths = allPathsAlgorithm.getAllPaths(source, target, true, maxPathLength);
+        return jgraphtPaths.stream()
+                .map(JGraphtGraphView::toPath)
+                .filter(path -> !path.containsCycle())
+                .toList();
     }
 
-    @Override
-    public Node target(final Edge edge) {
-        return graph.getEdgeTarget(edge);
+    /** Converts a JGraphT GraphPath to our Path model. */
+    private static Path toPath(final GraphPath<Node, Edge> jgraphtPath) {
+
+        final var vertices = jgraphtPath.getVertexList();
+        final var edges = jgraphtPath.getEdgeList();
+        if (vertices.size() != (edges.size() + 1)) {
+            throw new IllegalArgumentException("Vertex count must be one greater than edge count");
+        }
+        final List<Element> elements = new ArrayList<>();
+        for (var i = 0; i < vertices.size(); i++) {
+            elements.add(vertices.get(i));
+            if (i < edges.size()) {
+                elements.add(edges.get(i));
+            }
+        }
+        return new Path(elements);
     }
 
-    @Override
-    public boolean contains(final Node node) {
-        return (nodeFilter != null) ? nodeFilter.contains(node) : graph.containsVertex(node);
-    }
 
-    @Override
-    public boolean contains(final Edge edge) {
-        return (edgeFilter != null) ? edgeFilter.contains(edge) : graph.containsEdge(edge);
-    }
 }

@@ -7,6 +7,7 @@ package dev.iq.graph.model;
 
 import dev.iq.common.annotation.Stable;
 import dev.iq.common.version.Locator;
+import java.time.Instant;
 import java.util.Set;
 
 /**
@@ -24,4 +25,7 @@ public interface Edge extends Element {
 
     /** Returns the components associated with this edge. */
     Set<Locator> components();
+
+    /** Returns an expired version of this edge. */
+    Edge expire(Instant timestamp);
 }

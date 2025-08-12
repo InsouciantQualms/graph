@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Immutable view of the graph or a sub-graph (component).
+ */
 public interface View {
 
     /** Finder to locate nodes. */
@@ -12,9 +15,6 @@ public interface View {
 
     /** Finder to locate edges. */
     VersionedFinder<Edge> edges();
-
-    /** Finder to locate components. */
-    VersionedFinder<Component> components();
 
     /** Gets all neighbor nodes connected to the specified node. */
     Set<Node> neighbors(Node node);

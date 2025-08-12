@@ -7,13 +7,12 @@
 package dev.iq.graph.model;
 
 import dev.iq.common.version.Uid;
-import dev.iq.common.version.VersionedFinder;
 import java.util.Set;
 
 /**
  * Operations for managing components in a graph.
  */
-public interface ComponentSpace extends VersionedFinder<Component> {
+public interface ComponentSpace {
 
     /** Returns a view of all elemeents in the specified component. */
     View view(Uid id);

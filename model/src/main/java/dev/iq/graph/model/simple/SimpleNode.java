@@ -13,5 +13,16 @@ import dev.iq.graph.model.Type;
 import java.time.Instant;
 import java.util.Optional;
 
+/**
+ * Record implementation of Node.
+ */
 public record SimpleNode(Locator locator, Type type, Data data, Instant created, Optional<Instant> expired)
-        implements Node {}
+        implements Node {
+
+    /** {@inheritDoc} */
+    @Override
+    public Node expire(final Instant timestamp) {
+
+        return new SimpleNode(locator, type, data, created, Optional.of(timestamp));
+    }
+}

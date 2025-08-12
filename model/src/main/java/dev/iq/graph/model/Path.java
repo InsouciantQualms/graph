@@ -7,6 +7,7 @@
 package dev.iq.graph.model;
 
 import dev.iq.common.error.Invariant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,5 +25,15 @@ public record Path(List<Element> elements) {
             Invariant.require(elements.getLast() instanceof Node, "last element of a non‐empty path must be a Node");
         }
         this.elements = List.copyOf(elements);
+    }
+
+    /** Checks if a path contains a cycle (revisits the same node). */
+    public boolean containsCycle() {
+
+        final var visitedNodes = new HashSet<Node>();
+        return elements.stream()
+                .filter(element -> element instanceof Node)
+                .map(element -> (Node) element)
+                .anyMatch(node -> !visitedNodes.add(node));
     }
 }

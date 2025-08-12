@@ -8,115 +8,145 @@ package dev.iq.graph.model.jgrapht;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.Uid;
-import dev.iq.common.version.VersionedFinder;
 import dev.iq.common.version.Versions;
-import dev.iq.graph.model.Component;
+import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
+import dev.iq.graph.model.Type;
+import dev.iq.graph.model.operations.NodeOperations;
+import dev.iq.graph.model.simple.SimpleEdge;
+import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Stream;
 import org.jgrapht.Graph;
 
 /**
- * JGraphT-based implementation of immutable node operations for versioned graph elements.
- * This class provides query-only operations on nodes. For mutation operations,
- * see JGraphtMutableNodeOperations.
+ * JGraphT implementation of mutable node operations.
+ * Used during graph construction and bulk operations.
+ *
+ * This implementation ensures referential integrity:
+ * - When a node is expired, all connected edges are also expired
+ * - When a node is updated, connected edges are recreated to point to the new version
  */
-public final class JGraphtNodeOperations implements VersionedFinder<Node> {
+public final class JGraphtNodeOperations implements NodeOperations {
 
+    /** Graph delegate. */
     private final Graph<Node, Edge> graph;
+    /** Edge operations to perform. */
+    private final JGraphtEdgeOperations edgeOperations;
 
-    public JGraphtNodeOperations(final Graph<Node, Edge> graph) {
+    /** Creates a new node operations. */
+    public JGraphtNodeOperations(final Graph<Node, Edge> graph, final JGraphtEdgeOperations edgeOperations) {
         this.graph = graph;
+        this.edgeOperations = edgeOperations;
     }
 
-    public boolean contains(final Node node) {
-
-        return graph.containsVertex(node);
-    }
-
-    public Set<Node> vertexSet() {
-
-        return graph.vertexSet();
-    }
-
+    /** {@inheritDoc} */
     @Override
-    public Optional<Node> findActive(final Uid id) {
-        return Versions.findActive(id, graph.vertexSet());
+    public Node add(final Type type, final Data data, final Instant timestamp) {
+
+        final var locator = Locator.generate();
+        final var node = new SimpleNode(locator, type, data, timestamp, Optional.empty());
+        graph.addVertex(node);
+        return node;
     }
 
+    /** {@inheritDoc} */
     @Override
-    public Optional<Node> findAt(final Uid id, final Instant timestamp) {
-        return Versions.findAt(id, timestamp, graph.vertexSet());
+    public Node update(final Uid id, final Type type, final Data data, final Instant timestamp) {
+
+        final var existing = JGraphtHelper.require(Versions.findActive(id, graph.vertexSet()), id, "Node");
+
+        // Collect edge information before expiring
+        final var incoming = graph.incomingEdgesOf(existing);
+        final var outgoing = graph.outgoingEdgesOf(existing);
+
+        // Expire the existing node (which also expires its edges)
+        final var expired = expire(id, timestamp);
+
+        // Create new version
+        final var incremented = expired.locator().next();
+        final var newNode = new SimpleNode(incremented, type, data, timestamp, Optional.empty());
+        graph.addVertex(newNode);
+
+        // Recreate edges to the new node
+        recreateEdges(newNode, incoming, outgoing, newNode.created(), Optional.empty());
+        return newNode;
     }
 
+    /** {@inheritDoc} */
     @Override
-    public Node find(final Locator locator) {
-        return graph.vertexSet().stream()
-                .filter(n -> n.locator().equals(locator))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Node not found for locator: " + locator));
-    }
+    public Node expire(final Uid id, final Instant timestamp) {
 
-    @Override
-    public List<Node> findVersions(final Uid id) {
-        return Versions.findAllVersions(id, graph.vertexSet());
-    }
+        final var node = JGraphtHelper.require(Versions.findActive(id, graph.vertexSet()), id, "Node");
 
-    public List<Node> allActive() {
-        return Versions.allActive(graph.vertexSet());
-    }
+        // Collect all connected edges
+        final var incoming = graph.incomingEdgesOf(node);
+        final var outgoing = graph.outgoingEdgesOf(node);
 
-    public Optional<Node> findNodeAt(final Uid id, final Instant timestamp) {
-        return findAt(id, timestamp);
-    }
+        // Expire active edges to maintain referential integrity
+        expireActiveEdges(incoming, timestamp);
+        expireActiveEdges(outgoing, timestamp);
 
-    public List<Node> activeNodes() {
-        return allActive();
+        // Create expired node
+        final var expiredNode = node.expire(timestamp);
+
+        // Remove old node and add expired version
+        graph.removeVertex(node);
+        graph.addVertex(expiredNode);
+
+        // Recreate all edges with updated endpoints (pointing to the expired node)
+        recreateEdges(expiredNode, incoming, outgoing, expiredNode.created(), expiredNode.expired());
+        return expiredNode;
     }
 
     /**
-     * Gets all neighbor nodes connected to the specified node via active edges.
+     * Expires all active edges in the collection.
      */
-    public List<Node> getNeighbors(final Node node) {
+    private void expireActiveEdges(final Collection<Edge> edges, final Instant timestamp) {
 
-        final var outgoingNeighbors = graph.outgoingEdgesOf(node).stream()
+        edges.stream()
                 .filter(edge -> edge.expired().isEmpty())
-                .map(Edge::target);
-
-        final var incomingNeighbors = graph.incomingEdgesOf(node).stream()
-                .filter(edge -> edge.expired().isEmpty())
-                .map(Edge::source);
-
-        return Stream.concat(outgoingNeighbors, incomingNeighbors).toList();
+                .forEach(edge -> edgeOperations.expire(edge.locator().id(), timestamp));
     }
 
-    @Override
-    public Set<Edge> outgoingEdges(final Node node) {
-        return graph.outgoingEdgesOf(node);
+    /**
+     * Recreates edges for a new node version after update.
+     */
+    private void recreateEdges(
+            final Node node,
+            final Iterable<Edge> incoming,
+            final Iterable<Edge> outgoing,
+            final Instant created,
+            final Optional<Instant> expired) {
+
+        incoming.forEach(e ->
+                recreateEdge(e, e.source(), node, created, expired)
+        );
+        outgoing.forEach(e ->
+                recreateEdge(e, node, e.target(), created, expired)
+        );
     }
 
-    @Override
-    public Set<Edge> incomingEdges(final Node node) {
-        return graph.incomingEdgesOf(node);
-    }
+    private void recreateEdge(
+            final Edge existing,
+            final Node source,
+            final Node target,
+            final Instant created,
+            final Optional<Instant> expired
+    ) {
 
-    @Override
-    public Set<Edge> edges(final Node node) {
-        return graph.edgesOf(node);
-    }
-
-    @Override
-    public Set<Component> components(final Node node) {
-        // TODO: Implement component tracking
-        return Set.of();
-    }
-
-    @Override
-    public Set<Node> neighbors(final Node node) {
-        return Set.copyOf(getNeighbors(node));
+        final var added = new SimpleEdge(
+                existing.locator(),
+                existing.type(),
+                source,
+                target,
+                existing.data(),
+                existing.components(),
+                created,
+                expired
+        );
+        graph.addEdge(source, target, added);
     }
 }

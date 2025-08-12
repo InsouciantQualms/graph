@@ -8,6 +8,7 @@ package dev.iq.graph.model;
 
 import dev.iq.common.annotation.Stable;
 import dev.iq.common.version.Versioned;
+import java.time.Instant;
 
 /**
  * Represents a versioned component that groups elements in a graph.
@@ -22,4 +23,7 @@ public interface Component extends Versioned {
 
     /** Returns the data associated with this component. */
     Data data();
+
+    /** Return an expired version of this component. */
+    Component expire(Instant timestamp);
 }

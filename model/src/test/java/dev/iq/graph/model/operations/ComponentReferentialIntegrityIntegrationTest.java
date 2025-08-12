@@ -13,9 +13,9 @@ import dev.iq.common.version.Locator;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Type;
-import dev.iq.graph.model.jgrapht.mutable.JGraphtMutableComponentOperations;
-import dev.iq.graph.model.jgrapht.mutable.JGraphtMutableEdgeOperations;
-import dev.iq.graph.model.jgrapht.mutable.JGraphtMutableNodeOperations;
+import dev.iq.graph.model.jgrapht.JGraphtComponentOperations;
+import dev.iq.graph.model.jgrapht.JGraphtEdgeOperations;
+import dev.iq.graph.model.jgrapht.JGraphtNodeOperations;
 import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
@@ -39,9 +39,9 @@ import org.junit.jupiter.api.Test;
 class ComponentReferentialIntegrityIntegrationTest {
 
     private Graph<Node, Edge> graph;
-    private JGraphtMutableNodeOperations nodeOps;
-    private JGraphtMutableEdgeOperations edgeOps;
-    private JGraphtMutableComponentOperations componentOps;
+    private JGraphtNodeOperations nodeOps;
+    private JGraphtEdgeOperations edgeOps;
+    private JGraphtComponentOperations componentOps;
     private final Type defaultType = new SimpleType("test");
     private final Type componentType = new SimpleType("component");
     private final Instant timestamp = Instant.now();
@@ -49,9 +49,9 @@ class ComponentReferentialIntegrityIntegrationTest {
     @BeforeEach
     final void before() {
         graph = new DirectedMultigraph<>(null, null, false);
-        edgeOps = new JGraphtMutableEdgeOperations(graph);
-        nodeOps = new JGraphtMutableNodeOperations(graph, edgeOps);
-        componentOps = new JGraphtMutableComponentOperations(graph, nodeOps, edgeOps);
+        edgeOps = new JGraphtEdgeOperations(graph);
+        nodeOps = new JGraphtNodeOperations(graph, edgeOps);
+        componentOps = new JGraphtComponentOperations(graph, nodeOps, edgeOps);
     }
 
     @Test

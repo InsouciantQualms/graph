@@ -12,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import dev.iq.graph.model.ComponentSpace;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Type;
-import dev.iq.graph.model.jgrapht.JGraphtGraphBuilder;
 import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
 import java.util.HashSet;

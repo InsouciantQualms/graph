@@ -14,12 +14,13 @@ import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Type;
-import dev.iq.graph.model.jgrapht.mutable.JGraphtMutableEdgeOperations;
-import dev.iq.graph.model.jgrapht.mutable.JGraphtMutableNodeOperations;
+import dev.iq.graph.model.jgrapht.JGraphtEdgeOperations;
+import dev.iq.graph.model.jgrapht.JGraphtNodeOperations;
 import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import org.jgrapht.Graph;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,16 +36,16 @@ import org.junit.jupiter.api.Test;
 @DisplayName("Node Operations Referential Integrity Tests")
 public class NodeOperationsReferentialIntegrityTest {
 
-    private org.jgrapht.Graph<Node, Edge> graph;
-    private JGraphtMutableNodeOperations nodeOps;
-    private JGraphtMutableEdgeOperations edgeOps;
+    private Graph<Node, Edge> graph;
+    private JGraphtNodeOperations nodeOps;
+    private JGraphtEdgeOperations edgeOps;
     private final Type defaultType = new SimpleType("test");
 
     @BeforeEach
     final void before() {
         graph = new DirectedMultigraph<>(null, null, false);
-        edgeOps = new JGraphtMutableEdgeOperations(graph);
-        nodeOps = new JGraphtMutableNodeOperations(graph, edgeOps);
+        edgeOps = new JGraphtEdgeOperations(graph);
+        nodeOps = new JGraphtNodeOperations(graph, edgeOps);
     }
 
     @Test

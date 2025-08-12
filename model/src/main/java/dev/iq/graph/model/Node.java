@@ -6,10 +6,15 @@
 package dev.iq.graph.model;
 
 import dev.iq.common.annotation.Stable;
+import java.time.Instant;
 
 /**
  * Represents a vertex in the graph that has zero or more edges (which can be incoming or outgoing from the node).
  * Implementations must be immutable and thread-safe.
  */
 @Stable
-public interface Node extends Element {}
+public interface Node extends Element {
+
+    /** Return an expired instance of this node. */
+    Node expire(final Instant timestamp);
+}

@@ -13,5 +13,16 @@ import dev.iq.graph.model.Type;
 import java.time.Instant;
 import java.util.Optional;
 
+/**
+ * Record implementation of Component.  Used to store data about the versioned component.
+ */
 public record SimpleComponent(Locator locator, Type type, Data data, Instant created, Optional<Instant> expired)
-        implements Component {}
+        implements Component {
+
+    /** {@inheritDoc} */
+    @Override
+    public Component expire(final Instant timestamp) {
+
+        return new SimpleComponent(locator, type, data, created, Optional.of(timestamp));
+    }
+}

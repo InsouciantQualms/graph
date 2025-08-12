@@ -15,6 +15,9 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Record implementation of Edge.
+ */
 public record SimpleEdge(
         Locator locator,
         Type type,
@@ -29,5 +32,12 @@ public record SimpleEdge(
     @SuppressWarnings("ConstructorWithTooManyParameters")
     public SimpleEdge {
         components = Set.copyOf(components);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Edge expire(final Instant timestamp) {
+
+        return new SimpleEdge(locator, type, source, target, data, components, created, Optional.of(timestamp));
     }
 }
