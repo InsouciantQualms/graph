@@ -21,6 +21,7 @@ import com.mongodb.client.MongoDatabase;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.simple.SimpleComponent;
 import dev.iq.graph.model.simple.SimpleType;
@@ -64,9 +65,9 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
     }
 
     @Override
-    public Optional<Component> findActive(final NanoId componentId) {
+    public Optional<Component> findActive(final Uid componentId) {
         final var document = collection
-                .find(and(eq("id", componentId.id()), not(exists("expired"))))
+                .find(and(eq("id", componentId.code()), not(exists("expired"))))
                 .sort(descending("versionId"))
                 .first();
 
@@ -74,8 +75,8 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
     }
 
     @Override
-    public List<Component> findAll(final NanoId componentId) {
-        final var documents = collection.find(eq("id", componentId.id())).sort(ascending("versionId"));
+    public List<Component> findAll(final Uid componentId) {
+        final var documents = collection.find(eq("id", componentId.code())).sort(ascending("versionId"));
 
         return StreamSupport.stream(documents.spliterator(), false)
                 .map(this::documentToComponent)
@@ -83,14 +84,14 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
     }
 
     @Override
-    public List<Component> findVersions(final NanoId componentId) {
+    public List<Component> findVersions(final Uid componentId) {
         return findAll(componentId);
     }
 
     @Override
     public Component find(final Locator locator) {
         final var document = collection
-                .find(and(eq("id", locator.id().id()), eq("versionId", locator.version())))
+                .find(and(eq("id", locator.id().code()), eq("versionId", locator.version())))
                 .first();
 
         return Optional.ofNullable(document)
@@ -99,11 +100,11 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
     }
 
     @Override
-    public Optional<Component> findAt(final NanoId componentId, final Instant timestamp) {
+    public Optional<Component> findAt(final Uid componentId, final Instant timestamp) {
         final var timestampStr = timestamp.truncatedTo(ChronoUnit.MILLIS).toString();
         final var document = collection
                 .find(and(
-                        eq("id", componentId.id()),
+                        eq("id", componentId.code()),
                         lte("created", timestampStr),
                         or(not(exists("expired")), gt("expired", timestampStr))))
                 .sort(descending("versionId"))
@@ -113,15 +114,15 @@ public final class MongoComponentRepository implements ExtendedVersionedReposito
     }
 
     @Override
-    public boolean delete(final NanoId componentId) {
-        final var result = collection.deleteMany(eq("id", componentId.id()));
+    public boolean delete(final Uid componentId) {
+        final var result = collection.deleteMany(eq("id", componentId.code()));
         return result.getDeletedCount() > 0;
     }
 
     @Override
-    public boolean expire(final NanoId elementId, final Instant expiredAt) {
+    public boolean expire(final Uid elementId, final Instant expiredAt) {
         final var result = collection.updateMany(
-                and(eq("id", elementId.id()), not(exists("expired"))),
+                and(eq("id", elementId.code()), not(exists("expired"))),
                 new Document(
                         "$set",
                         new Document(

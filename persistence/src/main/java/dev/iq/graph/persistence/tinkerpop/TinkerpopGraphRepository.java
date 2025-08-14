@@ -11,6 +11,10 @@ import org.springframework.stereotype.Repository;
 
 /**
  * GraphSpace listener repository using an in memory Tinkerpop implementation.
+ *
+ * Note: TinkerPop implementations should use GraphComponentStrategy for component storage,
+ * which stores components as special manifest nodes in the graph itself. This is different
+ * from MongoDB and SQLite implementations which use SeparateComponentStrategy.
  */
 @Repository("tinkerpopGraphRepository")
 public record TinkerpopGraphRepository(

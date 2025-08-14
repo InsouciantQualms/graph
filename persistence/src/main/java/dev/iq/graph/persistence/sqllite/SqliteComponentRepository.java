@@ -9,6 +9,7 @@ package dev.iq.graph.persistence.sqllite;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.simple.SimpleComponent;
@@ -58,7 +59,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
         Io.withVoid(() -> {
             getHandle()
                     .createUpdate(sql)
-                    .bind("id", component.locator().id().id())
+                    .bind("id", component.locator().id().code())
                     .bind("version_id", component.locator().version())
                     .bind("type", component.type().code())
                     .bind("created", component.created().toString())
@@ -73,7 +74,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
     }
 
     @Override
-    public Optional<Component> findActive(final NanoId id) {
+    public Optional<Component> findActive(final Uid id) {
         final var sql =
                 """
                 SELECT id, version_id, type, created, expired
@@ -85,13 +86,13 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", id.id())
+                .bind("id", id.code())
                 .map(new ComponentMapper())
                 .findOne());
     }
 
     @Override
-    public Optional<Component> findAt(final NanoId id, final Instant timestamp) {
+    public Optional<Component> findAt(final Uid id, final Instant timestamp) {
         final var sql =
                 """
                 SELECT id, version_id, type, created, expired
@@ -105,7 +106,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", id.id())
+                .bind("id", id.code())
                 .bind("timestamp", timestamp.toString())
                 .map(new ComponentMapper())
                 .findOne());
@@ -122,7 +123,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", locator.id().id())
+                .bind("id", locator.id().code())
                 .bind("version_id", locator.version())
                 .map(new ComponentMapper())
                 .findOne()
@@ -130,7 +131,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
     }
 
     @Override
-    public List<Component> findAll(final NanoId id) {
+    public List<Component> findAll(final Uid id) {
         final var sql =
                 """
                 SELECT id, version_id, type, created, expired
@@ -141,18 +142,18 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", id.id())
+                .bind("id", id.code())
                 .map(new ComponentMapper())
                 .list());
     }
 
     @Override
-    public List<Component> findVersions(final NanoId id) {
+    public List<Component> findVersions(final Uid id) {
         return findAll(id);
     }
 
     @Override
-    public boolean expire(final NanoId id, final Instant expiredAt) {
+    public boolean expire(final Uid id, final Instant expiredAt) {
         final var sql =
                 """
                 UPDATE component
@@ -163,21 +164,24 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
         return Io.withReturn(() -> getHandle()
                         .createUpdate(sql)
                         .bind("expired", expiredAt.toString())
-                        .bind("id", id.id())
+                        .bind("id", id.code())
                         .execute()
                 > 0);
     }
 
     @Override
-    public boolean delete(final NanoId id) {
+    public boolean delete(final Uid id) {
         final var deleteComponentSql =
                 """
                 DELETE FROM component
                 WHERE id = :id
                 """;
 
-        return Io.withReturn(() ->
-                getHandle().createUpdate(deleteComponentSql).bind("id", id.id()).execute() > 0);
+        return Io.withReturn(() -> getHandle()
+                        .createUpdate(deleteComponentSql)
+                        .bind("id", id.code())
+                        .execute()
+                > 0);
     }
 
     @Override
@@ -186,7 +190,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .map((rs, ctx) -> NanoId.from(rs.getString("id")))
                 .list());
     }
 
@@ -196,7 +200,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .map((rs, ctx) -> NanoId.from(rs.getString("id")))
                 .list());
     }
 
@@ -205,7 +209,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
         @Override
         public final Component map(final ResultSet rs, final StatementContext ctx) throws SQLException {
 
-            final var id = new NanoId(rs.getString("id"));
+            final var id = NanoId.from(rs.getString("id"));
             final var version = rs.getInt("version_id");
             final var locator = new Locator(id, version);
             final var type = new SimpleType(rs.getString("type"));
@@ -219,7 +223,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
         }
     }
 
-    private void saveProperties(final NanoId componentId, final int version, final Data data) {
+    private void saveProperties(final Uid componentId, final int version, final Data data) {
         final var sql =
                 """
                 INSERT INTO component_properties (id, version_id, property_key, property_value)
@@ -230,7 +234,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
         Io.withVoid(() -> {
             final var batch = getHandle().prepareBatch(sql);
             for (final var entry : properties.entrySet()) {
-                batch.bind("id", componentId.id())
+                batch.bind("id", componentId.code())
                         .bind("version_id", version)
                         .bind("property_key", entry.getKey())
                         .bind("property_value", String.valueOf(entry.getValue()))
@@ -240,7 +244,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
         });
     }
 
-    private Data loadProperties(final NanoId componentId, final int version) {
+    private Data loadProperties(final Uid componentId, final int version) {
         final var sql =
                 """
                 SELECT property_key, property_value
@@ -252,7 +256,7 @@ public final class SqliteComponentRepository implements ExtendedVersionedReposit
             final var properties = new HashMap<String, Object>();
             getHandle()
                     .createQuery(sql)
-                    .bind("id", componentId.id())
+                    .bind("id", componentId.code())
                     .bind("version_id", version)
                     .map((rs, ctx) -> {
                         properties.put(rs.getString("property_key"), rs.getString("property_value"));

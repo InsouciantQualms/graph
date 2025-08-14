@@ -7,7 +7,7 @@
 package dev.iq.graph.persistence.mongodb;
 
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
@@ -26,23 +26,21 @@ final class TestDataHelper {
 
     private TestDataHelper() {}
 
-    public static Node createNode(final NanoId id, final int version, final Data data, final Instant created) {
+    public static Node createNode(final Uid id, final int version, final Data data, final Instant created) {
         final var locator = new Locator(id, version);
         final var type = new SimpleType("test");
-        final Set<Locator> components = new HashSet<>();
-        return new SimpleNode(locator, type, data, components, created, Optional.empty());
+        return new SimpleNode(locator, type, data, created, Optional.empty());
     }
 
     public static Node createExpiredNode(
-            final NanoId id, final int version, final Data data, final Instant created, final Instant expired) {
+            final Uid id, final int version, final Data data, final Instant created, final Instant expired) {
         final var locator = new Locator(id, version);
         final var type = new SimpleType("test");
-        final Set<Locator> components = new HashSet<>();
-        return new SimpleNode(locator, type, data, components, created, Optional.of(expired));
+        return new SimpleNode(locator, type, data, created, Optional.of(expired));
     }
 
     public static Edge createEdge(
-            final NanoId id,
+            final Uid id,
             final int version,
             final Node source,
             final Node target,
@@ -56,7 +54,7 @@ final class TestDataHelper {
 
     @SuppressWarnings("MethodWithTooManyParameters")
     public static Edge createExpiredEdge(
-            final NanoId id,
+            final Uid id,
             final int version,
             final Node source,
             final Node target,

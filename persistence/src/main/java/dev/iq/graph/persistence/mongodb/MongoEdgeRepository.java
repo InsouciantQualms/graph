@@ -21,6 +21,7 @@ import com.mongodb.client.MongoDatabase;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.simple.SimpleEdge;
 import dev.iq.graph.model.simple.SimpleType;
@@ -56,9 +57,9 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
         return Io.withReturn(() -> {
             final var document = MongoHelper.createBaseDocument(
                             edge.locator(), edge.type().code(), edge.created(), serde.serialize(edge.data()))
-                    .append("sourceId", edge.source().locator().id().id())
+                    .append("sourceId", edge.source().locator().id().code())
                     .append("sourceVersionId", edge.source().locator().version())
-                    .append("targetId", edge.target().locator().id().id())
+                    .append("targetId", edge.target().locator().id().code())
                     .append("targetVersionId", edge.target().locator().version());
             MongoHelper.addExpiryToDocument(document, edge.expired());
 
@@ -71,9 +72,9 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     }
 
     @Override
-    public Optional<Edge> findActive(final NanoId edgeId) {
+    public Optional<Edge> findActive(final Uid edgeId) {
         final var document = collection
-                .find(and(eq("id", edgeId.id()), not(exists("expired"))))
+                .find(and(eq("id", edgeId.code()), not(exists("expired"))))
                 .sort(descending("versionId"))
                 .first();
 
@@ -81,8 +82,8 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     }
 
     @Override
-    public List<Edge> findAll(final NanoId edgeId) {
-        final var documents = collection.find(eq("id", edgeId.id())).sort(ascending("versionId"));
+    public List<Edge> findAll(final Uid edgeId) {
+        final var documents = collection.find(eq("id", edgeId.code())).sort(ascending("versionId"));
 
         return StreamSupport.stream(documents.spliterator(), false)
                 .map(this::documentToEdge)
@@ -90,14 +91,14 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     }
 
     @Override
-    public List<Edge> findVersions(final NanoId edgeId) {
+    public List<Edge> findVersions(final Uid edgeId) {
         return findAll(edgeId);
     }
 
     @Override
     public Edge find(final Locator locator) {
         final var document = collection
-                .find(and(eq("id", locator.id().id()), eq("versionId", locator.version())))
+                .find(and(eq("id", locator.id().code()), eq("versionId", locator.version())))
                 .first();
 
         return Optional.ofNullable(document)
@@ -106,11 +107,11 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     }
 
     @Override
-    public Optional<Edge> findAt(final NanoId edgeId, final Instant timestamp) {
+    public Optional<Edge> findAt(final Uid edgeId, final Instant timestamp) {
         final var timestampStr = timestamp.truncatedTo(ChronoUnit.MILLIS).toString();
         final var document = collection
                 .find(and(
-                        eq("id", edgeId.id()),
+                        eq("id", edgeId.code()),
                         lte("created", timestampStr),
                         or(not(exists("expired")), gt("expired", timestampStr))))
                 .sort(descending("versionId"))
@@ -120,15 +121,15 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
     }
 
     @Override
-    public boolean delete(final NanoId edgeId) {
-        final var result = collection.deleteMany(eq("id", edgeId.id()));
+    public boolean delete(final Uid edgeId) {
+        final var result = collection.deleteMany(eq("id", edgeId.code()));
         return result.getDeletedCount() > 0;
     }
 
     @Override
-    public boolean expire(final NanoId elementId, final Instant expiredAt) {
+    public boolean expire(final Uid elementId, final Instant expiredAt) {
         final var result = collection.updateMany(
-                and(eq("id", elementId.id()), not(exists("expired"))),
+                and(eq("id", elementId.code()), not(exists("expired"))),
                 new Document(
                         "$set",
                         new Document(
@@ -143,9 +144,9 @@ public final class MongoEdgeRepository implements ExtendedVersionedRepository<Ed
             final var data = serde.deserialize(versionedData.serializedData());
 
             // Retrieve source and target nodes
-            final var sourceId = new NanoId(document.getString("sourceId"));
+            final var sourceId = NanoId.from(document.getString("sourceId"));
             final var sourceVersionId = document.getInteger("sourceVersionId");
-            final var targetId = new NanoId(document.getString("targetId"));
+            final var targetId = NanoId.from(document.getString("targetId"));
             final var targetVersionId = document.getInteger("targetVersionId");
 
             final var sourceLocator = new Locator(sourceId, sourceVersionId);

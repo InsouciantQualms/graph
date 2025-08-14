@@ -9,11 +9,11 @@ package dev.iq.graph.persistence.sqllite;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleEdge;
-import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,7 +49,7 @@ public final class SqliteReferentialIntegrityManager {
      * Handles referential integrity when a node is expired.
      * All connected edges must also be expired with the same timestamp.
      */
-    public void handleNodeExpiry(final NanoId nodeId, final Instant expiredAt) {
+    public void handleNodeExpiry(final Uid nodeId, final Instant expiredAt) {
         Io.withVoid(() -> {
             final var handle = session.handle();
 
@@ -67,7 +67,7 @@ public final class SqliteReferentialIntegrityManager {
 
             handle.createUpdate(sql)
                     .bind("expired", expiredAt.toString())
-                    .bind("node_id", nodeId.id())
+                    .bind("node_id", nodeId.code())
                     .execute();
         });
     }
@@ -101,10 +101,10 @@ public final class SqliteReferentialIntegrityManager {
                     """;
 
             handle.createQuery(sourceEdgesSql)
-                    .bind("node_id", oldNode.locator().id().id())
+                    .bind("node_id", oldNode.locator().id().code())
                     .bind("node_version", oldNode.locator().version())
                     .map((rs, ctx) -> {
-                        final var edgeId = new NanoId(rs.getString("id"));
+                        final var edgeId = NanoId.from(rs.getString("id"));
                         final var edgeVersion = rs.getInt("version_id");
                         return new Locator(edgeId, edgeVersion);
                     })
@@ -123,10 +123,10 @@ public final class SqliteReferentialIntegrityManager {
                     """;
 
             handle.createQuery(targetEdgesSql)
-                    .bind("node_id", oldNode.locator().id().id())
+                    .bind("node_id", oldNode.locator().id().code())
                     .bind("node_version", oldNode.locator().version())
                     .map((rs, ctx) -> {
-                        final var edgeId = new NanoId(rs.getString("id"));
+                        final var edgeId = NanoId.from(rs.getString("id"));
                         final var edgeVersion = rs.getInt("version_id");
                         return new Locator(edgeId, edgeVersion);
                     })
@@ -141,7 +141,7 @@ public final class SqliteReferentialIntegrityManager {
                 }
 
                 // Mark this edge as updated
-                alreadyUpdatedEdges.add(oldEdge.locator().id());
+                alreadyUpdatedEdges.add((NanoId) oldEdge.locator().id());
 
                 // Expire the current edge
                 edgeRepository.expire(oldEdge.locator().id(), timestamp);
@@ -227,10 +227,10 @@ public final class SqliteReferentialIntegrityManager {
                     """;
 
             final var nodesToUpdate = handle.createQuery(sql)
-                    .bind("component_id", oldLocator.id().id())
+                    .bind("component_id", oldLocator.id().code())
                     .bind("component_version", oldLocator.version())
                     .map((rs, ctx) -> {
-                        final var nodeId = new NanoId(rs.getString("id"));
+                        final var nodeId = NanoId.from(rs.getString("id"));
                         final var nodeVersion = rs.getInt("version_id");
                         return new Locator(nodeId, nodeVersion);
                     })
@@ -239,30 +239,8 @@ public final class SqliteReferentialIntegrityManager {
             for (Locator nodeLocator : nodesToUpdate) {
                 final Node node = nodeRepository.find(nodeLocator);
 
-                // Create new components set with updated reference
-                final Set<Locator> updatedComponents = new HashSet<>(node.components());
-                updatedComponents.remove(oldLocator);
-                updatedComponents.add(newLocator);
-
-                // Expire the old node version
-                nodeRepository.expire(node.locator().id(), timestamp);
-
-                // Create new node version with updated components
-                final var newNodeLocator =
-                        new Locator(node.locator().id(), node.locator().version() + 1);
-
-                final var newNode = new SimpleNode(
-                        newNodeLocator,
-                        node.type(),
-                        node.data(),
-                        updatedComponents,
-                        timestamp,
-                        java.util.Optional.empty());
-
-                nodeRepository.save(newNode);
-
-                // Handle cascading edge updates for this node update, passing the set of already updated edges
-                handleNodeUpdate(node, newNode, timestamp, alreadyUpdatedEdges);
+                // Nodes no longer have components in the new model
+                // Skip node updates for component changes
             }
         });
     }
@@ -287,10 +265,10 @@ public final class SqliteReferentialIntegrityManager {
                     """;
 
             final var edgesToUpdate = handle.createQuery(sql)
-                    .bind("component_id", oldLocator.id().id())
+                    .bind("component_id", oldLocator.id().code())
                     .bind("component_version", oldLocator.version())
                     .map((rs, ctx) -> {
-                        final var edgeId = new NanoId(rs.getString("id"));
+                        final var edgeId = NanoId.from(rs.getString("id"));
                         final var edgeVersion = rs.getInt("version_id");
                         return new Locator(edgeId, edgeVersion);
                     })
@@ -298,7 +276,7 @@ public final class SqliteReferentialIntegrityManager {
 
             for (Locator edgeLocator : edgesToUpdate) {
                 final Edge edge = edgeRepository.find(edgeLocator);
-                final NanoId edgeId = edge.locator().id();
+                final NanoId edgeId = (NanoId) edge.locator().id();
 
                 // Mark this edge as updated
                 updatedEdges.add(edgeId);

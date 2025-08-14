@@ -45,8 +45,8 @@ final class MongoHelper {
             final Locator locator, final String type, final Instant created, final String serializedData) {
 
         return new Document()
-                .append("_id", locator.id().id() + ':' + locator.version())
-                .append("id", locator.id().id())
+                .append("_id", locator.id().code() + ':' + locator.version())
+                .append("id", locator.id().code())
                 .append("versionId", locator.version())
                 .append("type", type)
                 .append("created", formatTimestamp(created))
@@ -67,7 +67,7 @@ final class MongoHelper {
     static VersionedDocumentData extractVersionedData(final Document document) {
 
         return Io.withReturn(() -> {
-            final var id = new NanoId(document.getString("id"));
+            final var id = NanoId.from(document.getString("id"));
             final var versionId = document.getInteger("versionId");
             final var type = document.getString("type");
             final var created = Instant.parse(document.getString("created"));
@@ -91,7 +91,7 @@ final class MongoHelper {
     static List<NanoId> convertToNanoIdList(final Iterable<String> stringIds) {
 
         return Io.withReturn(() -> StreamSupport.stream(stringIds.spliterator(), false)
-                .map(NanoId::new)
+                .map(NanoId::from)
                 .toList());
     }
 
@@ -101,7 +101,7 @@ final class MongoHelper {
     static List<Document> serializeComponents(final Set<Locator> components) {
         final var list = new ArrayList<Document>();
         for (final var locator : components) {
-            list.add(new Document().append("id", locator.id().id()).append("versionId", locator.version()));
+            list.add(new Document().append("id", locator.id().code()).append("versionId", locator.version()));
         }
         return list;
     }
@@ -113,7 +113,7 @@ final class MongoHelper {
         final var components = new HashSet<Locator>();
         if (documents != null) {
             for (final var doc : documents) {
-                final var id = new NanoId(doc.getString("id"));
+                final var id = NanoId.from(doc.getString("id"));
                 final var versionId = doc.getInteger("versionId");
                 components.add(new Locator(id, versionId));
             }

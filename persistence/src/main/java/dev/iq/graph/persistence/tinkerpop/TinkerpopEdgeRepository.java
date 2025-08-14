@@ -11,6 +11,7 @@ import static org.apache.tinkerpop.gremlin.process.traversal.P.lte;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleEdge;
@@ -55,12 +56,12 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
         final var targetVertex = findOrCreateVertexForNode(edge.target());
 
         final var tinkerpopEdge = sourceVertex.addEdge("edge", targetVertex);
-        tinkerpopEdge.property("id", edge.locator().id().id());
+        tinkerpopEdge.property("id", edge.locator().id().code());
         tinkerpopEdge.property("versionId", edge.locator().version());
         tinkerpopEdge.property("type", edge.type().code());
-        tinkerpopEdge.property("sourceId", edge.source().locator().id().id());
+        tinkerpopEdge.property("sourceId", edge.source().locator().id().code());
         tinkerpopEdge.property("sourceVersionId", edge.source().locator().version());
-        tinkerpopEdge.property("targetId", edge.target().locator().id().id());
+        tinkerpopEdge.property("targetId", edge.target().locator().id().code());
         tinkerpopEdge.property("targetVersionId", edge.target().locator().version());
         tinkerpopEdge.property("created", edge.created().toString());
         edge.expired().ifPresent(expired -> tinkerpopEdge.property("expired", expired.toString()));
@@ -75,21 +76,21 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
     }
 
     @Override
-    public Optional<Edge> findActive(final NanoId edgeId) {
+    public Optional<Edge> findActive(final Uid edgeId) {
         final var edgeOpt =
-                traversal.E().has("id", edgeId.id()).not(__.has("expired")).tryNext();
+                traversal.E().has("id", edgeId.code()).not(__.has("expired")).tryNext();
         return edgeOpt.map(this::edgeToEdge);
     }
 
     @Override
-    public List<Edge> findAll(final NanoId edgeId) {
-        return traversal.E().has("id", edgeId.id()).order().by("versionId").toList().stream()
+    public List<Edge> findAll(final Uid edgeId) {
+        return traversal.E().has("id", edgeId.code()).order().by("versionId").toList().stream()
                 .map(this::edgeToEdge)
                 .toList();
     }
 
     @Override
-    public List<Edge> findVersions(final NanoId edgeId) {
+    public List<Edge> findVersions(final Uid edgeId) {
         return findAll(edgeId);
     }
 
@@ -97,7 +98,7 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
     public Edge find(final Locator locator) {
         final var edgeOpt = traversal
                 .E()
-                .has("id", locator.id().id())
+                .has("id", locator.id().code())
                 .has("versionId", locator.version())
                 .tryNext();
         return edgeOpt.map(this::edgeToEdge)
@@ -105,11 +106,11 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
     }
 
     @Override
-    public Optional<Edge> findAt(final NanoId edgeId, final Instant timestamp) {
+    public Optional<Edge> findAt(final Uid edgeId, final Instant timestamp) {
         final var timestampStr = timestamp.toString();
         return traversal
                 .E()
-                .has("id", edgeId.id())
+                .has("id", edgeId.code())
                 .where(__.values("created").is(lte(timestampStr)))
                 .where(__.or(__.not(__.has("expired")), __.values("expired").is(gt(timestampStr))))
                 .order()
@@ -120,19 +121,19 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
     }
 
     @Override
-    public boolean delete(final NanoId edgeId) {
-        final var count = traversal.E().has("id", edgeId.id()).count().next();
+    public boolean delete(final Uid edgeId) {
+        final var count = traversal.E().has("id", edgeId.code()).count().next();
         if (count > 0) {
-            traversal.E().has("id", edgeId.id()).drop().iterate();
+            traversal.E().has("id", edgeId.code()).drop().iterate();
             return true;
         }
         return false;
     }
 
     @Override
-    public boolean expire(final NanoId elementId, final Instant expiredAt) {
+    public boolean expire(final Uid elementId, final Instant expiredAt) {
         final var edges =
-                traversal.E().has("id", elementId.id()).not(__.has("expired")).toList();
+                traversal.E().has("id", elementId.code()).not(__.has("expired")).toList();
         if (!edges.isEmpty()) {
             edges.forEach(e -> e.property("expired", expiredAt.toString()));
             return true;
@@ -143,29 +144,29 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
     @Override
     public List<NanoId> allIds() {
         return traversal.E().values("id").dedup().toList().stream()
-                .map(id -> new NanoId((String) id))
+                .map(id -> NanoId.from((String) id))
                 .toList();
     }
 
     @Override
     public List<NanoId> allActiveIds() {
         return traversal.E().not(__.has("expired")).values("id").dedup().toList().stream()
-                .map(id -> new NanoId((String) id))
+                .map(id -> NanoId.from((String) id))
                 .toList();
     }
 
     private Vertex findOrCreateVertexForNode(final Node node) {
-        final var existing = traversal.V().has("id", node.locator().id().id()).tryNext();
+        final var existing = traversal.V().has("id", node.locator().id().code()).tryNext();
         if (existing.isPresent()) {
             return existing.get();
         }
         // Create vertex if it doesn't exist
         nodeRepository.save(node);
-        return traversal.V().has("id", node.locator().id().id()).next();
+        return traversal.V().has("id", node.locator().id().code()).next();
     }
 
     private Edge edgeToEdge(final org.apache.tinkerpop.gremlin.structure.Edge tinkerpopEdge) {
-        final var id = new NanoId(tinkerpopEdge.value("id"));
+        final var id = NanoId.from(tinkerpopEdge.value("id"));
         final int versionId = tinkerpopEdge.value("versionId");
         final var type = new SimpleType(tinkerpopEdge.value("type"));
         final var created = Instant.parse(tinkerpopEdge.value("created"));
@@ -193,9 +194,9 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
         final var locator = new Locator(id, versionId);
 
         // Get source and target nodes using the stored version information
-        final var sourceId = new NanoId(tinkerpopEdge.value("sourceId"));
+        final var sourceId = NanoId.from(tinkerpopEdge.value("sourceId"));
         final var sourceVersionId = (Integer) tinkerpopEdge.value("sourceVersionId");
-        final var targetId = new NanoId(tinkerpopEdge.value("targetId"));
+        final var targetId = NanoId.from(tinkerpopEdge.value("targetId"));
         final var targetVersionId = (Integer) tinkerpopEdge.value("targetVersionId");
 
         final var source = nodeRepository.find(new Locator(sourceId, sourceVersionId));
@@ -212,7 +213,7 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
 
         // Store components as a serialized property - each component as "componentId:versionId"
         final var componentStrings = components.stream()
-                .map(loc -> loc.id().id() + ":" + loc.version())
+                .map(loc -> loc.id().code() + ":" + loc.version())
                 .toList();
         edge.property("components", String.join(",", componentStrings));
     }
@@ -228,7 +229,7 @@ public final class TinkerpopEdgeRepository implements ExtendedVersionedRepositor
                     final var parts = pair.split(":");
                     if (parts.length == 2) {
                         try {
-                            final var id = new NanoId(parts[0]);
+                            final var id = NanoId.from(parts[0]);
                             final var version = Integer.parseInt(parts[1]);
                             components.add(new Locator(id, version));
                         } catch (final NumberFormatException ignored) {

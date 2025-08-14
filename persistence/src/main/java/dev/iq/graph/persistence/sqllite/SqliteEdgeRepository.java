@@ -9,6 +9,7 @@ package dev.iq.graph.persistence.sqllite;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.simple.SimpleEdge;
@@ -71,12 +72,12 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
         Io.withVoid(() -> {
             getHandle()
                     .createUpdate(sql)
-                    .bind("id", edge.locator().id().id())
+                    .bind("id", edge.locator().id().code())
                     .bind("version_id", edge.locator().version())
                     .bind("type", edge.type().code())
-                    .bind("source_id", edge.source().locator().id().id())
+                    .bind("source_id", edge.source().locator().id().code())
                     .bind("source_version_id", edge.source().locator().version())
-                    .bind("target_id", edge.target().locator().id().id())
+                    .bind("target_id", edge.target().locator().id().code())
                     .bind("target_version_id", edge.target().locator().version())
                     .bind("created", edge.created().toString())
                     .bind("expired", edge.expired().map(Object::toString).orElse(null))
@@ -93,7 +94,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
     }
 
     @Override
-    public Optional<Edge> findActive(final NanoId edgeId) {
+    public Optional<Edge> findActive(final Uid edgeId) {
         final var sql = EDGE_BASE_QUERY
                 + """
                 WHERE e.id = :id AND e.expired IS NULL
@@ -102,13 +103,13 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", edgeId.id())
+                .bind("id", edgeId.code())
                 .map(new EdgeMapper())
                 .findOne());
     }
 
     @Override
-    public List<Edge> findAll(final NanoId edgeId) {
+    public List<Edge> findAll(final Uid edgeId) {
         final var sql = EDGE_BASE_QUERY
                 + """
                 WHERE e.id = :id
@@ -117,13 +118,13 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", edgeId.id())
+                .bind("id", edgeId.code())
                 .map(new EdgeMapper())
                 .list());
     }
 
     @Override
-    public List<Edge> findVersions(final NanoId edgeId) {
+    public List<Edge> findVersions(final Uid edgeId) {
         return findAll(edgeId);
     }
 
@@ -136,7 +137,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", locator.id().id())
+                .bind("id", locator.id().code())
                 .bind("version_id", locator.version())
                 .map(new EdgeMapper())
                 .findOne()
@@ -144,7 +145,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
     }
 
     @Override
-    public Optional<Edge> findAt(final NanoId edgeId, final Instant timestamp) {
+    public Optional<Edge> findAt(final Uid edgeId, final Instant timestamp) {
         final var sql = EDGE_BASE_QUERY
                 + """
                 WHERE e.id = :id AND e.created <= :timestamp
@@ -157,7 +158,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
             final var timestampStr = timestamp.toString();
             return getHandle()
                     .createQuery(sql)
-                    .bind("id", edgeId.id())
+                    .bind("id", edgeId.code())
                     .bind("timestamp", timestampStr)
                     .map(new EdgeMapper())
                     .findOne();
@@ -165,21 +166,21 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
     }
 
     @Override
-    public boolean delete(final NanoId edgeId) {
+    public boolean delete(final Uid edgeId) {
         final var sql = "DELETE FROM edge WHERE id = :id";
 
         return Io.withReturn(
-                () -> getHandle().createUpdate(sql).bind("id", edgeId.id()).execute() > 0);
+                () -> getHandle().createUpdate(sql).bind("id", edgeId.code()).execute() > 0);
     }
 
     @Override
-    public boolean expire(final NanoId elementId, final Instant expiredAt) {
+    public boolean expire(final Uid elementId, final Instant expiredAt) {
         final var sql = "UPDATE edge SET expired = :expired WHERE id = :id AND expired IS NULL";
 
         return Io.withReturn(() -> getHandle()
                         .createUpdate(sql)
                         .bind("expired", expiredAt.toString())
-                        .bind("id", elementId.id())
+                        .bind("id", elementId.code())
                         .execute()
                 > 0);
     }
@@ -190,7 +191,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .map((rs, ctx) -> NanoId.from(rs.getString("id")))
                 .list());
     }
 
@@ -200,7 +201,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .map((rs, ctx) -> NanoId.from(rs.getString("id")))
                 .list());
     }
 
@@ -209,7 +210,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
         @Override
         public final Edge map(final ResultSet rs, final StatementContext ctx) throws SQLException {
 
-            final var id = new NanoId(rs.getString("id"));
+            final var id = NanoId.from(rs.getString("id"));
             final var versionId = rs.getInt("version_id");
             final var type = new SimpleType(rs.getString("type"));
             final var created = Instant.parse(rs.getString("created"));
@@ -223,9 +224,9 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
             final var data = loadProperties(id, versionId);
 
             // Get source and target nodes with specific versions
-            final var sourceId = new NanoId(rs.getString("source_id"));
+            final var sourceId = NanoId.from(rs.getString("source_id"));
             final var sourceVersionId = rs.getInt("source_version_id");
-            final var targetId = new NanoId(rs.getString("target_id"));
+            final var targetId = NanoId.from(rs.getString("target_id"));
             final var targetVersionId = rs.getInt("target_version_id");
 
             final var sourceNode = nodeRepository.find(new Locator(sourceId, sourceVersionId));
@@ -238,7 +239,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
         }
     }
 
-    private void saveProperties(final NanoId edgeId, final int version, final Data data) {
+    private void saveProperties(final Uid edgeId, final int version, final Data data) {
         final var sql =
                 """
                 INSERT INTO edge_properties (id, version_id, property_key, property_value)
@@ -249,7 +250,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
         Io.withVoid(() -> {
             final var batch = getHandle().prepareBatch(sql);
             for (final var entry : properties.entrySet()) {
-                batch.bind("id", edgeId.id())
+                batch.bind("id", edgeId.code())
                         .bind("version_id", version)
                         .bind("property_key", entry.getKey())
                         .bind("property_value", String.valueOf(entry.getValue()))
@@ -259,7 +260,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
         });
     }
 
-    private Data loadProperties(final NanoId edgeId, final int version) {
+    private Data loadProperties(final Uid edgeId, final int version) {
         final var sql =
                 """
                 SELECT property_key, property_value
@@ -271,7 +272,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
             final var properties = new HashMap<String, Object>();
             getHandle()
                     .createQuery(sql)
-                    .bind("id", edgeId.id())
+                    .bind("id", edgeId.code())
                     .bind("version_id", version)
                     .map((rs, ctx) -> {
                         properties.put(rs.getString("property_key"), rs.getString("property_value"));
@@ -282,7 +283,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
         });
     }
 
-    private void saveComponents(final NanoId edgeId, final int version, final Set<Locator> components) {
+    private void saveComponents(final Uid edgeId, final int version, final Set<Locator> components) {
         final var sql =
                 """
                 INSERT INTO edge_components (edge_id, edge_version, component_id, component_version)
@@ -296,9 +297,9 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
         Io.withVoid(() -> {
             final var batch = getHandle().prepareBatch(sql);
             for (final var component : components) {
-                batch.bind("edge_id", edgeId.id())
+                batch.bind("edge_id", edgeId.code())
                         .bind("edge_version", version)
-                        .bind("component_id", component.id().id())
+                        .bind("component_id", component.id().code())
                         .bind("component_version", component.version())
                         .add();
             }
@@ -306,7 +307,7 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
         });
     }
 
-    private Set<Locator> loadComponents(final NanoId edgeId, final int version) {
+    private Set<Locator> loadComponents(final Uid edgeId, final int version) {
         final var sql =
                 """
                 SELECT component_id, component_version
@@ -318,10 +319,10 @@ public final class SqliteEdgeRepository implements ExtendedVersionedRepository<E
             final var components = new HashSet<Locator>();
             getHandle()
                     .createQuery(sql)
-                    .bind("edge_id", edgeId.id())
+                    .bind("edge_id", edgeId.code())
                     .bind("edge_version", version)
                     .map((rs, ctx) -> {
-                        final var componentId = new NanoId(rs.getString("component_id"));
+                        final var componentId = NanoId.from(rs.getString("component_id"));
                         final var componentVersion = rs.getInt("component_version");
                         components.add(new Locator(componentId, componentVersion));
                         return null;

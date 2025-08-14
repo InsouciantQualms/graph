@@ -11,6 +11,7 @@ import static org.apache.tinkerpop.gremlin.process.traversal.P.lte;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.model.simple.SimpleType;
@@ -18,11 +19,9 @@ import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import dev.iq.graph.persistence.serde.PropertiesSerde;
 import dev.iq.graph.persistence.serde.Serde;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
@@ -51,7 +50,7 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
     @Override
     public Node save(final @NotNull Node node) {
         final var vertex = graph.addVertex("node");
-        vertex.property("id", node.locator().id().id());
+        vertex.property("id", node.locator().id().code());
         vertex.property("versionId", node.locator().version());
         vertex.property("type", node.type().code());
         vertex.property("created", node.created().toString());
@@ -60,32 +59,31 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
         final var properties = serde.serialize(node.data());
         properties.forEach(vertex::property);
 
-        // Save components
-        saveComponents(vertex, node.components());
+        // Nodes no longer have components in the new model
 
         return node;
     }
 
     @Override
-    public Optional<Node> findActive(final NanoId nodeId) {
+    public Optional<Node> findActive(final Uid nodeId) {
         return traversal
                 .V()
                 .hasLabel("node")
-                .has("id", nodeId.id())
+                .has("id", nodeId.code())
                 .not(__.has("expired"))
                 .tryNext()
                 .map(this::vertexToNode);
     }
 
     @Override
-    public List<Node> findAll(final NanoId nodeId) {
-        return traversal.V().hasLabel("node").has("id", nodeId.id()).order().by("versionId").toList().stream()
+    public List<Node> findAll(final Uid nodeId) {
+        return traversal.V().hasLabel("node").has("id", nodeId.code()).order().by("versionId").toList().stream()
                 .map(this::vertexToNode)
                 .toList();
     }
 
     @Override
-    public List<Node> findVersions(final NanoId nodeId) {
+    public List<Node> findVersions(final Uid nodeId) {
         return findAll(nodeId);
     }
 
@@ -94,7 +92,7 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
         final var vertex = traversal
                 .V()
                 .hasLabel("node")
-                .has("id", locator.id().id())
+                .has("id", locator.id().code())
                 .has("versionId", locator.version())
                 .tryNext();
         return vertex.map(this::vertexToNode)
@@ -102,12 +100,12 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
     }
 
     @Override
-    public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
+    public Optional<Node> findAt(final Uid nodeId, final Instant timestamp) {
         final var timestampStr = timestamp.toString();
         return traversal
                 .V()
                 .hasLabel("node")
-                .has("id", nodeId.id())
+                .has("id", nodeId.code())
                 .where(__.values("created").is(lte(timestampStr)))
                 .where(__.or(__.not(__.has("expired")), __.values("expired").is(gt(timestampStr))))
                 .order()
@@ -118,22 +116,22 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
     }
 
     @Override
-    public boolean delete(final NanoId nodeId) {
+    public boolean delete(final Uid nodeId) {
         final var count =
-                traversal.V().hasLabel("node").has("id", nodeId.id()).count().next();
+                traversal.V().hasLabel("node").has("id", nodeId.code()).count().next();
         if (count > 0) {
-            traversal.V().hasLabel("node").has("id", nodeId.id()).drop().iterate();
+            traversal.V().hasLabel("node").has("id", nodeId.code()).drop().iterate();
             return true;
         }
         return false;
     }
 
     @Override
-    public boolean expire(final NanoId elementId, final Instant expiredAt) {
+    public boolean expire(final Uid elementId, final Instant expiredAt) {
         final var vertices = traversal
                 .V()
                 .hasLabel("node")
-                .has("id", elementId.id())
+                .has("id", elementId.code())
                 .not(__.has("expired"))
                 .toList();
         if (!vertices.isEmpty()) {
@@ -146,19 +144,19 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
     @Override
     public List<NanoId> allIds() {
         return traversal.V().hasLabel("node").values("id").dedup().toList().stream()
-                .map(id -> new NanoId((String) id))
+                .map(id -> NanoId.from((String) id))
                 .toList();
     }
 
     @Override
     public List<NanoId> allActiveIds() {
         return traversal.V().hasLabel("node").not(__.has("expired")).values("id").dedup().toList().stream()
-                .map(id -> new NanoId((String) id))
+                .map(id -> NanoId.from((String) id))
                 .toList();
     }
 
     private Node vertexToNode(final Vertex vertex) {
-        final var id = new NanoId(vertex.value("id"));
+        final var id = NanoId.from(vertex.value("id"));
         final int versionId = vertex.value("versionId");
         final var type = new SimpleType(vertex.value("type"));
         final var created = Instant.parse(vertex.value("created"));
@@ -175,45 +173,8 @@ public final class TinkerpopNodeRepository implements ExtendedVersionedRepositor
 
         final var data = serde.deserialize(properties);
         final var locator = new Locator(id, versionId);
-        final var components = loadComponents(vertex);
-
-        return new SimpleNode(locator, type, data, components, created, expired);
+        return new SimpleNode(locator, type, data, created, expired);
     }
 
-    private void saveComponents(final Vertex vertex, final Set<Locator> components) {
-        if (components.isEmpty()) {
-            return;
-        }
-
-        // Store components as a serialized property - each component as "componentId:versionId"
-        final var componentStrings = components.stream()
-                .map(loc -> loc.id().id() + ":" + loc.version())
-                .toList();
-        vertex.property("components", String.join(",", componentStrings));
-    }
-
-    private Set<Locator> loadComponents(final Vertex vertex) {
-        final var components = new HashSet<Locator>();
-
-        if (vertex.property("components").isPresent()) {
-            final var componentsStr = vertex.<String>value("components");
-            if (!componentsStr.isEmpty()) {
-                final var componentPairs = componentsStr.split(",");
-                for (final var pair : componentPairs) {
-                    final var parts = pair.split(":");
-                    if (parts.length == 2) {
-                        try {
-                            final var id = new NanoId(parts[0]);
-                            final var version = Integer.parseInt(parts[1]);
-                            components.add(new Locator(id, version));
-                        } catch (final NumberFormatException ignored) {
-                            // Skip invalid component references
-                        }
-                    }
-                }
-            }
-        }
-
-        return components;
-    }
+    // Nodes no longer have components in the new model - methods removed
 }

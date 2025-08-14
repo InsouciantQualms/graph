@@ -130,23 +130,13 @@ class MongoReferentialIntegrityIntegrationTest {
                 Optional.empty());
         componentRepository.save(comp2);
 
-        // Step 2: Create nodes with component references
+        // Step 2: Create nodes (nodes no longer have components)
         final var node1 = new SimpleNode(
-                new Locator(NanoId.generate(), 1),
-                defaultType,
-                new TestData("Node1"),
-                Set.of(comp1.locator()),
-                baseTime,
-                Optional.empty());
+                new Locator(NanoId.generate(), 1), defaultType, new TestData("Node1"), baseTime, Optional.empty());
         nodeRepository.save(node1);
 
         final var node2 = new SimpleNode(
-                new Locator(NanoId.generate(), 1),
-                defaultType,
-                new TestData("Node2"),
-                Set.of(comp1.locator(), comp2.locator()),
-                baseTime,
-                Optional.empty());
+                new Locator(NanoId.generate(), 1), defaultType, new TestData("Node2"), baseTime, Optional.empty());
         nodeRepository.save(node2);
 
         // Step 3: Create edges
@@ -179,16 +169,9 @@ class MongoReferentialIntegrityIntegrationTest {
         final var currentNode1 = nodeRepository.findActive(node1.locator().id()).orElseThrow();
         final var currentNode2 = nodeRepository.findActive(node2.locator().id()).orElseThrow();
 
-        assertEquals(2, currentNode1.locator().version(), "Node1 should be version 2");
-        assertEquals(2, currentNode2.locator().version(), "Node2 should be version 2");
-
-        // Verify nodes reference the new component version
-        assertTrue(currentNode1.components().contains(updatedComp1.locator()));
-        assertFalse(currentNode1.components().contains(comp1.locator()));
-
-        assertTrue(currentNode2.components().contains(updatedComp1.locator()));
-        assertTrue(currentNode2.components().contains(comp2.locator())); // Should still have comp2
-        assertFalse(currentNode2.components().contains(comp1.locator()));
+        // Nodes no longer have components, so they should not be updated
+        assertEquals(1, currentNode1.locator().version(), "Node1 should remain at version 1");
+        assertEquals(1, currentNode2.locator().version(), "Node2 should remain at version 1");
 
         // Verify edge was updated (both directly and due to node updates)
         final var edgeVersions = edgeRepository.findVersions(edge1.locator().id());
@@ -198,9 +181,7 @@ class MongoReferentialIntegrityIntegrationTest {
         assertTrue(currentEdge.components().contains(updatedComp1.locator()));
         assertFalse(currentEdge.components().contains(comp1.locator()));
 
-        // Verify all timestamps are consistent
-        assertTimestampsEqual(updateTime, currentNode1.created());
-        assertTimestampsEqual(updateTime, currentNode2.created());
+        // Only edge should have new timestamp (nodes weren't updated)
         assertTimestampsEqual(updateTime, currentEdge.created());
     }
 
@@ -212,21 +193,11 @@ class MongoReferentialIntegrityIntegrationTest {
 
         // Create nodes
         final var node1 = new SimpleNode(
-                new Locator(NanoId.generate(), 1),
-                defaultType,
-                new TestData("Node1"),
-                new HashSet<>(),
-                createTime,
-                Optional.empty());
+                new Locator(NanoId.generate(), 1), defaultType, new TestData("Node1"), createTime, Optional.empty());
         nodeRepository.save(node1);
 
         final var node2 = new SimpleNode(
-                new Locator(NanoId.generate(), 1),
-                defaultType,
-                new TestData("Node2"),
-                new HashSet<>(),
-                createTime,
-                Optional.empty());
+                new Locator(NanoId.generate(), 1), defaultType, new TestData("Node2"), createTime, Optional.empty());
         nodeRepository.save(node2);
 
         // Create edges
@@ -287,23 +258,13 @@ class MongoReferentialIntegrityIntegrationTest {
                 Optional.empty());
         componentRepository.save(comp);
 
-        // Create nodes
+        // Create nodes (nodes no longer have components)
         final var node1 = new SimpleNode(
-                new Locator(NanoId.generate(), 1),
-                defaultType,
-                new TestData("Node1"),
-                Set.of(comp.locator()),
-                createTime,
-                Optional.empty());
+                new Locator(NanoId.generate(), 1), defaultType, new TestData("Node1"), createTime, Optional.empty());
         nodeRepository.save(node1);
 
         final var node2 = new SimpleNode(
-                new Locator(NanoId.generate(), 1),
-                defaultType,
-                new TestData("Node2"),
-                new HashSet<>(),
-                createTime,
-                Optional.empty());
+                new Locator(NanoId.generate(), 1), defaultType, new TestData("Node2"), createTime, Optional.empty());
         nodeRepository.save(node2);
 
         // Create edge
@@ -323,7 +284,6 @@ class MongoReferentialIntegrityIntegrationTest {
                 new Locator(node1.locator().id(), 2),
                 defaultType,
                 new TestData("UpdatedNode1"),
-                Set.of(comp.locator()),
                 updateTime,
                 Optional.empty());
 

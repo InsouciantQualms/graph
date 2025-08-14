@@ -8,6 +8,7 @@ package dev.iq.graph.persistence.tinkerpop;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
@@ -59,12 +60,12 @@ public final class TinkerpopNodeRepositoryWithIntegrity implements ExtendedVersi
     }
 
     @Override
-    public Optional<Node> findActive(final NanoId nodeId) {
+    public Optional<Node> findActive(final Uid nodeId) {
         return baseRepository.findActive(nodeId);
     }
 
     @Override
-    public List<Node> findVersions(final NanoId nodeId) {
+    public List<Node> findVersions(final Uid nodeId) {
         return baseRepository.findVersions(nodeId);
     }
 
@@ -74,17 +75,17 @@ public final class TinkerpopNodeRepositoryWithIntegrity implements ExtendedVersi
     }
 
     @Override
-    public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
+    public Optional<Node> findAt(final Uid nodeId, final Instant timestamp) {
         return baseRepository.findAt(nodeId, timestamp);
     }
 
     @Override
-    public boolean delete(final NanoId nodeId) {
+    public boolean delete(final Uid nodeId) {
         return baseRepository.delete(nodeId);
     }
 
     @Override
-    public boolean expire(final NanoId nodeId, final Instant expiredAt) {
+    public boolean expire(final Uid nodeId, final Instant expiredAt) {
         final var result = baseRepository.expire(nodeId, expiredAt);
 
         if (result) {
@@ -106,7 +107,7 @@ public final class TinkerpopNodeRepositoryWithIntegrity implements ExtendedVersi
     }
 
     @Override
-    public List<Node> findAll(final NanoId nodeId) {
+    public List<Node> findAll(final Uid nodeId) {
         return baseRepository.findAll(nodeId);
     }
 

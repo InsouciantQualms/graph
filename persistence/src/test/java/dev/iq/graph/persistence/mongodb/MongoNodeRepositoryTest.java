@@ -24,7 +24,6 @@ import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -73,8 +72,7 @@ final class MongoNodeRepositoryTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
-        final var node =
-                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node = new SimpleNode(locator, new SimpleType("test"), data, created, Optional.empty());
 
         final var savedNode = repository.save(node);
         assertEquals(node, savedNode);
@@ -94,10 +92,10 @@ final class MongoNodeRepositoryTest {
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
 
-        final var node1 = new SimpleNode(
-                locator1, new SimpleType("test"), data, new HashSet<>(), created, Optional.of(created.plusSeconds(10)));
-        final var node2 = new SimpleNode(
-                locator2, new SimpleType("test"), data, new HashSet<>(), created.plusSeconds(5), Optional.empty());
+        final var node1 =
+                new SimpleNode(locator1, new SimpleType("test"), data, created, Optional.of(created.plusSeconds(10)));
+        final var node2 =
+                new SimpleNode(locator2, new SimpleType("test"), data, created.plusSeconds(5), Optional.empty());
 
         repository.save(node1);
         repository.save(node2);
@@ -113,10 +111,10 @@ final class MongoNodeRepositoryTest {
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
 
-        final var node1 = new SimpleNode(
-                new Locator(nodeId, 1), new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
-        final var node2 = new SimpleNode(
-                new Locator(nodeId, 2), new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node1 =
+                new SimpleNode(new Locator(nodeId, 1), new SimpleType("test"), data, created, Optional.empty());
+        final var node2 =
+                new SimpleNode(new Locator(nodeId, 2), new SimpleType("test"), data, created, Optional.empty());
 
         repository.save(node1);
         repository.save(node2);
@@ -133,8 +131,7 @@ final class MongoNodeRepositoryTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
-        final var node =
-                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node = new SimpleNode(locator, new SimpleType("test"), data, created, Optional.empty());
 
         repository.save(node);
 
@@ -151,8 +148,7 @@ final class MongoNodeRepositoryTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-value");
         final var created = Instant.now();
-        final var node =
-                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node = new SimpleNode(locator, new SimpleType("test"), data, created, Optional.empty());
 
         repository.save(node);
         assertTrue(repository.delete(nodeId));

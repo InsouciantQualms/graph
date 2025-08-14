@@ -21,6 +21,7 @@ import com.mongodb.client.MongoDatabase;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.model.simple.SimpleType;
@@ -31,7 +32,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.StreamSupport;
 import org.bson.Document;
 import org.springframework.stereotype.Repository;
@@ -56,18 +56,15 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
                     node.locator(), node.type().code(), node.created(), serde.serialize(node.data()));
             MongoHelper.addExpiryToDocument(document, node.expired());
 
-            // Add components
-            document.append("components", MongoHelper.serializeComponents(node.components()));
-
             collection.insertOne(document);
             return node;
         });
     }
 
     @Override
-    public Optional<Node> findActive(final NanoId nodeId) {
+    public Optional<Node> findActive(final Uid nodeId) {
         final var document = collection
-                .find(and(eq("id", nodeId.id()), not(exists("expired"))))
+                .find(and(eq("id", nodeId.code()), not(exists("expired"))))
                 .sort(descending("versionId"))
                 .first();
 
@@ -75,8 +72,8 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     }
 
     @Override
-    public List<Node> findAll(final NanoId nodeId) {
-        final var documents = collection.find(eq("id", nodeId.id())).sort(ascending("versionId"));
+    public List<Node> findAll(final Uid nodeId) {
+        final var documents = collection.find(eq("id", nodeId.code())).sort(ascending("versionId"));
 
         return StreamSupport.stream(documents.spliterator(), false)
                 .map(this::documentToNode)
@@ -84,14 +81,14 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     }
 
     @Override
-    public List<Node> findVersions(final NanoId nodeId) {
+    public List<Node> findVersions(final Uid nodeId) {
         return findAll(nodeId);
     }
 
     @Override
     public Node find(final Locator locator) {
         final var document = collection
-                .find(and(eq("id", locator.id().id()), eq("versionId", locator.version())))
+                .find(and(eq("id", locator.id().code()), eq("versionId", locator.version())))
                 .first();
 
         return Optional.ofNullable(document)
@@ -100,11 +97,11 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     }
 
     @Override
-    public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
+    public Optional<Node> findAt(final Uid nodeId, final Instant timestamp) {
         final var timestampStr = timestamp.truncatedTo(ChronoUnit.MILLIS).toString();
         final var document = collection
                 .find(and(
-                        eq("id", nodeId.id()),
+                        eq("id", nodeId.code()),
                         lte("created", timestampStr),
                         or(not(exists("expired")), gt("expired", timestampStr))))
                 .sort(descending("versionId"))
@@ -114,15 +111,15 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
     }
 
     @Override
-    public boolean delete(final NanoId nodeId) {
-        final var result = collection.deleteMany(eq("id", nodeId.id()));
+    public boolean delete(final Uid nodeId) {
+        final var result = collection.deleteMany(eq("id", nodeId.code()));
         return result.getDeletedCount() > 0;
     }
 
     @Override
-    public boolean expire(final NanoId elementId, final Instant expiredAt) {
+    public boolean expire(final Uid elementId, final Instant expiredAt) {
         final var result = collection.updateMany(
-                and(eq("id", elementId.id()), not(exists("expired"))),
+                and(eq("id", elementId.code()), not(exists("expired"))),
                 new Document(
                         "$set",
                         new Document(
@@ -137,13 +134,8 @@ public final class MongoNodeRepository implements ExtendedVersionedRepository<No
             final var data = serde.deserialize(versionedData.serializedData());
             final var type = new SimpleType(versionedData.type());
 
-            // Extract components
-            @SuppressWarnings("unchecked")
-            final var componentDocs = (List<Document>) document.get("components", List.class);
-            final Set<Locator> components = MongoHelper.deserializeComponents(componentDocs);
-
             return new SimpleNode(
-                    versionedData.locator(), type, data, components, versionedData.created(), versionedData.expired());
+                    versionedData.locator(), type, data, versionedData.created(), versionedData.expired());
         });
     }
 

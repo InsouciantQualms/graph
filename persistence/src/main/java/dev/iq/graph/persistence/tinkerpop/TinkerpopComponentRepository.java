@@ -9,6 +9,7 @@ package dev.iq.graph.persistence.tinkerpop;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.simple.SimpleComponent;
 import dev.iq.graph.model.simple.SimpleType;
@@ -31,6 +32,11 @@ import org.springframework.stereotype.Repository;
 
 /**
  * Tinkerpop implementation of ComponentRepository.
+ *
+ * This implementation stores components as vertices in the graph with label "component".
+ * When used with the model layer, TinkerPop should use GraphComponentStrategy which
+ * stores components as special manifest nodes, making this repository compatible with
+ * the graph-based component storage approach.
  */
 @Repository("tinkerpopComponentRepository")
 public final class TinkerpopComponentRepository implements ExtendedVersionedRepository<Component> {
@@ -56,7 +62,7 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
         return Io.withReturn(() -> {
             final var vertex = graph.addVertex("component");
 
-            vertex.property("id", component.locator().id().id());
+            vertex.property("id", component.locator().id().code());
             vertex.property("version", component.locator().version());
             vertex.property("created", component.created().toString());
             component.expired().ifPresent(exp -> vertex.property("expired", exp.toString()));
@@ -73,11 +79,11 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
     }
 
     @Override
-    public Optional<Component> findActive(final NanoId id) {
+    public Optional<Component> findActive(final Uid id) {
         return Io.withReturn(() -> traversal
                 .V()
                 .hasLabel("component")
-                .has("id", id.id())
+                .has("id", id.code())
                 .not(__.has("expired"))
                 .order()
                 .by("version", Order.desc)
@@ -87,13 +93,13 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
     }
 
     @Override
-    public Optional<Component> findAt(final NanoId id, final Instant timestamp) {
+    public Optional<Component> findAt(final Uid id, final Instant timestamp) {
         return Io.withReturn(() -> {
             final var timestampStr = timestamp.toString();
             return traversal
                     .V()
                     .hasLabel("component")
-                    .has("id", id.id())
+                    .has("id", id.code())
                     .where(__.values("created").is(P.lte(timestampStr)))
                     .where(__.or(__.not(__.has("expired")), __.values("expired").is(P.gt(timestampStr))))
                     .order()
@@ -109,7 +115,7 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
         return Io.withReturn(() -> traversal
                 .V()
                 .hasLabel("component")
-                .has("id", locator.id().id())
+                .has("id", locator.id().code())
                 .has("version", locator.version())
                 .tryNext()
                 .map(this::vertexToComponent)
@@ -117,25 +123,25 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
     }
 
     @Override
-    public List<Component> findAll(final NanoId id) {
+    public List<Component> findAll(final Uid id) {
         return Io.withReturn(
-                () -> traversal.V().hasLabel("component").has("id", id.id()).order().by("version").toList().stream()
+                () -> traversal.V().hasLabel("component").has("id", id.code()).order().by("version").toList().stream()
                         .map(this::vertexToComponent)
                         .toList());
     }
 
     @Override
-    public List<Component> findVersions(final NanoId id) {
+    public List<Component> findVersions(final Uid id) {
         return findAll(id);
     }
 
     @Override
-    public boolean expire(final NanoId id, final Instant expiredAt) {
+    public boolean expire(final Uid id, final Instant expiredAt) {
         return Io.withReturn(() -> {
             final var vertices = traversal
                     .V()
                     .hasLabel("component")
-                    .has("id", id.id())
+                    .has("id", id.code())
                     .not(__.has("expired"))
                     .toList();
             if (!vertices.isEmpty()) {
@@ -147,12 +153,12 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
     }
 
     @Override
-    public boolean delete(final NanoId id) {
+    public boolean delete(final Uid id) {
         return Io.withReturn(() -> {
             final var count = traversal
                     .V()
                     .hasLabel("component")
-                    .has("id", id.id())
+                    .has("id", id.code())
                     .count()
                     .next();
             if (count > 0) {
@@ -160,13 +166,13 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
                 traversal
                         .V()
                         .hasLabel("component")
-                        .has("id", id.id())
+                        .has("id", id.code())
                         .bothE()
                         .drop()
                         .iterate();
 
                 // Then delete the vertices
-                traversal.V().hasLabel("component").has("id", id.id()).drop().iterate();
+                traversal.V().hasLabel("component").has("id", id.code()).drop().iterate();
                 return true;
             }
             return false;
@@ -176,7 +182,7 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
     @Override
     public List<NanoId> allIds() {
         return Io.withReturn(() -> traversal.V().hasLabel("component").values("id").dedup().toList().stream()
-                .map(id -> new NanoId((String) id))
+                .map(id -> NanoId.from((String) id))
                 .toList());
     }
 
@@ -184,12 +190,12 @@ public final class TinkerpopComponentRepository implements ExtendedVersionedRepo
     public List<NanoId> allActiveIds() {
         return Io.withReturn(
                 () -> traversal.V().hasLabel("component").not(__.has("expired")).values("id").dedup().toList().stream()
-                        .map(id -> new NanoId((String) id))
+                        .map(id -> NanoId.from((String) id))
                         .toList());
     }
 
     private Component vertexToComponent(final Vertex vertex) {
-        final var id = new NanoId(vertex.value("id"));
+        final var id = NanoId.from(vertex.value("id"));
         final var version = vertex.<Integer>value("version");
         final var locator = new Locator(id, version);
         final var created = Instant.parse(vertex.value("created"));

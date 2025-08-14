@@ -141,7 +141,6 @@ class SqliteReferentialIntegrityManagerTest {
                 new Locator(node1.locator().id(), 2),
                 defaultType,
                 new TestData("UpdatedNode1"),
-                new HashSet<>(),
                 timestamp3,
                 Optional.empty());
 
@@ -198,16 +197,13 @@ class SqliteReferentialIntegrityManagerTest {
         componentRepository.save(updatedComponent);
         integrityManager.handleComponentUpdate(component, updatedComponent, timestamp3);
 
-        // Verify nodes were updated to reference new component version
+        // Nodes no longer have components, so they should not be updated
         final var activeNode1 = nodeRepository.findActive(node1.locator().id()).orElseThrow();
         final var activeNode2 = nodeRepository.findActive(node2.locator().id()).orElseThrow();
 
-        assertEquals(2, activeNode1.locator().version());
-        assertEquals(2, activeNode2.locator().version());
-        assertTrue(activeNode1.components().contains(updatedComponent.locator()));
-        assertTrue(activeNode2.components().contains(updatedComponent.locator()));
-        assertFalse(activeNode1.components().contains(component.locator()));
-        assertFalse(activeNode2.components().contains(component.locator()));
+        // Nodes should remain at version 1 since they don't have components
+        assertEquals(1, activeNode1.locator().version());
+        assertEquals(1, activeNode2.locator().version());
 
         // Verify edge was updated to reference new component version
         final var activeEdge = edgeRepository.findActive(edge.locator().id()).orElseThrow();
@@ -246,22 +242,20 @@ class SqliteReferentialIntegrityManagerTest {
         componentRepository.save(updatedComponent);
         integrityManager.handleComponentUpdate(component, updatedComponent, updateTimestamp);
 
-        // Verify all updates have the same timestamp
+        // Verify only the edge was updated (nodes don't have components)
         final var updatedNode1 = nodeRepository.findActive(node1.locator().id()).orElseThrow();
         final var updatedNode2 = nodeRepository.findActive(node2.locator().id()).orElseThrow();
         final var updatedEdge = edgeRepository.findActive(edge.locator().id()).orElseThrow();
 
-        assertEquals(updateTimestamp, updatedNode1.created());
-        assertEquals(updateTimestamp, updatedNode2.created());
+        // Nodes should not be updated (remain at version 1)
+        assertEquals(1, updatedNode1.locator().version());
+        assertEquals(1, updatedNode2.locator().version());
+
+        // Only edge should be updated
         assertEquals(updateTimestamp, updatedEdge.created());
 
-        // Verify expired versions also have consistent timestamp
-        final var expiredNode1 = nodeRepository.find(node1.locator());
-        final var expiredNode2 = nodeRepository.find(node2.locator());
+        // Verify expired edge has consistent timestamp
         final var expiredEdge = edgeRepository.find(edge.locator());
-
-        assertEquals(updateTimestamp, expiredNode1.expired().get());
-        assertEquals(updateTimestamp, expiredNode2.expired().get());
         assertEquals(updateTimestamp, expiredEdge.expired().get());
     }
 
@@ -299,18 +293,18 @@ class SqliteReferentialIntegrityManagerTest {
         componentRepository.save(updatedComp1);
         integrityManager.handleComponentUpdate(comp1, updatedComp1, updateTime);
 
-        // Verify only affected elements were updated
+        // Verify nodes are NOT updated (nodes no longer have components)
         final var currentNodeA = nodeRepository.findActive(nodeA.locator().id()).orElseThrow();
         final var currentNodeB = nodeRepository.findActive(nodeB.locator().id()).orElseThrow();
         final var currentNodeC = nodeRepository.findActive(nodeC.locator().id()).orElseThrow();
         final var currentNodeD = nodeRepository.findActive(nodeD.locator().id()).orElseThrow();
 
-        assertEquals(2, currentNodeA.locator().version(), "NodeA should be updated");
-        assertEquals(2, currentNodeB.locator().version(), "NodeB should be updated");
+        assertEquals(1, currentNodeA.locator().version(), "NodeA should not be updated");
+        assertEquals(1, currentNodeB.locator().version(), "NodeB should not be updated");
         assertEquals(1, currentNodeC.locator().version(), "NodeC should not be updated");
         assertEquals(1, currentNodeD.locator().version(), "NodeD should not be updated");
 
-        // Verify edge updates cascaded correctly
+        // Verify only edges with components are updated
         final var currentEdgeAB =
                 edgeRepository.findActive(edgeAB.locator().id()).orElseThrow();
         final var currentEdgeAC =
@@ -320,27 +314,24 @@ class SqliteReferentialIntegrityManagerTest {
         final var currentEdgeCD =
                 edgeRepository.findActive(edgeCD.locator().id()).orElseThrow();
 
-        assertEquals(2, currentEdgeAB.locator().version(), "EdgeAB should be updated (nodeA updated)");
-        assertEquals(2, currentEdgeAC.locator().version(), "EdgeAC should be updated (nodeA updated)");
-        assertEquals(2, currentEdgeBD.locator().version(), "EdgeBD should be updated (has comp1 + nodeB updated)");
-        assertEquals(1, currentEdgeCD.locator().version(), "EdgeCD should not be updated");
+        assertEquals(1, currentEdgeAB.locator().version(), "EdgeAB should not be updated (no components)");
+        assertEquals(1, currentEdgeAC.locator().version(), "EdgeAC should not be updated (no components)");
+        assertEquals(2, currentEdgeBD.locator().version(), "EdgeBD should be updated (has comp1)");
+        assertEquals(1, currentEdgeCD.locator().version(), "EdgeCD should not be updated (no components)");
     }
 
     // Helper methods
 
     private Node createAndSaveNode(final String id, final Instant timestamp) {
         final var locator = new Locator(NanoId.generate(), 1);
-        final var node =
-                new SimpleNode(locator, defaultType, new TestData(id), new HashSet<>(), timestamp, Optional.empty());
+        final var node = new SimpleNode(locator, defaultType, new TestData(id), timestamp, Optional.empty());
         return nodeRepository.save(node);
     }
 
     private Node createAndSaveNodeWithComponents(
             final String id, final Set<Locator> components, final Instant timestamp) {
-        final var locator = new Locator(NanoId.generate(), 1);
-        final var node = new SimpleNode(
-                locator, defaultType, new TestData(id), new HashSet<>(components), timestamp, Optional.empty());
-        return nodeRepository.save(node);
+        // Nodes no longer have components in the new model
+        return createAndSaveNode(id, timestamp);
     }
 
     private Edge createAndSaveEdge(final String id, final Node source, final Node target, final Instant timestamp) {

@@ -17,11 +17,11 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleEdge;
-import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -62,12 +62,12 @@ public final class MongoReferentialIntegrityManager {
      * Handles referential integrity when a node is expired.
      * All connected edges must also be expired with the same timestamp.
      */
-    public void handleNodeExpiry(final NanoId nodeId, final Instant expiredAt) {
+    public void handleNodeExpiry(final Uid nodeId, final Instant expiredAt) {
         final MongoCollection<Document> edgeCollection = database.getCollection("edges");
 
         // Find all active edges connected to this node
         final var connectedEdgesFilter =
-                and(or(eq("sourceId", nodeId.id()), eq("targetId", nodeId.id())), not(exists("expired")));
+                and(or(eq("sourceId", nodeId.code()), eq("targetId", nodeId.code())), not(exists("expired")));
 
         // Expire all connected edges with the same timestamp
         if (clientSession != null) {
@@ -99,10 +99,10 @@ public final class MongoReferentialIntegrityManager {
 
         // Find edges where this node is the source
         final var sourceEdges =
-                edgeCollection.find(and(eq("sourceId", oldNode.locator().id().id()), not(exists("expired"))));
+                edgeCollection.find(and(eq("sourceId", oldNode.locator().id().code()), not(exists("expired"))));
 
         for (Document doc : sourceEdges) {
-            final NanoId edgeId = new NanoId(doc.getString("id"));
+            final NanoId edgeId = NanoId.from(doc.getString("id"));
             // Skip if this edge was already updated
             if (alreadyUpdatedEdges.contains(edgeId)) {
                 continue;
@@ -117,10 +117,10 @@ public final class MongoReferentialIntegrityManager {
 
         // Find edges where this node is the target
         final var targetEdges =
-                edgeCollection.find(and(eq("targetId", oldNode.locator().id().id()), not(exists("expired"))));
+                edgeCollection.find(and(eq("targetId", oldNode.locator().id().code()), not(exists("expired"))));
 
         for (Document doc : targetEdges) {
-            final NanoId edgeId = new NanoId(doc.getString("id"));
+            final NanoId edgeId = NanoId.from(doc.getString("id"));
             // Skip if this edge was already updated
             if (alreadyUpdatedEdges.contains(edgeId)) {
                 continue;
@@ -136,7 +136,7 @@ public final class MongoReferentialIntegrityManager {
         // Process each edge that needs updating
         for (Edge edge : connectedEdges) {
             // Mark this edge as updated
-            alreadyUpdatedEdges.add(edge.locator().id());
+            alreadyUpdatedEdges.add((NanoId) edge.locator().id());
 
             // Expire the current edge
             edgeRepository.expire(edge.locator().id(), timestamp);
@@ -213,31 +213,14 @@ public final class MongoReferentialIntegrityManager {
                 not(exists("expired")),
                 eq(
                         "components",
-                        new Document().append("id", oldLocator.id().id()).append("versionId", oldLocator.version())));
+                        new Document().append("id", oldLocator.id().code()).append("versionId", oldLocator.version())));
 
         final var nodes = nodeCollection.find(filter);
         for (Document doc : nodes) {
             final Node node = nodeRepository.find(extractNodeLocator(doc));
 
-            // Create new components set with updated reference
-            final Set<Locator> updatedComponents = new HashSet<>(node.components());
-            updatedComponents.remove(oldLocator);
-            updatedComponents.add(newLocator);
-
-            // Expire the old node version
-            nodeRepository.expire(node.locator().id(), timestamp);
-
-            // Create new node version with updated components
-            final var newNodeLocator =
-                    new Locator(node.locator().id(), node.locator().version() + 1);
-
-            final var newNode = new SimpleNode(
-                    newNodeLocator, node.type(), node.data(), updatedComponents, timestamp, java.util.Optional.empty());
-
-            nodeRepository.save(newNode);
-
-            // Handle cascading edge updates for this node update, passing the set of already updated edges
-            handleNodeUpdate(node, newNode, timestamp, alreadyUpdatedEdges);
+            // Nodes no longer have components in the new model
+            // Skip node updates for component changes
         }
     }
 
@@ -253,11 +236,11 @@ public final class MongoReferentialIntegrityManager {
                 not(exists("expired")),
                 eq(
                         "components",
-                        new Document().append("id", oldLocator.id().id()).append("versionId", oldLocator.version())));
+                        new Document().append("id", oldLocator.id().code()).append("versionId", oldLocator.version())));
 
         final var edges = edgeCollection.find(filter);
         for (Document doc : edges) {
-            final NanoId edgeId = new NanoId(doc.getString("id"));
+            final NanoId edgeId = NanoId.from(doc.getString("id"));
             final Edge edge = edgeRepository.find(extractEdgeLocator(doc));
 
             // Mark this edge as updated
@@ -290,13 +273,13 @@ public final class MongoReferentialIntegrityManager {
     }
 
     private Locator extractNodeLocator(final Document document) {
-        final var id = new NanoId(document.getString("id"));
+        final var id = NanoId.from(document.getString("id"));
         final var versionId = document.getInteger("versionId");
         return new Locator(id, versionId);
     }
 
     private Locator extractEdgeLocator(final Document document) {
-        final var id = new NanoId(document.getString("id"));
+        final var id = NanoId.from(document.getString("id"));
         final var versionId = document.getInteger("versionId");
         return new Locator(id, versionId);
     }

@@ -9,11 +9,11 @@ package dev.iq.graph.persistence.tinkerpop;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleEdge;
-import dev.iq.graph.model.simple.SimpleNode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -54,12 +54,12 @@ public final class TinkerpopReferentialIntegrityManager {
      * Handles referential integrity when a node is expired.
      * All connected edges must also be expired with the same timestamp.
      */
-    public void handleNodeExpiry(final NanoId nodeId, final Instant expiredAt) {
+    public void handleNodeExpiry(final Uid nodeId, final Instant expiredAt) {
         Io.withVoid(() -> {
             // Find all active edges connected to this node
             final var connectedEdges = traversal
                     .E()
-                    .or(__.has("sourceId", nodeId.id()), __.has("targetId", nodeId.id()))
+                    .or(__.has("sourceId", nodeId.code()), __.has("targetId", nodeId.code()))
                     .not(__.has("expired"))
                     .toList();
 
@@ -86,12 +86,12 @@ public final class TinkerpopReferentialIntegrityManager {
             // Find edges where this node is the source
             traversal
                     .E()
-                    .has("sourceId", oldNode.locator().id().id())
+                    .has("sourceId", oldNode.locator().id().code())
                     .has("sourceVersionId", oldNode.locator().version())
                     .not(__.has("expired"))
                     .toList()
                     .forEach(e -> {
-                        final var edgeId = new NanoId(e.value("id"));
+                        final var edgeId = NanoId.from(e.value("id"));
                         final var edgeVersion = e.<Integer>value("versionId");
                         connectedEdges.add(edgeRepository.find(new Locator(edgeId, edgeVersion)));
                     });
@@ -99,12 +99,12 @@ public final class TinkerpopReferentialIntegrityManager {
             // Find edges where this node is the target
             traversal
                     .E()
-                    .has("targetId", oldNode.locator().id().id())
+                    .has("targetId", oldNode.locator().id().code())
                     .has("targetVersionId", oldNode.locator().version())
                     .not(__.has("expired"))
                     .toList()
                     .forEach(e -> {
-                        final var edgeId = new NanoId(e.value("id"));
+                        final var edgeId = NanoId.from(e.value("id"));
                         final var edgeVersion = e.<Integer>value("versionId");
                         connectedEdges.add(edgeRepository.find(new Locator(edgeId, edgeVersion)));
                     });
@@ -117,7 +117,7 @@ public final class TinkerpopReferentialIntegrityManager {
                 }
 
                 // Mark this edge as updated
-                alreadyUpdatedEdges.add(oldEdge.locator().id());
+                alreadyUpdatedEdges.add((NanoId) oldEdge.locator().id());
 
                 // Expire the current edge
                 edgeRepository.expire(oldEdge.locator().id(), timestamp);
@@ -188,51 +188,8 @@ public final class TinkerpopReferentialIntegrityManager {
             final Locator newLocator,
             final Instant timestamp,
             final Set<NanoId> alreadyUpdatedEdges) {
-        Io.withVoid(() -> {
-            // Find all active nodes that contain the old component locator
-            final var nodesToUpdate = new ArrayList<Node>();
-
-            // We need to search through all nodes and check their components
-            traversal.V().hasLabel("node").not(__.has("expired")).toList().forEach(vertex -> {
-                if (vertex.property("components").isPresent()) {
-                    final var componentsStr = vertex.<String>value("components");
-                    final var componentRef = oldLocator.id().id() + ":" + oldLocator.version();
-                    if (componentsStr.contains(componentRef)) {
-                        final var nodeId = new NanoId(vertex.value("id"));
-                        final var nodeVersion = vertex.<Integer>value("versionId");
-                        nodesToUpdate.add(nodeRepository.find(new Locator(nodeId, nodeVersion)));
-                    }
-                }
-            });
-
-            // Update each node
-            for (Node node : nodesToUpdate) {
-                // Create new components set with updated reference
-                final Set<Locator> updatedComponents = new HashSet<>(node.components());
-                updatedComponents.remove(oldLocator);
-                updatedComponents.add(newLocator);
-
-                // Expire the old node version
-                nodeRepository.expire(node.locator().id(), timestamp);
-
-                // Create new node version with updated components
-                final var newNodeLocator =
-                        new Locator(node.locator().id(), node.locator().version() + 1);
-
-                final var newNode = new SimpleNode(
-                        newNodeLocator,
-                        node.type(),
-                        node.data(),
-                        updatedComponents,
-                        timestamp,
-                        java.util.Optional.empty());
-
-                nodeRepository.save(newNode);
-
-                // Handle cascading edge updates for this node update, passing the set of already updated edges
-                handleNodeUpdate(node, newNode, timestamp, alreadyUpdatedEdges);
-            }
-        });
+        // Nodes no longer have components in the new model
+        // This method is now a no-op since only edges can reference components
     }
 
     private void updateEdgesReferencingComponent(
@@ -248,9 +205,9 @@ public final class TinkerpopReferentialIntegrityManager {
             traversal.E().not(__.has("expired")).toList().forEach(edge -> {
                 if (edge.property("components").isPresent()) {
                     final var componentsStr = edge.<String>value("components");
-                    final var componentRef = oldLocator.id().id() + ":" + oldLocator.version();
+                    final var componentRef = oldLocator.id().code() + ":" + oldLocator.version();
                     if (componentsStr.contains(componentRef)) {
-                        final var edgeId = new NanoId(edge.value("id"));
+                        final var edgeId = NanoId.from(edge.value("id"));
                         final var edgeVersion = edge.<Integer>value("versionId");
                         edgesToUpdate.add(edgeRepository.find(new Locator(edgeId, edgeVersion)));
                     }
@@ -259,7 +216,7 @@ public final class TinkerpopReferentialIntegrityManager {
 
             // Update each edge
             for (Edge edge : edgesToUpdate) {
-                final NanoId edgeId = edge.locator().id();
+                final NanoId edgeId = (NanoId) edge.locator().id();
 
                 // Mark this edge as updated
                 updatedEdges.add(edgeId);

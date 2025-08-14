@@ -18,7 +18,6 @@ import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.model.simple.SimpleType;
 import dev.iq.graph.persistence.config.TestPersistenceConfiguration;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.jupiter.api.Disabled;
@@ -62,8 +61,7 @@ class SpringTransactionIntegrationTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-data");
         final var created = Instant.now();
-        final var node =
-                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node = new SimpleNode(locator, new SimpleType("test"), data, created, Optional.empty());
 
         // Save node within transaction
         graphRepository.nodes().save(node);
@@ -81,8 +79,7 @@ class SpringTransactionIntegrationTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-data");
         final var created = Instant.now();
-        final var node =
-                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node = new SimpleNode(locator, new SimpleType("test"), data, created, Optional.empty());
 
         // Save node in transaction but rollback
         assertThrows(
@@ -114,8 +111,7 @@ class SpringTransactionIntegrationTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-data");
         final var created = Instant.now();
-        final var node =
-                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node = new SimpleNode(locator, new SimpleType("test"), data, created, Optional.empty());
 
         // Start transaction but don't commit yet
         transactionTemplate.execute(status -> {

@@ -9,6 +9,7 @@ package dev.iq.graph.persistence.sqllite;
 import dev.iq.common.fp.Io;
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.simple.SimpleNode;
@@ -20,11 +21,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -59,7 +58,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
         Io.withVoid(() -> {
             getHandle()
                     .createUpdate(sql)
-                    .bind("id", node.locator().id().id())
+                    .bind("id", node.locator().id().code())
                     .bind("version_id", node.locator().version())
                     .bind("type", node.type().code())
                     .bind("created", node.created().toString())
@@ -69,37 +68,36 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
             // Save properties in separate table
             saveProperties(node.locator().id(), node.locator().version(), node.data());
 
-            // Save components in junction table
-            saveComponents(node.locator().id(), node.locator().version(), node.components());
+            // Nodes no longer have components in the new model
         });
 
         return node;
     }
 
     @Override
-    public Optional<Node> findActive(final NanoId nodeId) {
+    public Optional<Node> findActive(final Uid nodeId) {
         final var sql = "SELECT * FROM node WHERE id = :id AND expired IS NULL ORDER BY version_id DESC LIMIT 1";
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", nodeId.id())
+                .bind("id", nodeId.code())
                 .map(new NodeMapper())
                 .findOne());
     }
 
     @Override
-    public List<Node> findAll(final NanoId nodeId) {
+    public List<Node> findAll(final Uid nodeId) {
         final var sql = "SELECT * FROM node WHERE id = :id ORDER BY version_id";
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", nodeId.id())
+                .bind("id", nodeId.code())
                 .map(new NodeMapper())
                 .list());
     }
 
     @Override
-    public List<Node> findVersions(final NanoId nodeId) {
+    public List<Node> findVersions(final Uid nodeId) {
         return findAll(nodeId);
     }
 
@@ -109,7 +107,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .bind("id", locator.id().id())
+                .bind("id", locator.id().code())
                 .bind("version_id", locator.version())
                 .map(new NodeMapper())
                 .findOne()
@@ -117,7 +115,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
     }
 
     @Override
-    public Optional<Node> findAt(final NanoId nodeId, final Instant timestamp) {
+    public Optional<Node> findAt(final Uid nodeId, final Instant timestamp) {
         final var sql =
                 """
                 SELECT * FROM node
@@ -131,7 +129,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
             final var timestampStr = timestamp.toString();
             return getHandle()
                     .createQuery(sql)
-                    .bind("id", nodeId.id())
+                    .bind("id", nodeId.code())
                     .bind("timestamp", timestampStr)
                     .map(new NodeMapper())
                     .findOne();
@@ -139,21 +137,21 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
     }
 
     @Override
-    public boolean delete(final NanoId nodeId) {
+    public boolean delete(final Uid nodeId) {
         final var sql = "DELETE FROM node WHERE id = :id";
 
         return Io.withReturn(
-                () -> getHandle().createUpdate(sql).bind("id", nodeId.id()).execute() > 0);
+                () -> getHandle().createUpdate(sql).bind("id", nodeId.code()).execute() > 0);
     }
 
     @Override
-    public boolean expire(final NanoId elementId, final Instant expiredAt) {
+    public boolean expire(final Uid elementId, final Instant expiredAt) {
         final var sql = "UPDATE node SET expired = :expired WHERE id = :id AND expired IS NULL";
 
         return Io.withReturn(() -> getHandle()
                         .createUpdate(sql)
                         .bind("expired", expiredAt.toString())
-                        .bind("id", elementId.id())
+                        .bind("id", elementId.code())
                         .execute()
                 > 0);
     }
@@ -164,7 +162,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .map((rs, ctx) -> NanoId.from(rs.getString("id")))
                 .list());
     }
 
@@ -174,7 +172,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
 
         return Io.withReturn(() -> getHandle()
                 .createQuery(sql)
-                .map((rs, ctx) -> new NanoId(rs.getString("id")))
+                .map((rs, ctx) -> NanoId.from(rs.getString("id")))
                 .list());
     }
 
@@ -183,7 +181,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
         @Override
         public final Node map(final ResultSet rs, final StatementContext ctx) throws SQLException {
 
-            final var id = new NanoId(rs.getString("id"));
+            final var id = NanoId.from(rs.getString("id"));
             final var versionId = rs.getInt("version_id");
             final var type = new SimpleType(rs.getString("type"));
             final var created = Instant.parse(rs.getString("created"));
@@ -197,13 +195,11 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
             final var data = loadProperties(id, versionId);
             final var locator = new Locator(id, versionId);
 
-            final var components = loadComponents(id, versionId);
-
-            return new SimpleNode(locator, type, data, components, created, expired);
+            return new SimpleNode(locator, type, data, created, expired);
         }
     }
 
-    private void saveProperties(final NanoId nodeId, final int version, final Data data) {
+    private void saveProperties(final Uid nodeId, final int version, final Data data) {
         final var sql =
                 """
                 INSERT INTO node_properties (id, version_id, property_key, property_value)
@@ -214,7 +210,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
         Io.withVoid(() -> {
             final var batch = getHandle().prepareBatch(sql);
             for (final var entry : properties.entrySet()) {
-                batch.bind("id", nodeId.id())
+                batch.bind("id", nodeId.code())
                         .bind("version_id", version)
                         .bind("property_key", entry.getKey())
                         .bind("property_value", String.valueOf(entry.getValue()))
@@ -224,7 +220,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
         });
     }
 
-    private Data loadProperties(final NanoId nodeId, final int version) {
+    private Data loadProperties(final Uid nodeId, final int version) {
         final var sql =
                 """
                 SELECT property_key, property_value
@@ -236,7 +232,7 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
             final var properties = new HashMap<String, Object>();
             getHandle()
                     .createQuery(sql)
-                    .bind("id", nodeId.id())
+                    .bind("id", nodeId.code())
                     .bind("version_id", version)
                     .map((rs, ctx) -> {
                         properties.put(rs.getString("property_key"), rs.getString("property_value"));
@@ -247,52 +243,6 @@ public final class SqliteNodeRepository implements ExtendedVersionedRepository<N
         });
     }
 
-    private void saveComponents(final NanoId nodeId, final int version, final Set<Locator> components) {
-        final var sql =
-                """
-                INSERT INTO node_components (node_id, node_version, component_id, component_version)
-                VALUES (:node_id, :node_version, :component_id, :component_version)
-                """;
+    // Nodes no longer have components in the new model - methods removed
 
-        if (components.isEmpty()) {
-            return;
-        }
-
-        Io.withVoid(() -> {
-            final var batch = getHandle().prepareBatch(sql);
-            for (final var component : components) {
-                batch.bind("node_id", nodeId.id())
-                        .bind("node_version", version)
-                        .bind("component_id", component.id().id())
-                        .bind("component_version", component.version())
-                        .add();
-            }
-            batch.execute();
-        });
-    }
-
-    private Set<Locator> loadComponents(final NanoId nodeId, final int version) {
-        final var sql =
-                """
-                SELECT component_id, component_version
-                FROM node_components
-                WHERE node_id = :node_id AND node_version = :node_version
-                """;
-
-        return Io.withReturn(() -> {
-            final var components = new HashSet<Locator>();
-            getHandle()
-                    .createQuery(sql)
-                    .bind("node_id", nodeId.id())
-                    .bind("node_version", version)
-                    .map((rs, ctx) -> {
-                        final var componentId = new NanoId(rs.getString("component_id"));
-                        final var componentVersion = rs.getInt("component_version");
-                        components.add(new Locator(componentId, componentVersion));
-                        return null;
-                    })
-                    .list();
-            return components;
-        });
-    }
 }

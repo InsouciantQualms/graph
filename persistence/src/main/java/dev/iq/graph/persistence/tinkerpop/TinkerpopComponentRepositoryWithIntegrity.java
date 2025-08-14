@@ -8,6 +8,7 @@ package dev.iq.graph.persistence.tinkerpop;
 
 import dev.iq.common.version.Locator;
 import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
 import dev.iq.graph.model.Component;
 import dev.iq.graph.persistence.ExtendedVersionedRepository;
 import java.time.Instant;
@@ -60,12 +61,12 @@ public final class TinkerpopComponentRepositoryWithIntegrity implements Extended
     }
 
     @Override
-    public Optional<Component> findActive(final NanoId componentId) {
+    public Optional<Component> findActive(final Uid componentId) {
         return baseRepository.findActive(componentId);
     }
 
     @Override
-    public List<Component> findVersions(final NanoId componentId) {
+    public List<Component> findVersions(final Uid componentId) {
         return baseRepository.findVersions(componentId);
     }
 
@@ -75,17 +76,17 @@ public final class TinkerpopComponentRepositoryWithIntegrity implements Extended
     }
 
     @Override
-    public Optional<Component> findAt(final NanoId componentId, final Instant timestamp) {
+    public Optional<Component> findAt(final Uid componentId, final Instant timestamp) {
         return baseRepository.findAt(componentId, timestamp);
     }
 
     @Override
-    public boolean delete(final NanoId componentId) {
+    public boolean delete(final Uid componentId) {
         return baseRepository.delete(componentId);
     }
 
     @Override
-    public boolean expire(final NanoId componentId, final Instant expiredAt) {
+    public boolean expire(final Uid componentId, final Instant expiredAt) {
         // Components don't cascade expiry to elements - elements continue to reference expired components
         return baseRepository.expire(componentId, expiredAt);
     }
@@ -101,7 +102,7 @@ public final class TinkerpopComponentRepositoryWithIntegrity implements Extended
     }
 
     @Override
-    public List<Component> findAll(final NanoId componentId) {
+    public List<Component> findAll(final Uid componentId) {
         return baseRepository.findAll(componentId);
     }
 

@@ -17,7 +17,6 @@ import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.Optional;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.structure.Graph;
@@ -57,7 +56,7 @@ final class TinkerpopNodeRepositoryTest {
         final var vertices = traversalSource
                 .V()
                 .hasLabel("node")
-                .has("id", node.locator().id().id())
+                .has("id", node.locator().id().code())
                 .has("versionId", node.locator().version())
                 .toList();
 
@@ -73,7 +72,6 @@ final class TinkerpopNodeRepositoryTest {
                 new Locator(nodeId, 1),
                 new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
-                new HashSet<>(),
                 Instant.now(),
                 Optional.empty());
 
@@ -96,7 +94,6 @@ final class TinkerpopNodeRepositoryTest {
                 new Locator(nodeId, 1),
                 new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
-                new HashSet<>(),
                 Instant.now(),
                 Optional.of(Instant.now()));
 
@@ -116,14 +113,12 @@ final class TinkerpopNodeRepositoryTest {
                 new Locator(nodeId, 1),
                 new SimpleType("test"),
                 new SimpleData(String.class, "test-value-1"),
-                new HashSet<>(),
                 Instant.now(),
                 Optional.of(Instant.now()));
         final var node2 = new SimpleNode(
                 new Locator(nodeId, 2),
                 new SimpleType("test"),
                 new SimpleData(String.class, "test-value-2"),
-                new HashSet<>(),
                 Instant.now(),
                 Optional.empty());
 
@@ -146,7 +141,6 @@ final class TinkerpopNodeRepositoryTest {
                 locator,
                 new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
-                new HashSet<>(),
                 Instant.now(),
                 Optional.empty());
 
@@ -170,7 +164,6 @@ final class TinkerpopNodeRepositoryTest {
                 new Locator(nodeId, 1),
                 new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
-                new HashSet<>(),
                 created,
                 Optional.empty());
 
@@ -191,7 +184,6 @@ final class TinkerpopNodeRepositoryTest {
                 new Locator(nodeId, 1),
                 new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
-                new HashSet<>(),
                 Instant.now(),
                 Optional.empty());
 
@@ -203,7 +195,7 @@ final class TinkerpopNodeRepositoryTest {
 
         // Verify node is gone
         final var vertices =
-                traversalSource.V().hasLabel("node").has("id", nodeId.id()).toList();
+                traversalSource.V().hasLabel("node").has("id", nodeId.code()).toList();
 
         assertTrue(vertices.isEmpty());
     }
@@ -217,7 +209,6 @@ final class TinkerpopNodeRepositoryTest {
                 new Locator(nodeId, 1),
                 new SimpleType("test"),
                 new SimpleData(String.class, "test-value"),
-                new HashSet<>(),
                 Instant.now(),
                 Optional.empty());
 
@@ -238,6 +229,6 @@ final class TinkerpopNodeRepositoryTest {
 
         final var locator = new Locator(NanoId.generate(), 1);
         final var data = new SimpleData(String.class, "test-value");
-        return new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), Instant.now(), Optional.empty());
+        return new SimpleNode(locator, new SimpleType("test"), data, Instant.now(), Optional.empty());
     }
 }

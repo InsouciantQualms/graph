@@ -16,7 +16,6 @@ import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.model.simple.SimpleNode;
 import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.Optional;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
@@ -55,8 +54,7 @@ final class SqliteSessionIntegrationTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-data");
         final var created = Instant.now();
-        final var node =
-                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node = new SimpleNode(locator, new SimpleType("test"), data, created, Optional.empty());
 
         // Save node in session and commit manually
         try (var session = sessionFactory.create()) {
@@ -80,8 +78,7 @@ final class SqliteSessionIntegrationTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-data");
         final var created = Instant.now();
-        final var node =
-                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node = new SimpleNode(locator, new SimpleType("test"), data, created, Optional.empty());
 
         // Save node in session but rollback manually
         try (var session = sessionFactory.create()) {
@@ -105,8 +102,7 @@ final class SqliteSessionIntegrationTest {
         final var locator = new Locator(nodeId, 1);
         final var data = new SimpleData(String.class, "test-data");
         final var created = Instant.now();
-        final var node =
-                new SimpleNode(locator, new SimpleType("test"), data, new HashSet<>(), created, Optional.empty());
+        final var node = new SimpleNode(locator, new SimpleType("test"), data, created, Optional.empty());
 
         // Save node in session but cause exception without explicit commit/rollback
         assertThrows(RuntimeException.class, () -> {
