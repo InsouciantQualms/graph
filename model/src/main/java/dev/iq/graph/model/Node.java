@@ -16,5 +16,5 @@ import java.time.Instant;
 public interface Node extends Element {
 
     /** Return an expired instance of this node. */
-    Node expire(final Instant timestamp);
+    Node expire(Instant timestamp);
 }

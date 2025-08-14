@@ -16,6 +16,12 @@ dependencies {
     // JGraphT
     implementation(libs.jgrapht.core)
 
+    // JSON and flattening
+    implementation(libs.bundles.jackson)
+    implementation("com.github.wnameless.json:json-flattener:0.16.6") {
+        exclude(group = "com.fasterxml.jackson.core")
+    }
+
     // Spring - minimal dependencies for @Repository and transaction support
     implementation("org.springframework:spring-context:6.2.9")
     implementation("org.springframework:spring-tx:6.2.9")
@@ -44,7 +50,7 @@ dependencies {
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers)
-    
+
     // Spring Test dependencies
     testImplementation("org.springframework:spring-test:6.2.9")
     testImplementation("org.springframework.boot:spring-boot-starter-test:3.2.5") {
@@ -70,7 +76,7 @@ configurations.all {
         force("org.springframework:spring-core:6.2.9")
         force("org.springframework:spring-beans:6.2.9")
     }
-    
+
     // Exclude log4j-to-slf4j to avoid conflict with log4j-slf4j2-impl
     exclude(group = "org.apache.logging.log4j", module = "log4j-to-slf4j")
 }
@@ -78,20 +84,20 @@ configurations.all {
 // Configure test timeouts to prevent hanging
 tasks.withType<Test> {
     timeout.set(Duration.ofMinutes(5))
-    
+
     // Ensure tests don't hang on shutdown and suppress ByteBuddy agent warning
     jvmArgs(
-        "-Xmx512m", 
-        "-XX:+UseG1GC"
+        "-Xmx512m",
+        "-XX:+UseG1GC",
     )
-    
+
     // Log test events - only show failures and skipped tests
     testLogging {
         events("skipped", "failed")
         showExceptions = true
         showCauses = true
         showStackTraces = true
-        
+
         // Only show stdout/stderr for failed tests
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         showStandardStreams = false

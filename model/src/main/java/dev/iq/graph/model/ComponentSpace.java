@@ -10,12 +10,19 @@ import dev.iq.common.version.Uid;
 import java.util.Set;
 
 /**
- * Operations for managing components in a graph.
+ * Represents a subgraph view for a single component.
+ * Provides access to the component and its elements.
  */
-public interface ComponentSpace {
+public interface ComponentSpace extends Space {
 
-    /** Returns a view of all elemeents in the specified component. */
-    View view(Uid id);
+    /** The component this space represents. */
+    Component component();
+
+    /** Get all edges that define this component. */
+    Set<Edge> componentEdges();
+
+    /** Get all nodes within this component (derived from edges). */
+    Set<Node> componentNodes();
 
     /** Gets all components containing the specified element (node or edge). */
     Set<Component> componentsForElement(Uid id);

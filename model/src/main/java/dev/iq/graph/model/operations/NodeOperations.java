@@ -22,7 +22,7 @@ import java.time.Instant;
 public interface NodeOperations {
 
     /** Adds a new node to the graph. */
-    Node add(Type type, Data data, Instant timestamp);
+    Node add(Uid id, Type type, Data data, Instant timestamp);
 
     /** Updates an existing node in the graph.  This will expire the current version and create a new version. */
     Node update(Uid id, Type type, Data data, Instant timestamp);

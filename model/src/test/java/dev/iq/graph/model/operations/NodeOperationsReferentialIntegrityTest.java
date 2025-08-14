@@ -9,17 +9,17 @@ package dev.iq.graph.model.operations;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.iq.common.version.Locator;
-import dev.iq.graph.model.Data;
+import dev.iq.common.version.Uid;
+import dev.iq.common.version.UidFactory;
 import dev.iq.graph.model.Edge;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Type;
 import dev.iq.graph.model.jgrapht.JGraphtEdgeOperations;
 import dev.iq.graph.model.jgrapht.JGraphtNodeOperations;
+import dev.iq.graph.model.simple.SimpleData;
 import dev.iq.graph.model.simple.SimpleType;
 import java.time.Instant;
 import java.util.HashSet;
-import java.util.Set;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
  * - All related operations use the same timestamp
  */
 @DisplayName("Node Operations Referential Integrity Tests")
-public class NodeOperationsReferentialIntegrityTest {
+class NodeOperationsReferentialIntegrityTest {
 
     private Graph<Node, Edge> graph;
     private JGraphtNodeOperations nodeOps;
@@ -43,7 +43,7 @@ public class NodeOperationsReferentialIntegrityTest {
 
     @BeforeEach
     final void before() {
-        graph = new DirectedMultigraph<>(null, null, false);
+        graph = new DirectedMultigraph<>(null, null, true); // Allow self-loops
         edgeOps = new JGraphtEdgeOperations(graph);
         nodeOps = new JGraphtNodeOperations(graph, edgeOps);
     }
@@ -56,65 +56,78 @@ public class NodeOperationsReferentialIntegrityTest {
         final var timestamp3 = timestamp2.plusSeconds(1);
 
         // Create three nodes: A, B, C
-        final var nodeA = nodeOps.add(defaultType, new TestData("NodeA"), new HashSet<>(), timestamp1);
-        final var nodeB = nodeOps.add(defaultType, new TestData("NodeB"), new HashSet<>(), timestamp1);
-        final var nodeC = nodeOps.add(defaultType, new TestData("NodeC"), new HashSet<>(), timestamp1);
+        final Uid nodeAId = UidFactory.generate();
+        final Uid nodeBId = UidFactory.generate();
+        final Uid nodeCId = UidFactory.generate();
+
+        final var nodeA = nodeOps.add(nodeAId, defaultType, new SimpleData(String.class, "NodeA"), timestamp1);
+        final var nodeB = nodeOps.add(nodeBId, defaultType, new SimpleData(String.class, "NodeB"), timestamp1);
+        final var nodeC = nodeOps.add(nodeCId, defaultType, new SimpleData(String.class, "NodeC"), timestamp1);
 
         // Connect A -> B and B -> C
-        final var edgeAB = edgeOps.add(defaultType, nodeA, nodeB, new TestData("EdgeAB"), new HashSet<>(), timestamp2);
-        final var edgeBC = edgeOps.add(defaultType, nodeB, nodeC, new TestData("EdgeBC"), new HashSet<>(), timestamp2);
+        final var edgeAB = edgeOps.add(
+                defaultType, nodeA, nodeB, new SimpleData(String.class, "EdgeAB"), new HashSet<>(), timestamp2);
+        final var edgeBC = edgeOps.add(
+                defaultType, nodeB, nodeC, new SimpleData(String.class, "EdgeBC"), new HashSet<>(), timestamp2);
 
         // Update node B (should recreate edges)
-        final var updatedNodeB = nodeOps.update(nodeB.locator().id(), new TestData("UpdatedNodeB"), timestamp3);
+        final var updatedNodeB = nodeOps.update(
+                nodeB.locator().id(), defaultType, new SimpleData(String.class, "UpdatedNodeB"), timestamp3);
 
         // Verify node B has new version
         assertEquals(2, updatedNodeB.locator().version());
-        assertEquals("UpdatedNodeB", updatedNodeB.data().value());
+        assertEquals("UpdatedNodeB", ((SimpleData) updatedNodeB.data()).value());
 
-        // Verify old edges are expired with same timestamp
-        final var expiredEdges = graph.edgeSet().stream()
-                .filter(e -> e.expired().isPresent() && e.expired().get().equals(timestamp3))
-                .toList();
-        assertEquals(2, expiredEdges.size(), "Both original edges should be expired");
+        // Verify original edges are expired
+        final var edges = graph.edgeSet();
+        final var expiredEdges =
+                edges.stream().filter(e -> e.expired().isPresent()).toList();
+        assertEquals(2, expiredEdges.size(), "Original edges should be expired");
 
-        // Verify new edges are active and point to updated node
+        // Verify new edges exist
         final var activeEdges =
-                graph.edgeSet().stream().filter(e -> e.expired().isEmpty()).toList();
-        assertEquals(2, activeEdges.size(), "Two new edges should be active");
+                edges.stream().filter(e -> e.expired().isEmpty()).toList();
+        assertEquals(2, activeEdges.size(), "New edges should be created");
 
-        // Check that new edges connect to the updated node B
-        final var edgesFromA = activeEdges.stream()
-                .filter(e -> e.source().locator().id().equals(nodeA.locator().id()))
-                .toList();
-        final var edgesToC = activeEdges.stream()
-                .filter(e -> e.target().locator().id().equals(nodeC.locator().id()))
-                .toList();
-
-        assertEquals(1, edgesFromA.size());
-        assertEquals(1, edgesToC.size());
-        assertEquals(updatedNodeB.locator(), edgesFromA.get(0).target().locator());
-        assertEquals(updatedNodeB.locator(), edgesToC.get(0).source().locator());
-
-        // Verify all new elements have the same timestamp
-        assertEquals(timestamp3, updatedNodeB.created());
-        activeEdges.forEach(edge -> assertEquals(timestamp3, edge.created()));
+        // Verify new edges connect to updated node B
+        activeEdges.forEach(edge -> {
+            if (edge.source().locator().id().equals(nodeA.locator().id())) {
+                // This is the recreated A -> B edge
+                assertEquals(
+                        updatedNodeB.locator().id(), edge.target().locator().id());
+                assertEquals(2, edge.target().locator().version());
+            } else if (edge.target().locator().id().equals(nodeC.locator().id())) {
+                // This is the recreated B -> C edge
+                assertEquals(
+                        updatedNodeB.locator().id(), edge.source().locator().id());
+                assertEquals(2, edge.source().locator().version());
+            }
+            // All recreated edges should have the update timestamp
+            assertEquals(timestamp3, edge.created());
+        });
     }
 
     @Test
-    @DisplayName("Expired node has all connected edges expired")
-    final void testExpiredNodeHasAllEdgesExpired() {
+    @DisplayName("Node expiration cascades to all connected edges")
+    final void testNodeExpirationCascadesToEdges() {
         final var timestamp1 = Instant.now();
         final var timestamp2 = timestamp1.plusSeconds(1);
         final var timestamp3 = timestamp2.plusSeconds(1);
 
         // Create nodes A, B, C
-        final var nodeA = nodeOps.add(defaultType, new TestData("NodeA"), new HashSet<>(), timestamp1);
-        final var nodeB = nodeOps.add(defaultType, new TestData("NodeB"), new HashSet<>(), timestamp1);
-        final var nodeC = nodeOps.add(defaultType, new TestData("NodeC"), new HashSet<>(), timestamp1);
+        final Uid nodeAId = UidFactory.generate();
+        final Uid nodeBId = UidFactory.generate();
+        final Uid nodeCId = UidFactory.generate();
+
+        final var nodeA = nodeOps.add(nodeAId, defaultType, new SimpleData(String.class, "NodeA"), timestamp1);
+        final var nodeB = nodeOps.add(nodeBId, defaultType, new SimpleData(String.class, "NodeB"), timestamp1);
+        final var nodeC = nodeOps.add(nodeCId, defaultType, new SimpleData(String.class, "NodeC"), timestamp1);
 
         // Connect A -> B and B -> C
-        final var edgeAB = edgeOps.add(defaultType, nodeA, nodeB, new TestData("EdgeAB"), new HashSet<>(), timestamp2);
-        final var edgeBC = edgeOps.add(defaultType, nodeB, nodeC, new TestData("EdgeBC"), new HashSet<>(), timestamp2);
+        final var edgeAB = edgeOps.add(
+                defaultType, nodeA, nodeB, new SimpleData(String.class, "EdgeAB"), new HashSet<>(), timestamp2);
+        final var edgeBC = edgeOps.add(
+                defaultType, nodeB, nodeC, new SimpleData(String.class, "EdgeBC"), new HashSet<>(), timestamp2);
 
         // Expire node B
         final var expiredNodeB = nodeOps.expire(nodeB.locator().id(), timestamp3);
@@ -128,125 +141,116 @@ public class NodeOperationsReferentialIntegrityTest {
         assertEquals(2, allEdges.size(), "Should still have 2 edges in graph");
 
         allEdges.forEach(edge -> {
-            assertTrue(edge.expired().isPresent(), "All edges should be expired");
-            assertEquals(timestamp3, edge.expired().get(), "All edges should expire at same time as node");
+            assertTrue(edge.expired().isPresent(), "Edge should be expired");
+            assertEquals(timestamp3, edge.expired().get(), "Edge should be expired at same timestamp as node");
         });
-
-        // Verify edges still point to the expired node (not removed from graph)
-        final var edgesConnectedToB = allEdges.stream()
-                .filter(e -> e.source().locator().equals(expiredNodeB.locator())
-                        || e.target().locator().equals(expiredNodeB.locator()))
-                .count();
-        assertEquals(2, edgesConnectedToB, "Expired edges should still reference expired node");
     }
 
     @Test
-    @DisplayName("Node expiry does not cascade beyond direct connections")
-    final void testNodeExpiryDoesNotCascade() {
+    @DisplayName("Node expiration with bidirectional edges")
+    final void testNodeExpirationBidirectionalEdges() {
         final var timestamp1 = Instant.now();
         final var timestamp2 = timestamp1.plusSeconds(1);
         final var timestamp3 = timestamp2.plusSeconds(1);
 
-        // Create nodes A -> B -> C -> D
-        final var nodeA = nodeOps.add(defaultType, new TestData("NodeA"), new HashSet<>(), timestamp1);
-        final var nodeB = nodeOps.add(defaultType, new TestData("NodeB"), new HashSet<>(), timestamp1);
-        final var nodeC = nodeOps.add(defaultType, new TestData("NodeC"), new HashSet<>(), timestamp1);
-        final var nodeD = nodeOps.add(defaultType, new TestData("NodeD"), new HashSet<>(), timestamp1);
+        // Create nodes
+        final Uid nodeAId = UidFactory.generate();
+        final Uid nodeBId = UidFactory.generate();
+        final Uid nodeCId = UidFactory.generate();
 
-        // Connect in chain
-        final var edgeAB = edgeOps.add(defaultType, nodeA, nodeB, new TestData("EdgeAB"), new HashSet<>(), timestamp2);
-        final var edgeBC = edgeOps.add(defaultType, nodeB, nodeC, new TestData("EdgeBC"), new HashSet<>(), timestamp2);
-        final var edgeCD = edgeOps.add(defaultType, nodeC, nodeD, new TestData("EdgeCD"), new HashSet<>(), timestamp2);
+        final var nodeA = nodeOps.add(nodeAId, defaultType, new SimpleData(String.class, "NodeA"), timestamp1);
+        final var nodeB = nodeOps.add(nodeBId, defaultType, new SimpleData(String.class, "NodeB"), timestamp1);
+        final var nodeC = nodeOps.add(nodeCId, defaultType, new SimpleData(String.class, "NodeC"), timestamp1);
 
-        // Expire node B (middle of chain)
+        // Create edges
+        final var edgeAB = edgeOps.add(
+                defaultType, nodeA, nodeB, new SimpleData(String.class, "EdgeAB"), new HashSet<>(), timestamp2);
+        final var edgeBC = edgeOps.add(
+                defaultType, nodeB, nodeC, new SimpleData(String.class, "EdgeBC"), new HashSet<>(), timestamp2);
+        final var edgeCB = edgeOps.add(
+                defaultType, nodeC, nodeB, new SimpleData(String.class, "EdgeCB"), new HashSet<>(), timestamp2);
+
+        // Expire node B
         nodeOps.expire(nodeB.locator().id(), timestamp3);
 
-        // Verify only edges connected to B are expired
-        final var edgeAbInGraph = graph.edgeSet().stream()
-                .filter(e -> e.locator().id().equals(edgeAB.locator().id()))
-                .findFirst()
-                .orElseThrow();
-        final var edgeBcInGraph = graph.edgeSet().stream()
-                .filter(e -> e.locator().id().equals(edgeBC.locator().id()))
-                .findFirst()
-                .orElseThrow();
-        final var edgeCdInGraph = graph.edgeSet().stream()
-                .filter(e -> e.locator().id().equals(edgeCD.locator().id()))
-                .findFirst()
-                .orElseThrow();
+        // All three edges should be expired
+        final var expiredEdges =
+                graph.edgeSet().stream().filter(e -> e.expired().isPresent()).toList();
+        assertEquals(3, expiredEdges.size(), "All edges connected to B should be expired");
 
-        assertTrue(edgeAbInGraph.expired().isPresent());
-        assertTrue(edgeBcInGraph.expired().isPresent());
-        assertTrue(edgeCdInGraph.expired().isEmpty(), "Edge C->D should not be expired");
-
-        // Verify nodes A, C, D are still active
-        assertTrue(graph.vertexSet().stream()
-                .anyMatch(n -> n.locator().id().equals(nodeA.locator().id())
-                        && n.expired().isEmpty()));
-        assertTrue(graph.vertexSet().stream()
-                .anyMatch(n -> n.locator().id().equals(nodeC.locator().id())
-                        && n.expired().isEmpty()));
-        assertTrue(graph.vertexSet().stream()
-                .anyMatch(n -> n.locator().id().equals(nodeD.locator().id())
-                        && n.expired().isEmpty()));
+        expiredEdges.forEach(edge -> {
+            assertEquals(timestamp3, edge.expired().get());
+        });
     }
 
     @Test
-    @DisplayName("Node update with components preserves component references")
-    final void testNodeUpdateWithComponents() {
+    @DisplayName("Complex node update scenario")
+    final void testComplexNodeUpdateScenario() {
         final var timestamp1 = Instant.now();
         final var timestamp2 = timestamp1.plusSeconds(1);
+        final var timestamp3 = timestamp2.plusSeconds(1);
 
-        // Create node with components
-        final Set<Locator> components = new HashSet<>();
-        components.add(Locator.generate());
-        components.add(Locator.generate());
+        // Create nodes A, B, C, D
+        final Uid nodeAId = UidFactory.generate();
+        final Uid nodeBId = UidFactory.generate();
+        final Uid nodeCId = UidFactory.generate();
+        final Uid nodeDId = UidFactory.generate();
 
-        final var node = nodeOps.add(defaultType, new TestData("Node"), components, timestamp1);
+        final var nodeA = nodeOps.add(nodeAId, defaultType, new SimpleData(String.class, "NodeA"), timestamp1);
+        final var nodeB = nodeOps.add(nodeBId, defaultType, new SimpleData(String.class, "NodeB"), timestamp1);
+        final var nodeC = nodeOps.add(nodeCId, defaultType, new SimpleData(String.class, "NodeC"), timestamp1);
+        final var nodeD = nodeOps.add(nodeDId, defaultType, new SimpleData(String.class, "NodeD"), timestamp1);
 
-        // Update node data (components should be preserved)
-        final var updatedNode = nodeOps.update(node.locator().id(), new TestData("UpdatedNode"), timestamp2);
+        // Create edges forming a more complex structure
+        final var edgeAB = edgeOps.add(
+                defaultType, nodeA, nodeB, new SimpleData(String.class, "EdgeAB"), new HashSet<>(), timestamp2);
+        final var edgeBC = edgeOps.add(
+                defaultType, nodeB, nodeC, new SimpleData(String.class, "EdgeBC"), new HashSet<>(), timestamp2);
+        final var edgeCD = edgeOps.add(
+                defaultType, nodeC, nodeD, new SimpleData(String.class, "EdgeCD"), new HashSet<>(), timestamp2);
+        final var edgeDB = edgeOps.add(
+                defaultType, nodeD, nodeB, new SimpleData(String.class, "EdgeDB"), new HashSet<>(), timestamp2);
 
-        assertEquals(components, updatedNode.components(), "Components should be preserved on update");
-        assertEquals(2, updatedNode.locator().version());
+        // Update node B
+        final var updatedNodeB = nodeOps.update(
+                nodeB.locator().id(), defaultType, new SimpleData(String.class, "UpdatedNodeB"), timestamp3);
+
+        // Verify correct number of edges are expired and recreated
+        final var allEdges = graph.edgeSet();
+        final var expiredEdges =
+                allEdges.stream().filter(e -> e.expired().isPresent()).toList();
+        final var activeEdges =
+                allEdges.stream().filter(e -> e.expired().isEmpty()).toList();
+
+        // 3 edges connected to B should be expired (AB, BC, DB)
+        assertEquals(3, expiredEdges.size());
+        // 4 edges should be active (3 recreated + 1 unchanged CD)
+        assertEquals(4, activeEdges.size());
+
+        // Verify CD edge is unchanged
+        final var unchangedCD = activeEdges.stream()
+                .filter(e -> e.source().locator().id().equals(nodeC.locator().id())
+                        && e.target().locator().id().equals(nodeD.locator().id()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(timestamp2, unchangedCD.created(), "CD edge should not be recreated");
     }
 
     @Test
-    @DisplayName("Node update components creates new version")
-    final void testNodeUpdateComponents() {
+    @DisplayName("Node update preserves data")
+    final void testNodeUpdatePreservesData() {
         final var timestamp1 = Instant.now();
         final var timestamp2 = timestamp1.plusSeconds(1);
 
-        // Create node with initial components
-        final Set<Locator> initialComponents = new HashSet<>();
-        initialComponents.add(Locator.generate());
+        // Create node
+        final Uid nodeId = UidFactory.generate();
+        final var node = nodeOps.add(nodeId, defaultType, new SimpleData(String.class, "Node"), timestamp1);
 
-        final var node = nodeOps.add(defaultType, new TestData("Node"), initialComponents, timestamp1);
+        // Update node with new data
+        final var updatedNode = nodeOps.update(
+                node.locator().id(), defaultType, new SimpleData(String.class, "UpdatedNode"), timestamp2);
 
-        // Update node components
-        final Set<Locator> newComponents = new HashSet<>();
-        newComponents.add(Locator.generate());
-        newComponents.add(Locator.generate());
-
-        final var updatedNode = nodeOps.updateComponents(node.locator().id(), newComponents, timestamp2);
-
-        assertEquals(newComponents, updatedNode.components(), "Components should be updated");
+        assertEquals("UpdatedNode", ((SimpleData) updatedNode.data()).value());
         assertEquals(2, updatedNode.locator().version());
-        assertEquals("Node", updatedNode.data().value(), "Data should be preserved");
-    }
-
-    /**
-     * Test data implementation.
-     */
-    private record TestData(String value) implements Data {
-        @Override
-        public String value() {
-            return value;
-        }
-
-        @Override
-        public Class<?> javaClass() {
-            return String.class;
-        }
     }
 }

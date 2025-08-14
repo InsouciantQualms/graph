@@ -15,15 +15,13 @@ import dev.iq.graph.model.Element;
 import dev.iq.graph.model.Node;
 import dev.iq.graph.model.Type;
 import dev.iq.graph.model.operations.ComponentOperations;
+import dev.iq.graph.model.operations.ComponentStrategy;
 import dev.iq.graph.model.simple.SimpleComponent;
+import dev.iq.graph.model.simple.SimpleEdge;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.jgrapht.Graph;
@@ -42,7 +40,7 @@ import org.jgrapht.graph.AsSubgraph;
 public final class JGraphtComponentOperations implements ComponentOperations {
 
     private final Graph<Node, Edge> graph;
-    private final Map<Uid, List<Component>> componentVersions;
+    private final ComponentStrategy componentStrategy;
     private final JGraphtNodeOperations nodeOperations;
     private final JGraphtEdgeOperations edgeOperations;
 
@@ -50,8 +48,16 @@ public final class JGraphtComponentOperations implements ComponentOperations {
             final Graph<Node, Edge> graph,
             final JGraphtNodeOperations nodeOperations,
             final JGraphtEdgeOperations edgeOperations) {
+        this(graph, nodeOperations, edgeOperations, new SeparateComponentStrategy(graph));
+    }
+
+    public JGraphtComponentOperations(
+            final Graph<Node, Edge> graph,
+            final JGraphtNodeOperations nodeOperations,
+            final JGraphtEdgeOperations edgeOperations,
+            final ComponentStrategy componentStrategy) {
         this.graph = graph;
-        componentVersions = new HashMap<>();
+        this.componentStrategy = componentStrategy;
         this.nodeOperations = nodeOperations;
         this.edgeOperations = edgeOperations;
     }
@@ -62,20 +68,14 @@ public final class JGraphtComponentOperations implements ComponentOperations {
         final var component = new SimpleComponent(locator, type, data, timestamp, Optional.empty());
 
         // Store component version
-        componentVersions.computeIfAbsent(locator.id(), k -> new ArrayList<>()).add(component);
+        componentStrategy.store(component);
 
         return component;
     }
 
     @Override
-    public Component update(final Uid id, final Data data, final Instant timestamp) {
-        final var existingComponent = JGraphtHelper.require(findActive(id), id, "Component");
-        return performUpdate(id, existingComponent.type(), data, timestamp);
-    }
-
-    @Override
     public Component update(final Uid id, final Type type, final Data data, final Instant timestamp) {
-        JGraphtHelper.require(findActive(id), id, "Component");
+        JGraphtHelper.require(componentStrategy.findActive(id), id, "Component");
         return performUpdate(id, type, data, timestamp);
     }
 
@@ -88,7 +88,7 @@ public final class JGraphtComponentOperations implements ComponentOperations {
         final var newComponent = new SimpleComponent(incremented, type, data, timestamp, Optional.empty());
 
         // Store new version
-        componentVersions.get(id).add(newComponent);
+        componentStrategy.store(newComponent);
 
         // Update all elements that reference this component
         // We need to be careful about the order of operations to avoid duplicate edge updates
@@ -99,19 +99,14 @@ public final class JGraphtComponentOperations implements ComponentOperations {
 
     @Override
     public Component expire(final Uid id, final Instant timestamp) {
-        final var component = JGraphtHelper.require(findActive(id), id, "Component");
+        final var component = JGraphtHelper.require(componentStrategy.findActive(id), id, "Component");
 
         // Create expired version
         final var expiredComponent = new SimpleComponent(
                 component.locator(), component.type(), component.data(), component.created(), Optional.of(timestamp));
 
         // Update stored version
-        final var versions = componentVersions.get(id);
-        if (versions != null) {
-            // Replace the active version with expired version
-            versions.removeIf(c -> c.locator().equals(component.locator()));
-            versions.add(expiredComponent);
-        }
+        componentStrategy.store(expiredComponent);
 
         return expiredComponent;
     }
@@ -121,92 +116,8 @@ public final class JGraphtComponentOperations implements ComponentOperations {
      * This maintains referential integrity when components are updated.
      */
     private void updateElementReferences(final Locator oldLocator, final Locator newLocator, final Instant timestamp) {
-        // Set up the component update mapping for edge recreation
-        final Map<Locator, Locator> componentUpdateMap = new HashMap<>();
-        componentUpdateMap.put(oldLocator, newLocator);
-        nodeOperations.setPendingComponentUpdates(componentUpdateMap);
-
-        try {
-            // Collect nodes that need updating and track edges that will be updated
-            final Set<Node> nodesToUpdate = collectNodesToUpdate(oldLocator);
-            final Set<Uid> edgesUpdatedByNodeUpdate = collectEdgesUpdatedByNodeUpdate(nodesToUpdate);
-
-            // Update nodes - their edges will be recreated with updated component references
-            updateNodes(nodesToUpdate, oldLocator, newLocator, timestamp);
-
-            // Update any edges that weren't updated as part of node updates
-            updateRemainingEdges(oldLocator, newLocator, edgesUpdatedByNodeUpdate, timestamp);
-        } finally {
-            // Clear the pending updates
-            nodeOperations.clearPendingComponentUpdates();
-        }
-    }
-
-    /**
-     * Collects all nodes that need to be updated because they reference the old component.
-     */
-    private Set<Node> collectNodesToUpdate(final Locator oldLocator) {
-        final Set<Node> nodesToUpdate = new HashSet<>();
-        for (final Node node : graph.vertexSet()) {
-            if (node.expired().isEmpty() && node.components().contains(oldLocator)) {
-                nodesToUpdate.add(node);
-            }
-        }
-        return nodesToUpdate;
-    }
-
-    /**
-     * Collects IDs of edges that will be updated as part of node updates.
-     */
-    private Set<Uid> collectEdgesUpdatedByNodeUpdate(final Set<Node> nodesToUpdate) {
-        final Set<Uid> edgesUpdatedByNodeUpdate = new HashSet<>();
-        for (final Node node : nodesToUpdate) {
-            // When a node is updated, all its connected edges are recreated
-            graph.incomingEdgesOf(node).stream()
-                    .filter(e -> e.expired().isEmpty())
-                    .forEach(e -> edgesUpdatedByNodeUpdate.add(e.locator().id()));
-            graph.outgoingEdgesOf(node).stream()
-                    .filter(e -> e.expired().isEmpty())
-                    .forEach(e -> edgesUpdatedByNodeUpdate.add(e.locator().id()));
-        }
-        return edgesUpdatedByNodeUpdate;
-    }
-
-    /**
-     * Updates nodes with new component references.
-     */
-    private void updateNodes(
-            final Set<Node> nodesToUpdate,
-            final Locator oldLocator,
-            final Locator newLocator,
-            final Instant timestamp) {
-        for (final Node node : nodesToUpdate) {
-            // Create new components set with updated reference
-            final Set<Locator> updatedComponents = new HashSet<>(node.components());
-            updatedComponents.remove(oldLocator);
-            updatedComponents.add(newLocator);
-
-            // Update the node with new component references
-            nodeOperations.updateComponents(node.locator().id(), updatedComponents, timestamp);
-        }
-    }
-
-    /**
-     * Updates edges that weren't updated as part of node updates.
-     */
-    private void updateRemainingEdges(
-            final Locator oldLocator,
-            final Locator newLocator,
-            final Set<Uid> edgesUpdatedByNodeUpdate,
-            final Instant timestamp) {
-        final Set<Edge> edgesToUpdate = new HashSet<>();
-        for (final Edge edge : graph.edgeSet()) {
-            if (edge.expired().isEmpty()
-                    && edge.components().contains(oldLocator)
-                    && !edgesUpdatedByNodeUpdate.contains(edge.locator().id())) {
-                edgesToUpdate.add(edge);
-            }
-        }
+        // Since nodes don't have components, we only need to update edges
+        final Set<Edge> edgesToUpdate = componentStrategy.findEdgesReferencingComponent(oldLocator);
 
         for (final Edge edge : edgesToUpdate) {
             // Create new components set with updated reference
@@ -215,7 +126,18 @@ public final class JGraphtComponentOperations implements ComponentOperations {
             updatedComponents.add(newLocator);
 
             // Update the edge with new component references
-            edgeOperations.updateComponents(edge.locator().id(), updatedComponents, timestamp);
+            // This requires recreating the edge with the new component set
+            graph.removeEdge(edge);
+            final Edge newEdge = new SimpleEdge(
+                    edge.locator().next(),
+                    edge.type(),
+                    edge.source(),
+                    edge.target(),
+                    edge.data(),
+                    updatedComponents,
+                    timestamp,
+                    Optional.empty());
+            graph.addEdge(edge.source(), edge.target(), newEdge);
         }
     }
 
@@ -225,9 +147,7 @@ public final class JGraphtComponentOperations implements ComponentOperations {
      */
     public void addPrebuiltComponent(final Component component) {
         // Store component version
-        componentVersions
-                .computeIfAbsent(component.locator().id(), k -> new ArrayList<>())
-                .add(component);
+        componentStrategy.store(component);
     }
 
     /**
@@ -235,20 +155,12 @@ public final class JGraphtComponentOperations implements ComponentOperations {
      * This is used by the builder pattern.
      */
     public List<Component> allActive() {
-        return componentVersions.values().stream()
-                .flatMap(List::stream)
-                .filter(c -> c.expired().isEmpty())
-                .toList();
+        return componentStrategy.allActive();
     }
 
-    private Optional<Component> findActive(final Uid id) {
-        final var versions = componentVersions.get(id);
-        if (versions == null) {
-            return Optional.empty();
-        }
-
-        return versions.stream().filter(c -> c.expired().isEmpty()).max(Comparator.comparingInt(c -> c.locator()
-                .version()));
+    @Override
+    public Optional<Component> findActive(final Uid id) {
+        return componentStrategy.findActive(id);
     }
 
     /**

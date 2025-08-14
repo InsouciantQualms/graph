@@ -12,6 +12,7 @@ import dev.iq.graph.model.Component;
 import dev.iq.graph.model.Data;
 import dev.iq.graph.model.Type;
 import java.time.Instant;
+import java.util.Optional;
 
 /**
  * Mutable operations for managing components in a graph during construction or bulk operations.
@@ -32,4 +33,7 @@ public interface ComponentOperations {
 
     /** Expires a component at the given timestamp. */
     Component expire(Uid id, Instant timestamp);
+
+    /** Find the active version of a component by ID. */
+    Optional<Component> findActive(Uid id);
 }

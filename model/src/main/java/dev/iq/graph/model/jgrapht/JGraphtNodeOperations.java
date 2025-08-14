@@ -44,9 +44,9 @@ public final class JGraphtNodeOperations implements NodeOperations {
 
     /** {@inheritDoc} */
     @Override
-    public Node add(final Type type, final Data data, final Instant timestamp) {
+    public Node add(final Uid id, final Type type, final Data data, final Instant timestamp) {
 
-        final var locator = Locator.generate();
+        final var locator = Locator.first(id);
         final var node = new SimpleNode(locator, type, data, timestamp, Optional.empty());
         graph.addVertex(node);
         return node;
@@ -58,9 +58,9 @@ public final class JGraphtNodeOperations implements NodeOperations {
 
         final var existing = JGraphtHelper.require(Versions.findActive(id, graph.vertexSet()), id, "Node");
 
-        // Collect edge information before expiring
-        final var incoming = graph.incomingEdgesOf(existing);
-        final var outgoing = graph.outgoingEdgesOf(existing);
+        // Collect edge information before expiring (make copies to avoid concurrent modification)
+        final var incoming = graph.incomingEdgesOf(existing).stream().toList();
+        final var outgoing = graph.outgoingEdgesOf(existing).stream().toList();
 
         // Expire the existing node (which also expires its edges)
         final var expired = expire(id, timestamp);
@@ -81,9 +81,9 @@ public final class JGraphtNodeOperations implements NodeOperations {
 
         final var node = JGraphtHelper.require(Versions.findActive(id, graph.vertexSet()), id, "Node");
 
-        // Collect all connected edges
-        final var incoming = graph.incomingEdgesOf(node);
-        final var outgoing = graph.outgoingEdgesOf(node);
+        // Collect all connected edges (make copies to avoid concurrent modification)
+        final var incoming = graph.incomingEdgesOf(node).stream().toList();
+        final var outgoing = graph.outgoingEdgesOf(node).stream().toList();
 
         // Expire active edges to maintain referential integrity
         expireActiveEdges(incoming, timestamp);
@@ -105,9 +105,10 @@ public final class JGraphtNodeOperations implements NodeOperations {
      * Expires all active edges in the collection.
      */
     private void expireActiveEdges(final Collection<Edge> edges, final Instant timestamp) {
-
+        // Create a copy to avoid ConcurrentModificationException
         edges.stream()
                 .filter(edge -> edge.expired().isEmpty())
+                .toList() // Collect to list first to avoid concurrent modification
                 .forEach(edge -> edgeOperations.expire(edge.locator().id(), timestamp));
     }
 
@@ -121,12 +122,8 @@ public final class JGraphtNodeOperations implements NodeOperations {
             final Instant created,
             final Optional<Instant> expired) {
 
-        incoming.forEach(e ->
-                recreateEdge(e, e.source(), node, created, expired)
-        );
-        outgoing.forEach(e ->
-                recreateEdge(e, node, e.target(), created, expired)
-        );
+        incoming.forEach(e -> recreateEdge(e, e.source(), node, created, expired));
+        outgoing.forEach(e -> recreateEdge(e, node, e.target(), created, expired));
     }
 
     private void recreateEdge(
@@ -134,8 +131,7 @@ public final class JGraphtNodeOperations implements NodeOperations {
             final Node source,
             final Node target,
             final Instant created,
-            final Optional<Instant> expired
-    ) {
+            final Optional<Instant> expired) {
 
         final var added = new SimpleEdge(
                 existing.locator(),
@@ -145,8 +141,7 @@ public final class JGraphtNodeOperations implements NodeOperations {
                 existing.data(),
                 existing.components(),
                 created,
-                expired
-        );
+                expired);
         graph.addEdge(source, target, added);
     }
 }

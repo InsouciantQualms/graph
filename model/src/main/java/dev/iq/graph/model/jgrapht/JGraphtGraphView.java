@@ -131,6 +131,4 @@ public final class JGraphtGraphView implements View {
         }
         return new Path(elements);
     }
-
-
 }

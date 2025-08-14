@@ -12,7 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.iq.common.version.Locator;
-import dev.iq.common.version.NanoId;
+import dev.iq.common.version.Uid;
+import dev.iq.common.version.UidFactory;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class SimpleComponentTest {
 
     @Test
     final void testSimpleComponentCreation() {
-        final var id = new NanoId("test-component-id");
+        final Uid id = UidFactory.generate();
         final var locator = new Locator(id, 1);
         final var type = new SimpleType("component");
         final var data = new SimpleData(String.class, "Test Component");
@@ -43,7 +44,7 @@ class SimpleComponentTest {
 
     @Test
     final void testSimpleComponentWithExpired() {
-        final var id = new NanoId("test-component-id");
+        final Uid id = UidFactory.generate();
         final var locator = new Locator(id, 1);
         final var type = new SimpleType("component");
         final var data = new SimpleData(String.class, "Test Component");
@@ -59,7 +60,7 @@ class SimpleComponentTest {
 
     @Test
     final void testSimpleComponentTypeVariations() {
-        final var id = new NanoId("component-id");
+        final Uid id = UidFactory.generate();
         final var locator = new Locator(id, 1);
         final var type1 = new SimpleType("metadata");
         final var type2 = new SimpleType("annotation");
@@ -77,7 +78,7 @@ class SimpleComponentTest {
 
     @Test
     final void testSimpleComponentEquality() {
-        final var id = new NanoId("test-component-id");
+        final Uid id = UidFactory.generate();
         final var locator = new Locator(id, 1);
         final var type = new SimpleType("component");
         final var data = new SimpleData(String.class, "Test Component");
@@ -92,8 +93,8 @@ class SimpleComponentTest {
 
     @Test
     final void testSimpleComponentInequality() {
-        final var id1 = new NanoId("component-id-1");
-        final var id2 = new NanoId("component-id-2");
+        final Uid id1 = UidFactory.generate();
+        final Uid id2 = UidFactory.generate();
         final var locator1 = new Locator(id1, 1);
         final var locator2 = new Locator(id2, 1);
         final var type = new SimpleType("component");
@@ -108,7 +109,7 @@ class SimpleComponentTest {
 
     @Test
     final void testSimpleComponentVersioning() {
-        final var id = new NanoId("component-id");
+        final Uid id = UidFactory.generate();
         final var locator1 = new Locator(id, 1);
         final var locator2 = new Locator(id, 2);
         final var type = new SimpleType("component");
@@ -126,7 +127,7 @@ class SimpleComponentTest {
 
     @Test
     final void testSimpleComponentToString() {
-        final var id = new NanoId("test-component-id");
+        final Uid id = UidFactory.generate();
         final var locator = new Locator(id, 1);
         final var type = new SimpleType("component");
         final var data = new SimpleData(String.class, "Test Component");

@@ -57,11 +57,7 @@ public final class JGraphtEdgeOperations implements EdgeOperations {
     /** {@inheritDoc} */
     @Override
     public Edge update(
-            final Uid id,
-            final Type type,
-            final Data data,
-            final Set<Locator> components,
-            final Instant timestamp) {
+            final Uid id, final Type type, final Data data, final Set<Locator> components, final Instant timestamp) {
 
         // First expire the existing edge
         final var existingEdge = JGraphtHelper.require(Versions.findActive(id, graph.edgeSet()), id, "Edge");
