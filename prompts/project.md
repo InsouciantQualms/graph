@@ -38,12 +38,14 @@ Model classes reside in dev.iq.graph.model
 Persistence classes reside in dev.iq.graph.persistence
 Implementations should reside in their own package when multiple implementations exist (e.g., sqllite and tinkerpop)
 
-# Setup
+# Referential Integrity Constraints
 
-- Treat the project's workspace as ~/Dev/ai, though you can make changes to ~/Dev/build-logic
-- This project consists of four modules:  model, access, persistence, api
-    - model defines the domain and has no dependencies on other modules
-    - access defines access control policies and the authorization engine and depends on model
-    - persistence defines data accses objects across multiple implementations and depends on model
-    - api defines the service layer and depends on model, persistence and access
-- By default write code in Java 21 (there is no kotlin in this project other than build files)
+The overall graph and any component sub-graphs must maintain referential integrity in response to update() and expire()
+operations.  In particular, please ensure that:
+
+- Each udpate() expires the current version and then adds an incremented version
+- When a node is expired (directly or via an update), its incoming and outgoing edges are also expired
+- When a component is updated (its Data or Type), that the subgraph remains valid both before and after the update
+- Components should be recreatable as of an Instant (timestamp) to accurately recreate the subgraph
+- When a component's edges or nodes are modified, the component again must be recreatable as of an Instant
+- The above constraints comprise portions of referential integrity that must be maintained
